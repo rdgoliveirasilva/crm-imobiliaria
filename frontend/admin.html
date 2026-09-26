@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SR Lançamentos · Painel Admin</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/admin.css">
+</head>
+<body class="admin-page">
+
+    <!-- =====================================================
+         HEADER
+         ===================================================== -->
+    <header class="app-header">
+        <div class="header-inner">
+            <div class="header-brand">
+                <div class="logo-mark">
+                    <img
+                        src="assets/img/logo.png"
+                        alt="SR Lançamentos"
+                        onerror="this.style.display='none'; this.parentElement.classList.add('fallback');"
+                    >
+                    <i class="fas fa-building logo-fallback"></i>
+                </div>
+                <div class="header-brand-text">
+                    <h1>SR <span>Lançamentos</span></h1>
+                    <p>Painel Administrativo</p>
+                </div>
+            </div>
+
+            <div class="header-user">
+                <div class="user-info">
+                    <span class="user-greeting">Bem vindo</span>
+                    <strong id="headerUserName">Administrador</strong>
+                </div>
+                <button class="btn-logout" id="btnLogout" title="Sair">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Sair</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- =====================================================
+         NAVEGAÇÃO POR ABAS
+         ===================================================== -->
+    <nav class="admin-nav">
+        <div class="admin-nav-inner">
+            <button class="nav-tab active" data-tab="dashboard">
+                <i class="fas fa-chart-line"></i>
+                <span>Dashboard</span>
+            </button>
+            <button class="nav-tab" data-tab="upload">
+                <i class="fas fa-cloud-upload-alt"></i>
+                <span>Subir Lista</span>
+            </button>
+            <button class="nav-tab" data-tab="listas">
+                <i class="fas fa-folder-open"></i>
+                <span>Listas</span>
+            </button>
+            <button class="nav-tab" data-tab="corretores">
+                <i class="fas fa-users"></i>
+                <span>Corretores</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- =====================================================
+         MAIN
+         ===================================================== -->
+    <main class="admin-main">
+
+        <!-- ================================================
+             ABA 1 — DASHBOARD
+             ================================================ -->
+        <section class="tab-panel active" id="tab-dashboard">
+
+            <div class="kpi-grid">
+                <div class="kpi-card">
+                    <div class="kpi-icon blue">
+                        <i class="fas fa-layer-group"></i>
+                    </div>
+                    <div class="kpi-info">
+                        <span class="kpi-label">Listas subidas</span>
+                        <strong class="kpi-value" id="kpiListas">0</strong>
+                    </div>
+                </div>
+
+                <div class="kpi-card">
+                    <div class="kpi-icon purple">
+                        <i class="fas fa-address-book"></i>
+                    </div>
+                    <div class="kpi-info">
+                        <span class="kpi-label">Contatos no total</span>
+                        <strong class="kpi-value" id="kpiTotal">0</strong>
+                    </div>
+                </div>
+
+                <div class="kpi-card">
+                    <div class="kpi-icon green">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                    <div class="kpi-info">
+                        <span class="kpi-label">Qualificados</span>
+                        <strong class="kpi-value" id="kpiQualificados">0</strong>
+                    </div>
+                </div>
+
+                <div class="kpi-card">
+                    <div class="kpi-icon orange">
+                        <i class="fas fa-hourglass-half"></i>
+                    </div>
+                    <div class="kpi-info">
+                        <span class="kpi-label">Aguardando chamada</span>
+                        <strong class="kpi-value" id="kpiAguardando">0</strong>
+                    </div>
+                </div>
+            </div>
+
+            <div class="dashboard-grid">
+
+                <section class="dashboard-card">
+                    <header class="card-header">
+                        <h2>
+                            <i class="fas fa-users"></i>
+                            Carteira por corretor
+                        </h2>
+                        <span class="card-badge" id="badgeTotalCorretores">0</span>
+                    </header>
+
+                    <div class="corretores-carteira" id="corretoresCarteira"></div>
+                </section>
+
+                <section class="dashboard-card">
+                    <header class="card-header">
+                        <h2>
+                            <i class="fas fa-filter"></i>
+                            Segmentação por qualificação
+                        </h2>
+                    </header>
+
+                    <div class="qualificacao-list" id="qualificacaoList"></div>
+                </section>
+
+            </div>
+
+        </section>
+
+        <!-- ================================================
+             ABA 2 — SUBIR LISTA
+             ================================================ -->
+        <section class="tab-panel" id="tab-upload">
+
+            <div class="upload-grid">
+
+                <!-- Coluna esquerda: form -->
+                <section class="form-card">
+                    <header class="card-header">
+                        <h2>
+                            <i class="fas fa-cloud-upload-alt"></i>
+                            Subir nova lista
+                        </h2>
+                    </header>
+
+                    <div class="form-body">
+
+                        <div class="form-group">
+                            <label for="nomeLista">Nome da lista <span class="required">*</span></label>
+                            <input
+                                type="text"
+                                id="nomeLista"
+                                placeholder="Ex: Lista Outubro/2025"
+                                maxlength="60"
+                            >
+                            <span class="form-error" id="nomeListaError"></span>
+                        </div>
+
+                        <!-- TOGGLE ARQUIVO / TEXTO -->
+                        <div class="form-group">
+                            <label>Como deseja enviar os contatos? <span class="required">*</span></label>
+
+                            <div class="modo-toggle" role="tablist">
+                                <button
+                                    type="button"
+                                    class="modo-btn active"
+                                    id="modoArquivoBtn"
+                                    data-modo="arquivo"
+                                >
+                                    <i class="fas fa-file-csv"></i>
+                                    <span>Anexar arquivo CSV</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    class="modo-btn"
+                                    id="modoTextoBtn"
+                                    data-modo="texto"
+                                >
+                                    <i class="fas fa-keyboard"></i>
+                                    <span>Colar texto</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- BLOCO ARQUIVO -->
+                        <div class="form-group" id="blocoArquivo">
+                            <label>Arquivo CSV <span class="required">*</span></label>
+
+                            <div class="file-drop" id="fileDrop">
+                                <input
+                                    type="file"
+                                    id="arquivoCsv"
+                                    accept=".csv,.txt,text/csv,text/plain"
+                                    hidden
+                                >
+                                <div class="file-drop-content" id="fileDropContent">
+                                    <div class="file-drop-icon">
+                                        <i class="fas fa-cloud-upload-alt"></i>
+                                    </div>
+                                    <strong>Clique ou arraste o arquivo aqui</strong>
+                                    <small>Formato aceito: <strong>.csv</strong> ou <strong>.txt</strong> · máx. 5MB</small>
+                                    <small class="file-drop-hint">
+                                        <i class="fas fa-info-circle"></i>
+                                        Colunas esperadas: <strong>nome e telefone</strong> (nesta ordem)
+                                    </small>
+                                </div>
+
+                                <div class="file-info" id="fileInfo" style="display: none;">
+                                    <div class="file-info-icon">
+                                        <i class="fas fa-file-csv"></i>
+                                    </div>
+                                    <div class="file-info-data">
+                                        <strong id="fileInfoNome">arquivo.csv</strong>
+                                        <small id="fileInfoTamanho">0 KB · 0 contatos detectados</small>
+                                    </div>
+                                    <button type="button" class="file-info-remove" id="btnRemoverArquivo" title="Remover arquivo">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <span class="form-error" id="arquivoCsvError"></span>
+                        </div>
+
+                        <!-- BLOCO TEXTO -->
+                        <div class="form-group" id="blocoTexto" style="display: none;">
+                            <label for="textoLista">Cole os contatos <span class="required">*</span></label>
+                            <textarea
+                                id="textoLista"
+                                rows="8"
+                                placeholder="Um contato por linha. Formatos aceitos:&#10;&#10;Nome, Telefone, Interesse&#10;Ingrid Alves, 16981006715, Apartamento 2 quartos"
+                            ></textarea>
+                            <span class="form-hint">
+                                <i class="fas fa-info-circle"></i>
+                                Um contato por linha. Separe por vírgula: nome, telefone, interesse.
+                            </span>
+                            <span class="form-error" id="textoListaError"></span>
+                        </div>
+
+                        <!-- PREVIEW CONTATOS -->
+                        <div class="form-preview" id="previewContatos" style="display: none;">
+                            <div class="preview-header">
+                                <i class="fas fa-eye"></i>
+                                <strong id="previewCount">0</strong> contatos detectados
+                            </div>
+                            <div class="preview-list" id="previewList"></div>
+                        </div>
+
+                        <!-- SELETOR DE CORRETORES -->
+                        <div class="form-group">
+                            <label>Quem entra na roleta? <span class="required">*</span></label>
+                            <p class="form-subtitle">Os contatos serão distribuídos igualmente entre os corretores selecionados.</p>
+
+                            <div class="corretores-selector" id="corretoresSelector"></div>
+                            <span class="form-error" id="corretoresError"></span>
+                        </div>
+
+                        <div class="form-actions">
+                            <button class="btn btn-primary" id="btnSubirLista">
+                                <i class="fas fa-check"></i>
+                                Subir e distribuir
+                            </button>
+                        </div>
+
+                    </div>
+                </section>
+
+                <!-- Coluna direita: preview da roleta -->
+                <aside class="info-card">
+                    <header class="card-header">
+                        <h2>
+                            <i class="fas fa-shuffle"></i>
+                            Preview da roleta
+                        </h2>
+                    </header>
+
+                    <div class="info-body" id="infoRoleta">
+                        <div class="info-empty">
+                            <i class="fas fa-chart-pie"></i>
+                            <p>Envie os contatos e selecione os corretores para ver como será a distribuição.</p>
+                        </div>
+                    </div>
+                </aside>
+
+            </div>
+
+        </section>
+
+        <!-- ================================================
+             ABA 3 — LISTAS
+             ================================================ -->
+        <section class="tab-panel" id="tab-listas">
+
+            <div class="listas-header">
+                <h2>
+                    <i class="fas fa-folder-open"></i>
+                    Listas subidas
+                </h2>
+                <span class="card-badge" id="badgeTotalListas">0</span>
+            </div>
+
+            <div class="listas-grid" id="listasGrid"></div>
+
+            <div class="empty-state" id="listasVazio">
+                <i class="fas fa-inbox"></i>
+                <h3>Nenhuma lista subida ainda</h3>
+                <p>Vá para a aba "Subir Lista" para começar.</p>
+            </div>
+
+        </section>
+
+        <!-- ================================================
+             ABA 4 — CORRETORES
+             ================================================ -->
+        <section class="tab-panel" id="tab-corretores">
+
+            <div class="corretores-grid">
+
+                <section class="form-card">
+                    <header class="card-header">
+                        <h2>
+                            <i class="fas fa-user-plus"></i>
+                            Cadastrar corretor
+                        </h2>
+                    </header>
+
+                    <div class="form-body">
+
+                        <div class="form-group">
+                            <label for="novoNome">Nome completo <span class="required">*</span></label>
+                            <input
+                                type="text"
+                                id="novoNome"
+                                placeholder="Ex: João Silva"
+                                maxlength="80"
+                            >
+                            <span class="form-error" id="novoNomeError"></span>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="novoUsuario">Usuário <span class="required">*</span></label>
+                            <input
+                                type="text"
+                                id="novoUsuario"
+                                placeholder="Ex: joao.silva"
+                                maxlength="30"
+                                autocapitalize="none"
+                                autocorrect="off"
+                                spellcheck="false"
+                            >
+                            <span class="form-hint">
+                                <i class="fas fa-info-circle"></i>
+                                Sem espaços. Use apenas letras, números, ponto, hífen ou underline.
+                            </span>
+                            <span class="form-error" id="novoUsuarioError"></span>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="novaSenha">Senha inicial <span class="required">*</span></label>
+                            <input
+                                type="text"
+                                id="novaSenha"
+                                placeholder="Mínimo 4 caracteres"
+                                maxlength="30"
+                            >
+                            <span class="form-hint">
+                                <i class="fas fa-info-circle"></i>
+                                O corretor poderá trocar depois. Anote e entregue a ele.
+                            </span>
+                            <span class="form-error" id="novaSenhaError"></span>
+                        </div>
+
+                        <div class="form-actions">
+                            <button class="btn btn-primary" id="btnCadastrarCorretor">
+                                <i class="fas fa-check"></i>
+                                Cadastrar corretor
+                            </button>
+                        </div>
+
+                    </div>
+                </section>
+
+                <section class="list-card">
+                    <header class="card-header">
+                        <h2>
+                            <i class="fas fa-users"></i>
+                            Corretores cadastrados
+                        </h2>
+                        <span class="card-badge" id="badgeTotalCorretoresList">0</span>
+                    </header>
+
+                    <div class="corretores-list" id="corretoresList"></div>
+
+                    <div class="empty-state small" id="corretoresVazio">
+                        <i class="fas fa-user-friends"></i>
+                        <p>Nenhum corretor cadastrado ainda.</p>
+                    </div>
+                </section>
+
+            </div>
+
+        </section>
+
+    </main>
+
+    <!-- =====================================================
+         MODAL — DETALHES DA LISTA
+         ===================================================== -->
+    <div class="modal-overlay" id="modalLista" style="display: none;">
+        <div class="modal-card">
+            <header class="modal-header">
+                <div>
+                    <h2 id="modalListaNome">—</h2>
+                    <p id="modalListaInfo">—</p>
+                </div>
+                <button class="modal-close" id="btnFecharModalLista" aria-label="Fechar">
+                    <i class="fas fa-times"></i>
+                </button>
+            </header>
+
+            <div class="modal-toolbar">
+                <input
+                    type="text"
+                    class="modal-search"
+                    id="modalSearchContato"
+                    placeholder="Buscar contato por nome ou telefone..."
+                >
+                <button class="btn-modal-delete" id="btnDeletarLista">
+                    <i class="fas fa-trash"></i>
+                    Excluir lista
+                </button>
+            </div>
+
+            <div class="modal-body">
+                <div class="contatos-table-wrapper">
+                    <table class="contatos-table">
+                        <thead>
+                            <tr>
+                                <th>Nome</th>
+                                <th>Telefone</th>
+                                <th>Interesse</th>
+                                <th>Corretor</th>
+                                <th>Status</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="contatosTableBody"></tbody>
+                    </table>
+
+                    <div class="empty-state small" id="contatosVazio" style="display: none;">
+                        <i class="fas fa-search"></i>
+                        <p>Nenhum contato encontrado.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- =====================================================
+         MODAL — CONFIRMAÇÃO
+         ===================================================== -->
+    <div class="modal-overlay" id="modalConfirm" style="display: none;">
+        <div class="modal-card modal-small">
+            <header class="modal-header">
+                <div>
+                    <h2 id="confirmTitle">Confirmar ação?</h2>
+                    <p id="confirmMessage">Esta ação não pode ser desfeita.</p>
+                </div>
+                <button class="modal-close" id="btnFecharConfirm" aria-label="Fechar">
+                    <i class="fas fa-times"></i>
+                </button>
+            </header>
+
+            <div class="modal-actions-row">
+                <button class="btn-modal-cancel" id="btnConfirmNao">
+                    Cancelar
+                </button>
+                <button class="btn-modal-danger" id="btnConfirmSim">
+                    <i class="fas fa-check"></i>
+                    Confirmar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+<script src="js/api-client.js"></script>
+<script src="js/admin.js"></script>
+    
+</body>
+</html>

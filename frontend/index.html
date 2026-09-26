@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>   
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SR Lançamentos · Acesso ao CRM</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/login.css">
+</head>
+<body class="login-page">
+
+    <div class="bg-decor">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+        <div class="blob blob-3"></div>
+        <div class="grid-overlay"></div>
+    </div>
+
+    <main class="login-wrapper">
+
+        <!-- Lado esquerdo: branding -->
+        <section class="brand-side">
+            <div class="brand-content">
+
+                <div class="brand-logo">
+                    <div class="logo-mark">
+                        <!-- Logo SR Lançamentos -->
+                        <img
+                            src="assets/img/logo.png"
+                            alt="SR Lançamentos"
+                            onerror="this.style.display='none'; this.parentElement.classList.add('fallback');"
+                        >
+                        <i class="fas fa-building logo-fallback"></i>
+                    </div>
+                    <div class="logo-text">
+                        <h1>SR <span>Lançamentos</span></h1>
+                        <p>Ferramenta de prospecção exclusiva</p>
+                    </div>
+                </div>
+
+                <div class="brand-headline">
+                    <h2>Sua carteira de clientes,<br>organizada e pronta para vender.</h2>
+                    <p>Acesse sua conta para ver os leads distribuídos, ligar, enviar mensagens e qualificar clientes em segundos.</p>
+                </div>
+
+                <ul class="brand-features">
+                    <li>
+                        <span class="feature-icon"><i class="fas fa-phone-volume"></i></span>
+                        <div>
+                            <strong>Ligação em 1 toque</strong>
+                            <small>Direto do celular, sem digitar número</small>
+                        </div>
+                    </li>
+                    <li>
+                        <span class="feature-icon"><i class="fab fa-whatsapp"></i></span>
+                        <div>
+                            <strong>WhatsApp com mensagem pronta</strong>
+                            <small>Abordagem padronizada e profissional</small>
+                        </div>
+                    </li>
+                    <li>
+                        <span class="feature-icon"><i class="fas fa-bolt"></i></span>
+                        <div>
+                            <strong>Próximo lead na hora</strong>
+                            <small>Qualificou? Recebe o próximo automaticamente</small>
+                        </div>
+                    </li>
+                </ul>
+
+            </div>
+        </section>
+
+        <!-- Lado direito: formulário -->
+        <section class="form-side">
+            <div class="login-card">
+
+                <header class="login-header">
+                    <div class="login-avatar">
+                        <i class="fas fa-user-tie"></i>
+                    </div>
+                    <h2>Bem-vindo de volta</h2>
+                    <p>Entre com suas credenciais para acessar a ferramenta.</p>
+                </header>
+
+                <form id="loginForm" class="login-form" autocomplete="on" novalidate>
+
+                   <div class="input-group">
+    <label for="usuario">Usuário</label>
+    <div class="input-field">
+        <i class="fas fa-user"></i>
+        <input
+            type="text"
+            id="usuario"
+            name="usuario"
+            placeholder="Nome de usuário"
+            required
+            autocomplete="username"
+            autocapitalize="none"
+            autocorrect="off"
+            spellcheck="false"
+        >
+    </div>
+    <span class="input-error" id="usuarioError"></span>
+</div>
+
+
+                    <div class="input-group">
+                        <label for="password">Senha</label>
+                        <div class="input-field">
+                            <i class="fas fa-lock"></i>
+                            <input
+                                type="password"
+                                id="password"
+                                name="password"
+                                placeholder="••••••••"
+                                required
+                                autocomplete="current-password"
+                            >
+                            <button type="button" class="toggle-password" id="togglePassword" aria-label="Mostrar senha">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                        <span class="input-error" id="passwordError"></span>
+                    </div>
+
+                    <div class="form-extras">
+                        <label class="remember">
+                            <input type="checkbox" id="remember" name="remember">
+                            <span class="checkmark"></span>
+                            Lembrar de mim
+                        </label>
+                        <a href="#" class="forgot-link">Esqueci minha senha</a>
+                    </div>
+
+                    <button type="submit" class="btn-login" id="btnLogin">
+                        <span class="btn-text">Entrar no CRM</span>
+                        <span class="btn-loader"><i class="fas fa-circle-notch fa-spin"></i></span>
+                    </button>
+
+                    <div class="login-message" id="loginMessage" role="alert"></div>
+
+                </form>
+
+            </div>
+        </section>
+
+    </main>
+
+    <script src="js/auth.js"></script>
+</body>
+</html>
