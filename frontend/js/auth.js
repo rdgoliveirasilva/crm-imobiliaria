@@ -1,8 +1,5 @@
 /* =========================================================
    AUTH.JS — Login com back-end real
-   - NÃO redireciona automaticamente ao carregar
-   - Só redireciona após clicar em "Entrar"
-   - Zero chance de loop
    ========================================================= */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -23,8 +20,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /* ---------- LIMPEZA DEFENSIVA ---------- */
-    // Sempre que a tela de login carrega, apaga qualquer resquício
-    // de sessão antiga. Isso evita redirecionamentos fantasma.
+    // Sempre que a tela de login carrega, limpa sessões antigas
     localStorage.removeItem('sr_token');
     localStorage.removeItem('sr_usuario');
     localStorage.removeItem('sr_usuario_login');
@@ -122,8 +118,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const dados = await resposta.json().catch(() => ({}));
 
+            console.log('[auth] resposta do /api/login:', dados);
+
             if (!resposta.ok) {
                 throw new Error(dados.erro || 'Usuário ou senha inválidos.');
+            }
+
+            if (!dados.token || !dados.usuario) {
+                throw new Error('Resposta do servidor inválida.');
             }
 
             // Salva sessão
@@ -133,9 +135,10 @@ document.addEventListener('DOMContentLoaded', () => {
             localStorage.setItem('sr_usuario_id', String(dados.usuario.id));
             localStorage.setItem('sr_tipo', dados.usuario.tipo);
 
+            console.log('[auth] sessão salva. tipo:', dados.usuario.tipo);
+
             mostrarMensagem(`Bem-vindo, ${dados.usuario.nome}! Redirecionando...`, 'success');
 
-            // Redireciona
             setTimeout(() => {
                 if (dados.usuario.tipo === 'admin') {
                     window.location.href = 'admin.html';
@@ -145,6 +148,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }, 700);
 
         } catch (err) {
+            console.error('[auth] erro:', err);
             mostrarMensagem(err.message || 'Falha ao entrar. Tente novamente.', 'error');
             btnLogin.classList.remove('loading');
             btnLogin.disabled = false;

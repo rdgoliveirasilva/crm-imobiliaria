@@ -1,35 +1,49 @@
 /* =========================================================
-   CONEXÃO COM O BANCO DE DADOS (SQLite)
+   CONEXÃO COM O BANCO DE DADOS (PostgreSQL — Neon)
    ========================================================= */
 
 const path = require('path');
 const fs = require('fs');
-const Database = require('better-sqlite3');
+const { Pool } = require('pg');
 require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 
-// Caminho do banco
-const dbPath = process.env.DB_PATH
-    ? path.resolve(__dirname, '..', process.env.DB_PATH)
-    : path.resolve(__dirname, '..', 'database', 'crm.db');
-
-// Garante que a pasta "database" existe
-const dbDir = path.dirname(dbPath);
-if (!fs.existsSync(dbDir)) {
-    fs.mkdirSync(dbDir, { recursive: true });
+if (!process.env.DATABASE_URL) {
+    console.error('[DB] ❌ DATABASE_URL não encontrada no .env');
+    process.exit(1);
 }
 
-// Abre conexão
-const db = new Database(dbPath);
-db.pragma('journal_mode = WAL');
-db.pragma('foreign_keys = ON');
+// Neon exige SSL
+const pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: { rejectUnauthorized: false },
+    max: 10,
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 10000
+});
 
-// Executa o schema (cria tabelas se não existirem)
-const schemaPath = path.resolve(__dirname, '..', 'database', 'schema.sql');
-if (fs.existsSync(schemaPath)) {
-    const schema = fs.readFileSync(schemaPath, 'utf-8');
-    db.exec(schema);
+pool.on('error', (err) => {
+    console.error('[DB] ❌ Erro inesperado no pool do Postgres:', err);
+});
+
+// Executa o schema (cria as tabelas se não existirem)
+async function inicializarSchema() {
+    const schemaPath = path.resolve(__dirname, '..', 'database', 'schema.sql');
+
+    if (!fs.existsSync(schemaPath)) {
+        console.error(`[DB] ❌ schema.sql não encontrado em ${schemaPath}`);
+        return;
+    }
+
+    try {
+        const schema = fs.readFileSync(schemaPath, 'utf-8');
+        await pool.query(schema);
+        console.log('[DB] ✅ Schema aplicado com sucesso.');
+    } catch (err) {
+        console.error('[DB] ❌ Erro ao aplicar schema:', err.message);
+        throw err;
+    }
 }
 
-console.log(`[DB] SQLite conectado em: ${dbPath}`);
+console.log('[DB] Pool PostgreSQL criado.');
 
-module.exports = db;
+module.exports = { pool, inicializarSchema };

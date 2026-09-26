@@ -4,7 +4,7 @@
 
 const express = require('express');
 const bcrypt = require('bcryptjs');
-const db = require('../config/db');
+const { pool } = require('../config/db');
 const { autenticar, apenasAdmin } = require('../middlewares/auth');
 
 const router = express.Router();
@@ -13,199 +13,261 @@ const router = express.Router();
 router.use(autenticar, apenasAdmin);
 
 /* =========================================================
-   UTILS
-   ========================================================= */
-
-function embaralhar(arr) {
-    const copia = [...arr];
-    for (let i = copia.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [copia[i], copia[j]] = [copia[j], copia[i]];
-    }
-    return copia;
-}
-
-/* =========================================================
    CORRETORES
    ========================================================= */
 
 // GET /api/admin/corretores
-router.get('/corretores', (req, res) => {
-    const corretores = db.prepare(`
-        SELECT id, nome, usuario, criado_em,
-               (SELECT COUNT(*) FROM leads WHERE corretor_id = usuarios.id) AS total_leads
-        FROM usuarios
-        WHERE tipo = 'corretor'
-        ORDER BY nome ASC
-    `).all();
+router.get('/corretores', async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT u.id, u.nome, u.usuario, u.criado_em,
+                   (SELECT COUNT(*) FROM leads WHERE corretor_id = u.id) AS total_leads
+            FROM usuarios u
+            WHERE u.tipo = 'corretor'
+            ORDER BY u.nome ASC
+        `);
 
-    res.json({ corretores });
+        const corretores = result.rows.map(c => ({
+            ...c,
+            total_leads: Number(c.total_leads)
+        }));
+
+        res.json({ corretores });
+
+    } catch (err) {
+        console.error('[admin/corretores] erro:', err);
+        res.status(500).json({ erro: 'Erro ao listar corretores.' });
+    }
 });
 
 // POST /api/admin/corretores
-router.post('/corretores', (req, res) => {
-    const { nome, usuario, senha } = req.body || {};
+router.post('/corretores', async (req, res) => {
+    try {
+        const { nome, usuario, senha } = req.body || {};
 
-    if (!nome || !usuario || !senha) {
-        return res.status(400).json({ erro: 'Informe nome, usuário e senha.' });
+        if (!nome || !usuario || !senha) {
+            return res.status(400).json({ erro: 'Informe nome, usuário e senha.' });
+        }
+
+        const usuarioLimpo = usuario.toLowerCase().trim();
+
+        if (!/^[a-z0-9._-]{3,}$/.test(usuarioLimpo)) {
+            return res.status(400).json({ erro: 'Usuário inválido. Use 3+ caracteres (letras, números, . _ -).' });
+        }
+
+        if (senha.length < 4) {
+            return res.status(400).json({ erro: 'Senha muito curta (mínimo 4 caracteres).' });
+        }
+
+        const existe = await pool.query('SELECT id FROM usuarios WHERE usuario = $1', [usuarioLimpo]);
+        if (existe.rows.length) {
+            return res.status(409).json({ erro: 'Este usuário já está cadastrado.' });
+        }
+
+        const hash = bcrypt.hashSync(senha, 10);
+
+        const result = await pool.query(`
+            INSERT INTO usuarios (nome, usuario, senha_hash, tipo)
+            VALUES ($1, $2, $3, 'corretor')
+            RETURNING id, nome, usuario, criado_em
+        `, [nome.trim(), usuarioLimpo, hash]);
+
+        res.status(201).json({ corretor: result.rows[0] });
+
+    } catch (err) {
+        console.error('[admin/corretores POST] erro:', err);
+        res.status(500).json({ erro: 'Erro ao cadastrar corretor.' });
     }
-
-    const usuarioLimpo = usuario.toLowerCase().trim();
-
-    if (!/^[a-z0-9._-]{3,}$/.test(usuarioLimpo)) {
-        return res.status(400).json({ erro: 'Usuário inválido. Use 3+ caracteres (letras, números, . _ -).' });
-    }
-
-    if (senha.length < 4) {
-        return res.status(400).json({ erro: 'Senha muito curta (mínimo 4 caracteres).' });
-    }
-
-    const existe = db.prepare('SELECT id FROM usuarios WHERE usuario = ?').get(usuarioLimpo);
-    if (existe) {
-        return res.status(409).json({ erro: 'Este usuário já está cadastrado.' });
-    }
-
-    const hash = bcrypt.hashSync(senha, 10);
-
-    const info = db.prepare(`
-        INSERT INTO usuarios (nome, usuario, senha_hash, tipo)
-        VALUES (?, ?, ?, 'corretor')
-    `).run(nome.trim(), usuarioLimpo, hash);
-
-    const novo = db.prepare('SELECT id, nome, usuario, criado_em FROM usuarios WHERE id = ?').get(info.lastInsertRowid);
-
-    res.status(201).json({ corretor: novo });
 });
 
 // DELETE /api/admin/corretores/:id
-router.delete('/corretores/:id', (req, res) => {
-    const id = Number(req.params.id);
-    const corretor = db.prepare('SELECT id FROM usuarios WHERE id = ? AND tipo = ?').get(id, 'corretor');
+router.delete('/corretores/:id', async (req, res) => {
+    try {
+        const id = Number(req.params.id);
 
-    if (!corretor) {
-        return res.status(404).json({ erro: 'Corretor não encontrado.' });
+        const exist = await pool.query(
+            'SELECT id FROM usuarios WHERE id = $1 AND tipo = $2',
+            [id, 'corretor']
+        );
+
+        if (!exist.rows.length) {
+            return res.status(404).json({ erro: 'Corretor não encontrado.' });
+        }
+
+        await pool.query('DELETE FROM usuarios WHERE id = $1', [id]);
+        res.json({ ok: true });
+
+    } catch (err) {
+        console.error('[admin/corretores DELETE] erro:', err);
+        res.status(500).json({ erro: 'Erro ao excluir corretor.' });
     }
-
-    db.prepare('DELETE FROM usuarios WHERE id = ?').run(id);
-    res.json({ ok: true });
 });
 
 /* =========================================================
-   LISTAS — CRUD
+   LISTAS
    ========================================================= */
 
-// GET /api/admin/listas — listar com stats
-router.get('/listas', (req, res) => {
-    const listas = db.prepare('SELECT * FROM listas ORDER BY criado_em DESC').all();
+// GET /api/admin/listas
+router.get('/listas', async (req, res) => {
+    try {
+        const listasResult = await pool.query('SELECT * FROM listas ORDER BY criado_em DESC');
 
-    const comStats = listas.map(lista => {
-        const total        = db.prepare('SELECT COUNT(*) AS c FROM leads WHERE lista_id = ?').get(lista.id).c;
-        const qualificados = db.prepare("SELECT COUNT(*) AS c FROM leads WHERE lista_id = ? AND status = 'qualificado'").get(lista.id).c;
-        const aguardando   = db.prepare("SELECT COUNT(*) AS c FROM leads WHERE lista_id = ? AND status = 'novo'").get(lista.id).c;
-        const descartados  = db.prepare("SELECT COUNT(*) AS c FROM leads WHERE lista_id = ? AND status = 'descartado'").get(lista.id).c;
+        const comStats = [];
+        for (const lista of listasResult.rows) {
+            const stats = await pool.query(`
+                SELECT
+                    COUNT(*) AS total,
+                    COUNT(*) FILTER (WHERE status = 'qualificado') AS qualificados,
+                    COUNT(*) FILTER (WHERE status = 'descartado')  AS descartados,
+                    COUNT(*) FILTER (WHERE status = 'novo')        AS aguardando
+                FROM leads
+                WHERE lista_id = $1
+            `, [lista.id]);
 
-        // Corretores que fazem parte dessa lista
-        const corretores = db.prepare(`
-            SELECT DISTINCT u.id, u.nome, u.usuario
-            FROM usuarios u
-            INNER JOIN leads l ON l.corretor_id = u.id
-            WHERE l.lista_id = ?
-            ORDER BY u.nome ASC
-        `).all(lista.id);
+            const corretores = await pool.query(`
+                SELECT DISTINCT u.id, u.nome, u.usuario
+                FROM usuarios u
+                INNER JOIN leads l ON l.corretor_id = u.id
+                WHERE l.lista_id = $1
+                ORDER BY u.nome ASC
+            `, [lista.id]);
 
-        return { ...lista, total, qualificados, aguardando, descartados, corretores };
-    });
+            const s = stats.rows[0];
 
-    res.json({ listas: comStats });
+            comStats.push({
+                ...lista,
+                total: Number(s.total),
+                qualificados: Number(s.qualificados),
+                descartados: Number(s.descartados),
+                aguardando: Number(s.aguardando),
+                corretores: corretores.rows
+            });
+        }
+
+        res.json({ listas: comStats });
+
+    } catch (err) {
+        console.error('[admin/listas] erro:', err);
+        res.status(500).json({ erro: 'Erro ao listar listas.' });
+    }
 });
 
 // POST /api/admin/listas — subir e distribuir
-router.post('/listas', (req, res) => {
-    const { nome, contatos, corretoresIds } = req.body || {};
+router.post('/listas', async (req, res) => {
+    const client = await pool.connect();
+    try {
+        const { nome, contatos, corretoresIds } = req.body || {};
 
-    if (!nome || !contatos || !Array.isArray(contatos) || !contatos.length) {
-        return res.status(400).json({ erro: 'Informe o nome da lista e pelo menos 1 contato.' });
-    }
+        if (!nome || !Array.isArray(contatos) || !contatos.length) {
+            return res.status(400).json({ erro: 'Informe o nome da lista e pelo menos 1 contato.' });
+        }
 
-    if (!Array.isArray(corretoresIds) || !corretoresIds.length) {
-        return res.status(400).json({ erro: 'Selecione pelo menos 1 corretor.' });
-    }
+        if (!Array.isArray(corretoresIds) || !corretoresIds.length) {
+            return res.status(400).json({ erro: 'Selecione pelo menos 1 corretor.' });
+        }
 
-    // Valida que os corretores existem
-    const placeholders = corretoresIds.map(() => '?').join(',');
-    const corretoresValidos = db.prepare(`
-        SELECT id FROM usuarios WHERE id IN (${placeholders}) AND tipo = 'corretor'
-    `).all(...corretoresIds);
+        const placeholders = corretoresIds.map((_, i) => `$${i + 1}`).join(',');
+        const corretoresValidos = await client.query(
+            `SELECT id FROM usuarios WHERE id IN (${placeholders}) AND tipo = 'corretor'`,
+            corretoresIds
+        );
 
-    if (corretoresValidos.length !== corretoresIds.length) {
-        return res.status(400).json({ erro: 'Um ou mais corretores não existem.' });
-    }
+        if (corretoresValidos.rows.length !== corretoresIds.length) {
+            return res.status(400).json({ erro: 'Um ou mais corretores não existem.' });
+        }
 
-    const idsValidos = corretoresValidos.map(c => c.id);
-    const contatosEmbaralhados = embaralhar(contatos);
+        const idsValidos = corretoresValidos.rows.map(c => c.id);
 
-    const tx = db.transaction(() => {
-        // Cria a lista
-        const listaInfo = db.prepare('INSERT INTO listas (nome, total) VALUES (?, ?)').run(nome.trim(), contatos.length);
-        const listaId = listaInfo.lastInsertRowid;
+        // Embaralha
+        const embaralhados = [...contatos];
+        for (let i = embaralhados.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [embaralhados[i], embaralhados[j]] = [embaralhados[j], embaralhados[i]];
+        }
 
-        // Distribui em rodadas
-        const insertLead = db.prepare(`
-            INSERT INTO leads (lista_id, nome, telefone, corretor_id, status, distribuido_em)
-            VALUES (?, ?, ?, ?, 'novo', datetime('now', 'localtime'))
-        `);
+        await client.query('BEGIN');
+
+        const listaResult = await client.query(
+            'INSERT INTO listas (nome, total) VALUES ($1, $2) RETURNING id',
+            [nome.trim(), contatos.length]
+        );
+        const listaId = listaResult.rows[0].id;
 
         const distribuicao = {};
         idsValidos.forEach(id => distribuicao[id] = 0);
 
         let idx = 0;
-        for (const contato of contatosEmbaralhados) {
+        for (const contato of embaralhados) {
             const corretorId = idsValidos[idx % idsValidos.length];
-            insertLead.run(listaId, contato.nome, contato.telefone, corretorId);
+            await client.query(`
+                INSERT INTO leads (lista_id, nome, telefone, corretor_id, status, distribuido_em)
+                VALUES ($1, $2, $3, $4, 'novo', NOW())
+            `, [listaId, contato.nome, contato.telefone, corretorId]);
             distribuicao[corretorId]++;
             idx++;
         }
 
-        return { listaId, distribuicao };
-    });
+        await client.query('COMMIT');
 
-    const { listaId, distribuicao } = tx();
+        res.status(201).json({
+            ok: true,
+            listaId,
+            total: contatos.length,
+            distribuicao
+        });
 
-    res.status(201).json({
-        ok: true,
-        listaId,
-        total: contatos.length,
-        distribuicao
-    });
+    } catch (err) {
+        await client.query('ROLLBACK');
+        console.error('[admin/listas POST] erro:', err);
+        res.status(500).json({ erro: 'Erro ao subir lista.' });
+    } finally {
+        client.release();
+    }
 });
 
 // GET /api/admin/listas/:id/contatos
-router.get('/listas/:id/contatos', (req, res) => {
-    const id = Number(req.params.id);
+router.get('/listas/:id/contatos', async (req, res) => {
+    try {
+        const id = Number(req.params.id);
 
-    const contatos = db.prepare(`
-        SELECT l.*, u.nome AS corretor_nome
-        FROM leads l
-        LEFT JOIN usuarios u ON u.id = l.corretor_id
-        WHERE l.lista_id = ?
-        ORDER BY l.id ASC
-    `).all(id);
+        const result = await pool.query(`
+            SELECT l.*, u.nome AS corretor_nome
+            FROM leads l
+            LEFT JOIN usuarios u ON u.id = l.corretor_id
+            WHERE l.lista_id = $1
+            ORDER BY l.id ASC
+        `, [id]);
 
-    res.json({ contatos });
+        res.json({ contatos: result.rows });
+
+    } catch (err) {
+        console.error('[admin/listas contatos] erro:', err);
+        res.status(500).json({ erro: 'Erro ao listar contatos.' });
+    }
 });
 
 // DELETE /api/admin/listas/:id
-router.delete('/listas/:id', (req, res) => {
-    const id = Number(req.params.id);
-    db.prepare('DELETE FROM listas WHERE id = ?').run(id);
-    res.json({ ok: true });
+router.delete('/listas/:id', async (req, res) => {
+    try {
+        const id = Number(req.params.id);
+        await pool.query('DELETE FROM listas WHERE id = $1', [id]);
+        res.json({ ok: true });
+    } catch (err) {
+        console.error('[admin/listas DELETE] erro:', err);
+        res.status(500).json({ erro: 'Erro ao excluir lista.' });
+    }
 });
 
 // DELETE /api/admin/leads/:id
-router.delete('/leads/:id', (req, res) => {
-    const id = Number(req.params.id);
-    db.prepare('DELETE FROM leads WHERE id = ?').run(id);
-    res.json({ ok: true });
+router.delete('/leads/:id', async (req, res) => {
+    try {
+        const id = Number(req.params.id);
+        await pool.query('DELETE FROM leads WHERE id = $1', [id]);
+        res.json({ ok: true });
+    } catch (err) {
+        console.error('[admin/leads DELETE] erro:', err);
+        res.status(500).json({ erro: 'Erro ao excluir lead.' });
+    }
 });
 
 /* =========================================================
@@ -213,45 +275,63 @@ router.delete('/leads/:id', (req, res) => {
    ========================================================= */
 
 // GET /api/admin/dashboard
-router.get('/dashboard', (req, res) => {
-    const totalListas    = db.prepare('SELECT COUNT(*) AS c FROM listas').get().c;
-    const totalContatos  = db.prepare('SELECT COUNT(*) AS c FROM leads').get().c;
-    const qualificados   = db.prepare("SELECT COUNT(*) AS c FROM leads WHERE status = 'qualificado'").get().c;
-    const descartados    = db.prepare("SELECT COUNT(*) AS c FROM leads WHERE status = 'descartado'").get().c;
-    const aguardando     = db.prepare("SELECT COUNT(*) AS c FROM leads WHERE status = 'novo'").get().c;
+router.get('/dashboard', async (req, res) => {
+    try {
+        const totais = await pool.query(`
+            SELECT
+                (SELECT COUNT(*) FROM listas) AS total_listas,
+                (SELECT COUNT(*) FROM leads) AS total_contatos,
+                (SELECT COUNT(*) FROM leads WHERE status = 'qualificado') AS qualificados,
+                (SELECT COUNT(*) FROM leads WHERE status = 'descartado')  AS descartados,
+                (SELECT COUNT(*) FROM leads WHERE status = 'novo')        AS aguardando
+        `);
 
-    const porCorretor = db.prepare(`
-        SELECT u.id, u.nome, u.usuario,
-               COUNT(l.id) AS total,
-               SUM(CASE WHEN l.status = 'qualificado' THEN 1 ELSE 0 END) AS qualificados,
-               SUM(CASE WHEN l.status = 'descartado' THEN 1 ELSE 0 END) AS descartados,
-               SUM(CASE WHEN l.status = 'novo' THEN 1 ELSE 0 END) AS aguardando
-        FROM usuarios u
-        LEFT JOIN leads l ON l.corretor_id = u.id
-        WHERE u.tipo = 'corretor'
-        GROUP BY u.id
-        ORDER BY u.nome ASC
-    `).all();
+        const t = totais.rows[0];
 
-    const porTagRows = db.prepare(`
-        SELECT resultado, COUNT(*) AS count
-        FROM leads
-        WHERE resultado IS NOT NULL
-        GROUP BY resultado
-    `).all();
+        const porCorretor = await pool.query(`
+            SELECT
+                u.id, u.nome, u.usuario,
+                COUNT(l.id) AS total,
+                COUNT(l.id) FILTER (WHERE l.status = 'qualificado') AS qualificados,
+                COUNT(l.id) FILTER (WHERE l.status = 'descartado')  AS descartados,
+                COUNT(l.id) FILTER (WHERE l.status = 'novo')        AS aguardando
+            FROM usuarios u
+            LEFT JOIN leads l ON l.corretor_id = u.id
+            WHERE u.tipo = 'corretor'
+            GROUP BY u.id
+            ORDER BY u.nome ASC
+        `);
 
-    const porTag = {};
-    porTagRows.forEach(t => porTag[t.resultado] = t.count);
+        const porTag = await pool.query(`
+            SELECT resultado, COUNT(*) AS count
+            FROM leads
+            WHERE resultado IS NOT NULL
+            GROUP BY resultado
+        `);
 
-    res.json({
-        totalListas,
-        totalContatos,
-        qualificados,
-        descartados,
-        aguardando,
-        porCorretor,
-        porTag
-    });
+        const porTagObj = {};
+        porTag.rows.forEach(r => porTagObj[r.resultado] = Number(r.count));
+
+        res.json({
+            totalListas: Number(t.total_listas),
+            totalContatos: Number(t.total_contatos),
+            qualificados: Number(t.qualificados),
+            descartados: Number(t.descartados),
+            aguardando: Number(t.aguardando),
+            porCorretor: porCorretor.rows.map(c => ({
+                ...c,
+                total: Number(c.total),
+                qualificados: Number(c.qualificados),
+                descartados: Number(c.descartados),
+                aguardando: Number(c.aguardando)
+            })),
+            porTag: porTagObj
+        });
+
+    } catch (err) {
+        console.error('[admin/dashboard] erro:', err);
+        res.status(500).json({ erro: 'Erro ao carregar dashboard.' });
+    }
 });
 
 module.exports = router;

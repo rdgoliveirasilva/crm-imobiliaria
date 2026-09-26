@@ -1,58 +1,55 @@
 -- =========================================================
--- SCHEMA — CRM SR Lançamentos
+-- SCHEMA — CRM SR Lançamentos (PostgreSQL)
 -- =========================================================
 
 -- Usuários (admin + corretores na mesma tabela)
 CREATE TABLE IF NOT EXISTS usuarios (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    nome TEXT NOT NULL,
-    usuario TEXT NOT NULL UNIQUE,
-    senha_hash TEXT NOT NULL,
-    tipo TEXT NOT NULL CHECK(tipo IN ('admin', 'corretor')),
-    ativo INTEGER DEFAULT 1,
-    criado_em TEXT DEFAULT (datetime('now', 'localtime'))
+    id SERIAL PRIMARY KEY,
+    nome VARCHAR(120) NOT NULL,
+    usuario VARCHAR(60) NOT NULL UNIQUE,
+    senha_hash VARCHAR(255) NOT NULL,
+    tipo VARCHAR(20) NOT NULL CHECK (tipo IN ('admin', 'corretor')),
+    ativo BOOLEAN DEFAULT TRUE,
+    criado_em TIMESTAMP DEFAULT NOW()
 );
 
 -- Listas subidas pelo admin
 CREATE TABLE IF NOT EXISTS listas (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    nome TEXT NOT NULL,
+    id SERIAL PRIMARY KEY,
+    nome VARCHAR(120) NOT NULL,
     total INTEGER NOT NULL,
-    criado_em TEXT DEFAULT (datetime('now', 'localtime'))
+    criado_em TIMESTAMP DEFAULT NOW()
 );
 
 -- Leads (contatos)
 CREATE TABLE IF NOT EXISTS leads (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    lista_id INTEGER NOT NULL,
-    nome TEXT NOT NULL,
-    telefone TEXT NOT NULL,
-    corretor_id INTEGER,
-    status TEXT NOT NULL DEFAULT 'novo' CHECK(status IN ('novo', 'qualificado', 'descartado')),
-    resultado TEXT,
+    id SERIAL PRIMARY KEY,
+    lista_id INTEGER NOT NULL REFERENCES listas(id) ON DELETE CASCADE,
+    nome VARCHAR(120) NOT NULL,
+    telefone VARCHAR(20) NOT NULL,
+    corretor_id INTEGER REFERENCES usuarios(id) ON DELETE SET NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'novo'
+        CHECK (status IN ('novo', 'qualificado', 'descartado')),
+    resultado VARCHAR(40),
     observacao TEXT DEFAULT '',
-    distribuido_em TEXT,
-    decidido_em TEXT,
-    criado_em TEXT DEFAULT (datetime('now', 'localtime')),
-    agendamento_data TEXT,
-    agendamento_local TEXT,
-    FOREIGN KEY (lista_id) REFERENCES listas(id) ON DELETE CASCADE,
-    FOREIGN KEY (corretor_id) REFERENCES usuarios(id) ON DELETE SET NULL
+    agendamento_data TIMESTAMP,
+    agendamento_local VARCHAR(255),
+    distribuido_em TIMESTAMP,
+    decidido_em TIMESTAMP,
+    criado_em TIMESTAMP DEFAULT NOW()
 );
 
 -- Histórico de ações
 CREATE TABLE IF NOT EXISTS historico (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    lead_id INTEGER NOT NULL,
-    corretor_id INTEGER NOT NULL,
-    acao TEXT NOT NULL,
+    id SERIAL PRIMARY KEY,
+    lead_id INTEGER NOT NULL REFERENCES leads(id) ON DELETE CASCADE,
+    corretor_id INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+    acao VARCHAR(40) NOT NULL,
     observacao TEXT DEFAULT '',
-    criado_em TEXT DEFAULT (datetime('now', 'localtime')),
-    FOREIGN KEY (lead_id) REFERENCES leads(id) ON DELETE CASCADE,
-    FOREIGN KEY (corretor_id) REFERENCES usuarios(id) ON DELETE CASCADE
+    criado_em TIMESTAMP DEFAULT NOW()
 );
 
--- Índices pra performance
+-- Índices
 CREATE INDEX IF NOT EXISTS idx_leads_corretor ON leads(corretor_id);
 CREATE INDEX IF NOT EXISTS idx_leads_status ON leads(status);
 CREATE INDEX IF NOT EXISTS idx_leads_lista ON leads(lista_id);
