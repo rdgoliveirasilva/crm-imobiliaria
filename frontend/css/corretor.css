@@ -2234,6 +2234,26 @@
 }
 
 /* =========================================================
+   HISTÓRICO — LEAD DESCARTADO
+   ========================================================= */
+
+.historico-item.descartado {
+    opacity: 0.6;
+    background: rgba(248, 251, 255, 0.7);
+    border-color: rgba(0, 44, 97, 0.04);
+}
+
+.historico-item.descartado:hover {
+    opacity: 1;
+    border-color: rgba(0, 44, 97, 0.15);
+    background: var(--white);
+}
+
+.historico-item.descartado .historico-item-nome {
+    color: var(--gray-700);
+}
+
+/* =========================================================
    RESPONSIVO
    ========================================================= */
 

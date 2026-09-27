@@ -308,7 +308,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         try {
             const stats = await ApiClient.get('/api/corretor/estatisticas');
-            const temHistorico = stats.qualificados > 0;
+            const temHistorico = stats.trabalhados > 0;
 
             const waitingIcon  = document.getElementById('waitingIcon');
             const waitingTitle = document.getElementById('waitingTitle');
@@ -326,7 +326,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     'Assim que o administrador liberar uma nova lista, ela aparecerá aqui automaticamente.';
                 if (waitingPulse) waitingPulse.style.display = 'none';
                 if (waitingHist)  waitingHist.style.display = 'block';
-                if (histCountEsp) histCountEsp.textContent = stats.qualificados;
+                if (histCountEsp) histCountEsp.textContent = stats.trabalhados;
             } else {
                 waitingState.classList.remove('all-done');
                 if (waitingIcon)  waitingIcon.innerHTML = '<i class="fas fa-hourglass-half"></i>';
@@ -358,11 +358,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const pct = stats.total > 0 ? (stats.trabalhados / stats.total) * 100 : 0;
             progressFill.style.width = `${pct}%`;
 
-            statQualificadosTop.textContent = stats.qualificados;
+            statQualificadosTop.textContent = stats.trabalhados;
             statRestantesTop.textContent    = stats.restantes;
 
-            if (historicoCount) historicoCount.textContent = stats.qualificados;
-            if (historicoCountEspera) historicoCountEspera.textContent = stats.qualificados;
+            if (historicoCount) historicoCount.textContent = stats.trabalhados;
+            if (historicoCountEspera) historicoCountEspera.textContent = stats.trabalhados;
 
             resultList.querySelectorAll('.result-tag').forEach(btn => {
                 const tag = btn.dataset.tag;
@@ -676,8 +676,8 @@ document.addEventListener('DOMContentLoaded', () => {
             historicoVazio.style.display = 'none';
             historicoLista.style.display = 'flex';
 
-            const totalQualif = carteiras.reduce((acc, c) => acc + c.total_qualificados, 0);
-            historicoResumo.textContent = `${carteiras.length} ${carteiras.length === 1 ? 'carteira' : 'carteiras'} · ${totalQualif} qualificados`;
+                const totalTrabalhados = carteiras.reduce((acc, c) => acc + c.total_qualificados, 0);
+            historicoResumo.textContent = `${carteiras.length} ${carteiras.length === 1 ? 'carteira' : 'carteiras'} · ${totalTrabalhados} trabalhados`;
 
             historicoLista.innerHTML = carteiras.map(c => `
                 <button class="carteira-item" data-lista-id="${c.lista_id}">
@@ -688,7 +688,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <strong>${escapeHtml(c.lista_nome)}</strong>
                         <small>
                             <i class="fas fa-check-circle"></i>
-                            ${c.total_qualificados} ${c.total_qualificados === 1 ? 'qualificado' : 'qualificados'}
+                            ${c.total_qualificados} ${c.total_qualificados === 1 ? 'trabalhado' : 'trabalhados'}
                             · Última atividade ${dataCurta(c.ultima_atividade)}
                         </small>
                     </div>
@@ -799,6 +799,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             leadsContainer.innerHTML = leads.map(item => {
                 const classeCor = tagCor(item.resultado);
+                const ehDescartado = item.status === 'descartado';
                 const data = new Date(item.decidido_em).toLocaleString('pt-BR', {
                     day: '2-digit', month: '2-digit', year: '2-digit',
                     hour: '2-digit', minute: '2-digit'
@@ -821,7 +822,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 return `
-                    <div class="historico-item">
+                    <div class="historico-item ${ehDescartado ? 'descartado' : ''}">
                         <div class="historico-item-top">
                             <span class="historico-item-nome">${escapeHtml(item.nome)}</span>
                             <button
