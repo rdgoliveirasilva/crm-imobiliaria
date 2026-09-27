@@ -161,7 +161,7 @@ router.patch('/leads/:id/qualificacao', async (req, res) => {
         }
 
         const leadCheck = await client.query(
-            `SELECT id FROM leads WHERE id = $1 AND corretor_id = $2 AND status = 'qualificado'`,
+            `SELECT id FROM leads WHERE id = $1 AND corretor_id = $2 AND status IN ('qualificado', 'descartado')`,
             [leadId, corretorId]
         );
 
@@ -269,7 +269,7 @@ router.get('/historico/carteiras', async (req, res) => {
             FROM leads l
             INNER JOIN listas li ON li.id = l.lista_id
             WHERE l.corretor_id = $1
-              AND l.status = 'qualificado'
+              AND l.status IN ('qualificado', 'descartado')
               AND l.decidido_em IS NOT NULL
             GROUP BY l.lista_id, li.nome, li.criado_em
             ORDER BY ultima_atividade DESC
@@ -309,13 +309,14 @@ router.get('/historico/carteiras/:listaId', async (req, res) => {
 
         let sql = `
             SELECT id, nome, telefone, resultado, observacao,
-                   decidido_em, agendamento_data, agendamento_local
+                   decidido_em, agendamento_data, agendamento_local, status
             FROM leads
             WHERE corretor_id = $1
               AND lista_id = $2
-              AND status = 'qualificado'
+              AND status IN ('qualificado', 'descartado')
               AND decidido_em IS NOT NULL
         `;
+        
         const params = [corretorId, listaId];
 
         if (busca) {
