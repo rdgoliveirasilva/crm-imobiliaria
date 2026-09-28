@@ -27,15 +27,15 @@
     <!-- Descrição padrão (Google) -->
     <meta name="description" content="Uma ferramenta exclusiva de prospecção da imobiliária Sônia e Ramalho para os corretores encontrarem novos clientes e potencializar suas oportunidades de venda de forma otimizada.">
 
+    
     <link rel="icon" type="image/png" href="assets/img/logo.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-
-    <link rel="stylesheet" href="css/style.css">
+ <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/corretor.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>
 <body class="corretor-page">
 
@@ -64,9 +64,8 @@
                     <span class="user-greeting">Bem vindo,</span>
                     <strong id="headerUserName">Corretor</strong>
                 </div>
-                <button class="btn-logout" id="btnLogout" title="Sair">
-                    <i class="fas fa-sign-out-alt"></i>
-                    <span>Sair</span>
+                <button class="btn-avatar" id="btnAvatar" title="Menu">
+                    <i class="fas fa-user"></i>
                 </button>
             </div>
         </div>
@@ -354,6 +353,7 @@
     <div class="toast" id="toast"></div>
 
 <script src="js/api-client.js"></script>
+<script src="js/avatar.js"></script>
 <script src="js/acoes.js"></script>
 <script src="js/corretor.js"></script>
 </body>

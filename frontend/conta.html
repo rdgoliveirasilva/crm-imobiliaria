@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prospect SR Lançamentos</title>
+
+    <link rel="icon" type="image/png" href="assets/img/logo.png">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/conta.css">
+
+    <script src="js/auth-guard.js"></script>
+</head>
+<body class="conta-page">
+
+    <!-- =====================================================
+         HEADER (mesmo estilo do corretor/admin)
+         ===================================================== -->
+    <header class="app-header">
+        <div class="header-inner">
+            <div class="header-brand">
+                <div class="logo-mark">
+                    <img src="assets/img/logo.png" alt="SR Lançamentos"
+                        onerror="this.style.display='none'; this.parentElement.classList.add('fallback');">
+                    <i class="fas fa-building logo-fallback"></i>
+                </div>
+                <div class="header-brand-text">
+                    <h1>SR <span>Lançamentos</span></h1>
+                    <p>Minha Conta</p>
+                </div>
+            </div>
+
+            <div class="header-user">
+                <div class="user-info">
+                    <span class="user-greeting">Olá,</span>
+                    <strong id="headerUserName">—</strong>
+                </div>
+                <button class="btn-avatar" id="btnAvatar" title="Menu">
+                    <i class="fas fa-user"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- =====================================================
+         MAIN
+         ===================================================== -->
+    <main class="app-main">
+
+        <div class="conta-wrapper">
+
+            <!-- Bloco 1: Perfil -->
+            <section class="conta-card">
+                <header class="conta-header">
+                    <div class="conta-icon">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <div>
+                        <h2>Meus dados</h2>
+                        <p>Atualize suas informações pessoais</p>
+                    </div>
+                </header>
+
+                <div class="conta-body">
+
+                    <div class="form-group">
+                        <label for="nome">Nome completo</label>
+                        <input type="text" id="nome" placeholder="Seu nome">
+                        <span class="form-error" id="nomeError"></span>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="usuario">Usuário</label>
+                        <input type="text" id="usuario" disabled>
+                        <span class="form-hint">
+                            <i class="fas fa-info-circle"></i>
+                            O usuário não pode ser alterado.
+                        </span>
+                    </div>
+
+                    <div class="form-actions">
+                        <button class="btn btn-primary" id="btnSalvarPerfil">
+                            <i class="fas fa-check"></i>
+                            Salvar informações
+                        </button>
+                    </div>
+
+                </div>
+            </section>
+
+            <!-- Bloco 2: Senha -->
+            <section class="conta-card">
+                <header class="conta-header">
+                    <div class="conta-icon">
+                        <i class="fas fa-lock"></i>
+                    </div>
+                    <div>
+                        <h2>Alterar senha</h2>
+                        <p>Use no mínimo 4 caracteres</p>
+                    </div>
+                </header>
+
+                <div class="conta-body">
+
+                    <div class="form-group">
+                        <label for="senhaAtual">Senha atual</label>
+                        <input type="password" id="senhaAtual" placeholder="••••••••">
+                        <span class="form-error" id="senhaAtualError"></span>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="senhaNova">Nova senha</label>
+                        <input type="password" id="senhaNova" placeholder="••••••••">
+                        <span class="form-error" id="senhaNovaError"></span>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="senhaConfirma">Confirmar nova senha</label>
+                        <input type="password" id="senhaConfirma" placeholder="••••••••">
+                        <span class="form-error" id="senhaConfirmaError"></span>
+                    </div>
+
+                    <div class="form-actions">
+                        <button class="btn btn-primary" id="btnAlterarSenha">
+                            <i class="fas fa-key"></i>
+                            Alterar senha
+                        </button>
+                    </div>
+
+                </div>
+            </section>
+
+        </div>
+
+        <div class="conta-footer">
+            <a href="corretor.html" class="btn-voltar">
+                <i class="fas fa-arrow-left"></i>
+                Voltar
+            </a>
+        </div>
+
+    </main>
+
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+
+    <script src="js/api-client.js"></script>
+    <script src="js/avatar.js"></script>
+    <script src="js/conta.js"></script>
+</body>
+</html>
