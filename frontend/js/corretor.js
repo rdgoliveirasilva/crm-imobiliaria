@@ -703,7 +703,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             leadsContainer.innerHTML = leads.map(item => {
                 const classeCor = tagCor(item.resultado);
-                const ehDescartado = item.status === 'descartado';
+                const ehDescartado = item.status === 'descartado' || item.status === 'sem_resposta';
                 const data = new Date(item.decidido_em).toLocaleString('pt-BR', {
                     day: '2-digit', month: '2-digit', year: '2-digit',
                     hour: '2-digit', minute: '2-digit'
@@ -794,12 +794,15 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
             <div class="tag-editor-list">
                 ${[
+                    { key: 'vendido',           label: 'Vendido',               cor: 'success' },
                     { key: 'agendado',          label: 'Agendado',              cor: 'success' },
                     { key: 'em_atendimento',    label: 'Em atendimento',        cor: 'success' },
                     { key: 'mensagem_enviada',  label: 'Mensagem enviada',      cor: 'warning' },
                     { key: 'retornar_depois',   label: 'Retornar depois',       cor: 'warning' },
+                    { key: 'follow_up',         label: 'Follow up',             cor: 'warning' },
                     { key: 'sem_interesse',     label: 'Cliente sem interesse', cor: 'danger'  },
-                    { key: 'telefone_invalido', label: 'Telefone inexistente',  cor: 'danger'  }
+                    { key: 'telefone_invalido', label: 'Telefone inexistente',  cor: 'danger'  },
+                    { key: 'sem_resposta',      label: 'Sem resposta',          cor: 'danger'  }
                 ].map(t => `
                     <button
                         class="tag-opcao ${t.cor} ${t.key === resultadoAtual ? 'atual' : ''}"
@@ -1058,17 +1061,20 @@ document.addEventListener('DOMContentLoaded', () => {
         const mapa = {
             agendado:          'Agendado',
             em_atendimento:    'Em atendimento',
+            vendido:           'Vendido',
             mensagem_enviada:  'Mensagem enviada',
             retornar_depois:   'Retornar depois',
+            follow_up:         'Follow up',
             sem_interesse:     'Cliente sem interesse',
-            telefone_invalido: 'Telefone inexistente'
+            telefone_invalido: 'Telefone inexistente',
+            sem_resposta:      'Sem resposta'
         };
         return mapa[tag] || tag;
     }
 
     function tagCor(tag) {
-        if (['agendado', 'em_atendimento'].includes(tag)) return 'success';
-        if (['mensagem_enviada', 'retornar_depois'].includes(tag)) return 'warning';
+        if (['agendado', 'em_atendimento', 'vendido'].includes(tag)) return 'success';
+        if (['mensagem_enviada', 'retornar_depois', 'follow_up'].includes(tag)) return 'warning';
         return 'danger';
     }
 
