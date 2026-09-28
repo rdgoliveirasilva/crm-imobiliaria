@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS usuarios (
     senha_hash VARCHAR(255) NOT NULL,
     tipo VARCHAR(20) NOT NULL CHECK (tipo IN ('admin', 'corretor')),
     ativo BOOLEAN DEFAULT TRUE,
+    ultimo_acesso TIMESTAMP,
     criado_em TIMESTAMP DEFAULT NOW()
 );
 

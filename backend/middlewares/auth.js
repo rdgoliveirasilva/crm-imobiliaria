@@ -1,8 +1,10 @@
 /* =========================================================
    MIDDLEWARE DE AUTENTICAÇÃO JWT
+   Atualiza "ultimo_acesso" a cada requisição autenticada.
    ========================================================= */
 
 const jwt = require('jsonwebtoken');
+const { pool } = require('../config/db');
 require('dotenv').config();
 
 function autenticar(req, res, next) {
@@ -17,6 +19,15 @@ function autenticar(req, res, next) {
     try {
         const payload = jwt.verify(token, process.env.JWT_SECRET);
         req.usuario = payload;
+
+        // 🔄 Atualiza "ultimo_acesso" em background (não bloqueia a resposta)
+        pool.query(
+            'UPDATE usuarios SET ultimo_acesso = NOW() WHERE id = $1',
+            [payload.id]
+        ).catch(err => {
+            console.error('[auth] erro ao atualizar ultimo_acesso:', err.message);
+        });
+
         next();
     } catch (err) {
         return res.status(401).json({ erro: 'Token inválido ou expirado.' });

@@ -334,4 +334,111 @@ router.get('/dashboard', async (req, res) => {
     }
 });
 
+/* =========================================================
+   DASHBOARD — CARTEIRAS E CORRETORES
+   ========================================================= */
+
+// GET /api/admin/dashboard/carteiras
+router.get('/dashboard/carteiras', async (req, res) => {
+    try {
+        /* ------------------------------------------
+           1. Corretores + status online/ausente/offline
+        ------------------------------------------ */
+
+        const corretoresResult = await pool.query(`
+            SELECT
+                u.id,
+                u.nome,
+                u.usuario,
+                u.ultimo_acesso,
+                COUNT(l.id) FILTER (WHERE l.status = 'qualificado') AS total_qualificados,
+                COUNT(l.id) FILTER (WHERE l.status = 'novo')        AS total_fila,
+                COUNT(l.id) AS total_carteira
+            FROM usuarios u
+            LEFT JOIN leads l ON l.corretor_id = u.id
+            WHERE u.tipo = 'corretor'
+            GROUP BY u.id
+            ORDER BY u.nome ASC
+        `);
+
+        const agora = Date.now();
+
+        const corretoresResumo = corretoresResult.rows.map(c => {
+            let status = 'offline';
+
+            if (c.ultimo_acesso) {
+                const diffMin = Math.floor((agora - new Date(c.ultimo_acesso).getTime()) / 60000);
+
+                if (diffMin <= 14) status = 'online';
+                else if (diffMin <= 19) status = 'ausente';
+                else status = 'offline';
+            }
+
+            return {
+                id: c.id,
+                nome: c.nome,
+                usuario: c.usuario,
+                status,
+                ultimo_acesso: c.ultimo_acesso,
+                total_qualificados: Number(c.total_qualificados),
+                total_fila: Number(c.total_fila),
+                total_carteira: Number(c.total_carteira)
+            };
+        });
+
+        /* ------------------------------------------
+           2. Carteiras (listas) + desempenho por corretor
+        ------------------------------------------ */
+
+        const listasResult = await pool.query(`
+            SELECT id, nome, total, criado_em
+            FROM listas
+            ORDER BY criado_em DESC
+        `);
+
+        const carteiras = [];
+
+        for (const lista of listasResult.rows) {
+            // Corretores que participam dessa lista, com desempenho
+            const porCorretorResult = await pool.query(`
+                SELECT
+                    u.id,
+                    u.nome,
+                    u.usuario,
+                    COUNT(l.id) AS recebeu,
+                    COUNT(l.id) FILTER (WHERE l.status = 'qualificado') AS qualificou,
+                    COUNT(l.id) FILTER (WHERE l.status = 'novo')        AS fila,
+                    COUNT(l.id) FILTER (WHERE l.status = 'descartado')  AS descartou
+                FROM usuarios u
+                INNER JOIN leads l ON l.corretor_id = u.id
+                WHERE l.lista_id = $1
+                GROUP BY u.id
+                ORDER BY u.nome ASC
+            `, [lista.id]);
+
+            carteiras.push({
+                lista_id: lista.id,
+                nome: lista.nome,
+                total: lista.total,
+                criado_em: lista.criado_em,
+                corretores: porCorretorResult.rows.map(c => ({
+                    id: c.id,
+                    nome: c.nome,
+                    usuario: c.usuario,
+                    recebeu: Number(c.recebeu),
+                    qualificou: Number(c.qualificou),
+                    fila: Number(c.fila),
+                    descartou: Number(c.descartou)
+                }))
+            });
+        }
+
+        res.json({ corretoresResumo, carteiras });
+
+    } catch (err) {
+        console.error('[admin/dashboard/carteiras] erro:', err);
+        res.status(500).json({ erro: 'Erro ao carregar carteiras.' });
+    }
+});
+
 module.exports = router;
