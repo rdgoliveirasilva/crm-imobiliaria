@@ -13,6 +13,64 @@ const router = express.Router();
 router.use(autenticar, apenasAdmin);
 
 /* =========================================================
+   HELPERS
+   ========================================================= */
+
+function embaralhar(arr) {
+    const copia = [...arr];
+    for (let i = copia.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [copia[i], copia[j]] = [copia[j], copia[i]];
+    }
+    return copia;
+}
+
+/**
+ * Insere leads em massa (bulk insert) em chunks.
+ * Retorna a distribuição final { [corretorId]: count }.
+ */
+async function inserirLeadsEmMassa(client, listaId, contatos, idsValidos) {
+    const CHUNK_SIZE = 500;
+    const distribuicao = {};
+    idsValidos.forEach(id => distribuicao[id] = 0);
+
+    // Embaralha os contatos
+    const embaralhados = embaralhar(contatos);
+
+    // Distribui em rodadas (round-robin)
+    // Primeiro monta a lista de (contato, corretorId)
+    const pares = [];
+    let idx = 0;
+    for (const contato of embaralhados) {
+        const corretorId = idsValidos[idx % idsValidos.length];
+        pares.push({ contato, corretorId });
+        distribuicao[corretorId]++;
+        idx++;
+    }
+
+    // Processa em chunks
+    for (let i = 0; i < pares.length; i += CHUNK_SIZE) {
+        const chunk = pares.slice(i, i + CHUNK_SIZE);
+
+        const values = [];
+        const params = [];
+        let p = 1;
+
+        for (const { contato, corretorId } of chunk) {
+            values.push(`($${p++}, $${p++}, $${p++}, $${p++}, 'novo', NOW())`);
+            params.push(listaId, contato.nome, contato.telefone, corretorId);
+        }
+
+        await client.query(`
+            INSERT INTO leads (lista_id, nome, telefone, corretor_id, status, distribuido_em)
+            VALUES ${values.join(', ')}
+        `, params);
+    }
+
+    return distribuicao;
+}
+
+/* =========================================================
    CORRETORES
    ========================================================= */
 
@@ -152,16 +210,71 @@ router.get('/listas', async (req, res) => {
     }
 });
 
-// POST /api/admin/listas — subir e distribuir
+// POST /api/admin/listas — subir e distribuir (com bulk insert)
 router.post('/listas', async (req, res) => {
     const client = await pool.connect();
     try {
-        const { nome, contatos, corretoresIds, mensagemWhatsapp } = req.body || {};
+        const {
+            nome,
+            contatos,
+            corretoresIds,
+            mensagemWhatsapp,
+            listaIdExistente
+        } = req.body || {};
 
         if (!nome || !Array.isArray(contatos) || !contatos.length) {
             return res.status(400).json({ erro: 'Informe o nome da lista e pelo menos 1 contato.' });
         }
 
+        // ============================================================
+        // CASO 1 — ATUALIZAR LISTA EXISTENTE
+        // ============================================================
+        if (listaIdExistente) {
+            const listaId = Number(listaIdExistente);
+
+            const listaCheck = await client.query('SELECT * FROM listas WHERE id = $1', [listaId]);
+            if (!listaCheck.rows.length) {
+                return res.status(404).json({ erro: 'Lista não encontrada.' });
+            }
+
+            const corretoresResult = await client.query(`
+                SELECT DISTINCT corretor_id
+                FROM leads
+                WHERE lista_id = $1 AND corretor_id IS NOT NULL
+            `, [listaId]);
+
+            if (!corretoresResult.rows.length) {
+                return res.status(400).json({
+                    erro: 'Essa lista ainda não tem corretores. Adicione ao menos um antes de atualizar.'
+                });
+            }
+
+            const idsValidos = corretoresResult.rows.map(r => r.corretor_id);
+
+            await client.query('BEGIN');
+
+            const distribuicao = await inserirLeadsEmMassa(client, listaId, contatos, idsValidos);
+
+            await client.query(`
+                UPDATE listas
+                SET total = total + $1
+                WHERE id = $2
+            `, [contatos.length, listaId]);
+
+            await client.query('COMMIT');
+
+            return res.status(201).json({
+                ok: true,
+                listaId,
+                atualizada: true,
+                adicionados: contatos.length,
+                distribuicao
+            });
+        }
+
+        // ============================================================
+        // CASO 2 — CRIAR LISTA NOVA
+        // ============================================================
         if (!Array.isArray(corretoresIds) || !corretoresIds.length) {
             return res.status(400).json({ erro: 'Selecione pelo menos 1 corretor.' });
         }
@@ -178,13 +291,6 @@ router.post('/listas', async (req, res) => {
 
         const idsValidos = corretoresValidos.rows.map(c => c.id);
 
-        // Embaralha
-        const embaralhados = [...contatos];
-        for (let i = embaralhados.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [embaralhados[i], embaralhados[j]] = [embaralhados[j], embaralhados[i]];
-        }
-
         await client.query('BEGIN');
 
         const listaResult = await client.query(
@@ -193,25 +299,14 @@ router.post('/listas', async (req, res) => {
         );
         const listaId = listaResult.rows[0].id;
 
-        const distribuicao = {};
-        idsValidos.forEach(id => distribuicao[id] = 0);
-
-        let idx = 0;
-        for (const contato of embaralhados) {
-            const corretorId = idsValidos[idx % idsValidos.length];
-            await client.query(`
-                INSERT INTO leads (lista_id, nome, telefone, corretor_id, status, distribuido_em)
-                VALUES ($1, $2, $3, $4, 'novo', NOW())
-            `, [listaId, contato.nome, contato.telefone, corretorId]);
-            distribuicao[corretorId]++;
-            idx++;
-        }
+        const distribuicao = await inserirLeadsEmMassa(client, listaId, contatos, idsValidos);
 
         await client.query('COMMIT');
 
         res.status(201).json({
             ok: true,
             listaId,
+            atualizada: false,
             total: contatos.length,
             distribuicao
         });
@@ -399,7 +494,6 @@ router.get('/dashboard/carteiras', async (req, res) => {
         const carteiras = [];
 
         for (const lista of listasResult.rows) {
-            // Corretores que participam dessa lista, com desempenho
             const porCorretorResult = await pool.query(`
                 SELECT
                     u.id,
