@@ -1,11 +1,5 @@
 /* =========================================================
    CORRETOR.JS — Painel do corretor
-   Recursos:
-   - Próximo lead do banco
-   - Registrar resultado (com agendamento pra agendado/retornar_depois)
-   - Histórico por carteira (com busca)
-   - Editar qualificação no histórico (com agendamento)
-   - Notificações 30min antes + na hora (site aberto)
    Depende de: api-client.js, acoes.js
    ========================================================= */
 
@@ -19,17 +13,16 @@ document.addEventListener('DOMContentLoaded', () => {
     let leadAtual = null;
     let processando = false;
     let toastTimer = null;
-    let carteiraAtual = null;              // { listaId, busca }
-    let leadsDaCarteiraAtual = [];         // leads carregados no histórico
-    let agendamentoPendente = null;        // modal de agendamento aberto
-    let agendamentosNotificados = {};      // evita notificar 2x o mesmo
-    let leadEmModoAgendamento = false;   // 👈 quando aberto via notificação
+    let carteiraAtual = null;
+    let leadsDaCarteiraAtual = [];
+    let agendamentoPendente = null;
+    let agendamentosNotificados = {};
+    let leadEmModoAgendamento = false;
 
     /* =========================================================
        ELEMENTOS
        ========================================================= */
     const headerUserName       = $('headerUserName');
-    const btnLogout            = $('btnLogout');
     const progressCount        = $('progressCount');
     const progressFill         = $('progressFill');
     const statQualificadosTop  = $('statQualificadosTop');
@@ -63,7 +56,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnCopiarNumero      = $('btnCopiarNumero');
     const btnModalWhatsApp     = $('btnModalWhatsApp');
 
-    /* Modal de agendamento */
+    // Agendamento
     const modalAgendamento          = $('modalAgendamento');
     const agendamentoTitulo         = $('agendamentoTitulo');
     const agendamentoSubtitulo      = $('agendamentoSubtitulo');
@@ -79,7 +72,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnSalvarAgendamento      = $('btnSalvarAgendamento');
     const btnSalvarAgendamentoTexto = $('btnSalvarAgendamentoTexto');
 
-    /* Notificações */
+    // Notificações
     const notifContainer = $('notifContainer');
 
     /* =========================================================
@@ -99,17 +92,16 @@ document.addEventListener('DOMContentLoaded', () => {
         const nome = localStorage.getItem('sr_usuario') || 'Corretor';
         headerUserName.textContent = nome.split(' ')[0];
 
-        btnLogout.addEventListener('click', () => ApiClient.logout());
-
         if (btnVerificar) btnVerificar.addEventListener('click', () => carregarCena());
-        btnLigar.addEventListener('click', handleLigar);
-        btnWhatsApp.addEventListener('click', handleWhatsApp);
+        if (btnLigar)     btnLigar.addEventListener('click', handleLigar);
+        if (btnWhatsApp)  btnWhatsApp.addEventListener('click', handleWhatsApp);
 
-        resultList.querySelectorAll('.result-tag').forEach(btn => {
-            btn.addEventListener('click', () => handleTagClick(btn));
-        });
+        if (resultList) {
+            resultList.querySelectorAll('.result-tag').forEach(btn => {
+                btn.addEventListener('click', () => handleTagClick(btn));
+            });
+        }
 
-        /* Histórico */
         if (btnHistorico)       btnHistorico.addEventListener('click', abrirHistorico);
         if (btnHistoricoEspera) btnHistoricoEspera.addEventListener('click', abrirHistorico);
         if (btnFecharHistorico) btnFecharHistorico.addEventListener('click', fecharHistorico);
@@ -119,7 +111,6 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
-        /* Modal ligar */
         if (btnFecharLigar) btnFecharLigar.addEventListener('click', () => modalLigar.style.display = 'none');
         if (modalLigar) {
             modalLigar.addEventListener('click', (e) => {
@@ -128,7 +119,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         if (btnCopiarNumero) btnCopiarNumero.addEventListener('click', copiarNumero);
 
-        /* Modal agendamento */
         if (btnFecharAgendamento)   btnFecharAgendamento.addEventListener('click', fecharModalAgendamento);
         if (btnCancelarAgendamento) btnCancelarAgendamento.addEventListener('click', fecharModalAgendamento);
         if (btnSalvarAgendamento)   btnSalvarAgendamento.addEventListener('click', salvarAgendamento);
@@ -138,7 +128,6 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
-        /* ESC fecha tudo */
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
                 if (modalHistorico)   modalHistorico.style.display = 'none';
@@ -151,13 +140,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         await carregarCena();
 
-        /* Notificações — verifica a cada 60s */
+        // Polling de agendamentos a cada 60s
         setTimeout(() => verificarAgendamentos(), 5000);
         setInterval(verificarAgendamentos, 60000);
     }
 
     /* =========================================================
-       CARREGA CENA
+       CARREGAR CENA
        ========================================================= */
     async function carregarCena() {
         await atualizarEstatisticas();
@@ -165,20 +154,21 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function mostrarTelaEspera() {
-        waitingState.style.display = 'block';
-        leadState.style.display = 'none';
+        if (waitingState) waitingState.style.display = 'block';
+        if (leadState)    leadState.style.display = 'none';
+        removerBadgeAgendamento();
     }
+
     function mostrarTelaLead() {
-        waitingState.style.display = 'none';
-        leadState.style.display = 'block';
+        if (waitingState) waitingState.style.display = 'none';
+        if (leadState)    leadState.style.display = 'block';
     }
 
     /* =========================================================
        PRÓXIMO LEAD
        ========================================================= */
-     async function carregarProximoLead() {
+    async function carregarProximoLead() {
         try {
-            // Sai do modo agendamento (se estiver)
             leadEmModoAgendamento = false;
             removerBadgeAgendamento();
 
@@ -193,16 +183,18 @@ document.addEventListener('DOMContentLoaded', () => {
             leadAtual = lead;
             processando = false;
 
-            leadNome.textContent     = lead.nome;
-            leadTelefone.textContent = Acoes.formatarTelefone(lead.telefone) || lead.telefone;
-            if (leadOrigem) leadOrigem.textContent = lead.lista_nome || 'SR Lançamentos';
+            if (leadNome)     leadNome.textContent = lead.nome;
+            if (leadTelefone) leadTelefone.textContent = Acoes.formatarTelefone(lead.telefone) || lead.telefone;
+            if (leadOrigem)   leadOrigem.textContent = lead.lista_nome || 'SR Lançamentos';
 
-            resultList.querySelectorAll('.result-tag').forEach(btn => {
-                btn.classList.remove('processing');
-            });
+            if (resultList) {
+                resultList.querySelectorAll('.result-tag').forEach(btn => {
+                    btn.classList.remove('processing');
+                });
+            }
 
-            observacao.value = '';
-            callNotice.style.display = 'none';
+            if (observacao) observacao.value = '';
+            if (callNotice) callNotice.style.display = 'none';
 
             mostrarTelaLead();
             await atualizarEstatisticas();
@@ -214,97 +206,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /* =========================================================
-       ABRIR UM LEAD ESPECÍFICO (via notificação)
-       ========================================================= */
-    async function abrirLeadEspecifico(leadId) {
-        try {
-            const { lead } = await ApiClient.get(`/api/corretor/lead/${leadId}`);
-
-            if (!lead) {
-                mostrarToast('Lead não encontrado.', 'error');
-                return;
-            }
-
-            // Marca que estamos em modo "lead agendado"
-            leadEmModoAgendamento = true;
-            leadAtual = lead;
-            processando = false;
-
-            // Preenche os dados
-            leadNome.textContent     = lead.nome;
-            leadTelefone.textContent = Acoes.formatarTelefone(lead.telefone) || lead.telefone;
-
-            if (leadOrigem) {
-                leadOrigem.textContent = lead.lista_nome || 'SR Lançamentos';
-            }
-
-            // Mostra badge "Atendimento agendado"
-            mostrarBadgeAgendamento(lead);
-
-            // Limpa estado das tags
-            resultList.querySelectorAll('.result-tag').forEach(btn => {
-                btn.classList.remove('processing');
-            });
-
-            observacao.value = lead.observacao || '';
-            callNotice.style.display = 'none';
-
-            // Vai direto pra tela do lead
-            mostrarTelaLead();
-            await atualizarEstatisticas();
-
-            mostrarToast('Lead agendado aberto', 'info');
-
-        } catch (err) {
-            console.error('[abrir-lead] erro:', err);
-            mostrarToast(err.message || 'Erro ao abrir lead.', 'error');
-        }
-    }
-
-    function mostrarBadgeAgendamento(lead) {
-        // Remove badge antigo se existir
-        const antigo = document.getElementById('badgeAgendamento');
-        if (antigo) antigo.remove();
-
-        if (!lead.agendamento_data) return;
-
-        const dt = new Date(String(lead.agendamento_data).replace(' ', 'T'));
-        const dataStr = dt.toLocaleString('pt-BR', {
-            day: '2-digit', month: '2-digit', year: '2-digit',
-            hour: '2-digit', minute: '2-digit'
-        });
-
-        const badge = document.createElement('div');
-        badge.id = 'badgeAgendamento';
-        badge.className = 'badge-agendamento';
-        badge.innerHTML = `
-            <i class="fas fa-calendar-check"></i>
-            <span>
-                <strong>${lead.resultado === 'agendado' ? 'Agendamento' : 'Retorno'}</strong>
-                ${dataStr}
-                ${lead.agendamento_local ? ` · ${escapeHtml(lead.agendamento_local)}` : ''}
-            </span>
-        `;
-
-        // Insere no topo do lead-card
-        const leadCard = document.querySelector('.lead-card');
-        if (leadCard) {
-            leadCard.insertBefore(badge, leadCard.firstChild);
-        }
-    }
-
-    function removerBadgeAgendamento() {
-        const badge = document.getElementById('badgeAgendamento');
-        if (badge) badge.remove();
-    }
-
-    /* =========================================================
        TELA DE ESPERA INTELIGENTE
        ========================================================= */
     async function mostrarTelaEsperaInteligente() {
-        waitingState.style.display = 'block';
-        leadState.style.display = 'none';
-        removerBadgeAgendamento();
+        if (waitingState) waitingState.style.display = 'block';
+        if (leadState)    leadState.style.display = 'none';
 
         try {
             const stats = await ApiClient.get('/api/corretor/estatisticas');
@@ -354,22 +260,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const stats = await ApiClient.get(url);
 
-            progressCount.textContent = `${stats.trabalhados} de ${stats.total} trabalhados`;
+            if (progressCount) progressCount.textContent = `${stats.trabalhados} de ${stats.total} trabalhados`;
             const pct = stats.total > 0 ? (stats.trabalhados / stats.total) * 100 : 0;
-            progressFill.style.width = `${pct}%`;
+            if (progressFill) progressFill.style.width = `${pct}%`;
 
-            statQualificadosTop.textContent = stats.trabalhados;
-            statRestantesTop.textContent    = stats.restantes;
-
-            if (historicoCount) historicoCount.textContent = stats.trabalhados;
+            if (statQualificadosTop) statQualificadosTop.textContent = stats.trabalhados;
+            if (statRestantesTop)    statRestantesTop.textContent    = stats.restantes;
+            if (historicoCount)       historicoCount.textContent       = stats.trabalhados;
             if (historicoCountEspera) historicoCountEspera.textContent = stats.trabalhados;
 
-            resultList.querySelectorAll('.result-tag').forEach(btn => {
-                const tag = btn.dataset.tag;
-                const count = (stats.porTag && stats.porTag[tag]) || 0;
-                const el = btn.querySelector('.tag-count');
-                if (el) el.textContent = `+${count}`;
-            });
+            if (resultList) {
+                resultList.querySelectorAll('.result-tag').forEach(btn => {
+                    const tag = btn.dataset.tag;
+                    const count = (stats.porTag && stats.porTag[tag]) || 0;
+                    const el = btn.querySelector('.tag-count');
+                    if (el) el.textContent = `+${count}`;
+                });
+            }
         } catch (err) {
             console.error('[corretor] erro nas estatísticas:', err);
         }
@@ -390,17 +297,17 @@ document.addEventListener('DOMContentLoaded', () => {
         const hora = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
         if (res.modo === 'desktop') {
-            modalLigarNome.textContent   = leadAtual.nome;
-            modalLigarNumero.textContent = Acoes.formatarTelefone(leadAtual.telefone);
-            btnModalWhatsApp.href        = Acoes.linkWhatsApp(
+            if (modalLigarNome)   modalLigarNome.textContent = leadAtual.nome;
+            if (modalLigarNumero) modalLigarNumero.textContent = Acoes.formatarTelefone(leadAtual.telefone);
+            if (btnModalWhatsApp) btnModalWhatsApp.href = Acoes.linkWhatsApp(
                 leadAtual,
                 localStorage.getItem('sr_usuario') || 'Corretor'
             );
-            modalLigar.style.display = 'flex';
+            if (modalLigar) modalLigar.style.display = 'flex';
         }
 
-        callNoticeText.textContent = `Chamada iniciada às ${hora}. Registre o resultado abaixo.`;
-        callNotice.style.display = 'flex';
+        if (callNoticeText) callNoticeText.textContent = `Chamada iniciada às ${hora}. Registre o resultado abaixo.`;
+        if (callNotice)     callNotice.style.display = 'flex';
     }
 
     /* =========================================================
@@ -417,8 +324,9 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        callNoticeText.textContent = 'WhatsApp aberto com mensagem pronta. Registre o resultado abaixo.';
-        callNotice.style.display = 'flex';
+        if (callNoticeText) callNoticeText.textContent = 'WhatsApp aberto com mensagem pronta. Registre o resultado abaixo.';
+        if (callNotice)     callNotice.style.display = 'flex';
+
         mostrarToast('WhatsApp aberto em nova aba.', 'success');
     }
 
@@ -448,7 +356,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const tag = btn.dataset.tag;
 
-        // Agendado / Retornar depois → abre modal
         if (tag === 'agendado' || tag === 'retornar_depois') {
             abrirModalAgendamento({
                 leadId: leadAtual.id,
@@ -462,7 +369,6 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // Outras tags → salva direto
         await salvarResultadoDireto(leadAtual.id, tag);
     }
 
@@ -470,7 +376,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (processando) return;
         processando = true;
 
-        const textoObs = observacao.value.trim();
+        const textoObs = observacao ? observacao.value.trim() : '';
 
         try {
             await ApiClient.post(`/api/corretor/leads/${leadId}/resultado`, {
@@ -497,35 +403,31 @@ document.addEventListener('DOMContentLoaded', () => {
        ========================================================= */
     function abrirModalAgendamento({ leadId, leadNome, leadTelefone, tag, modo, agendamentoAtual = null, localAtual = '' }) {
         if (!modalAgendamento) {
-            console.error('[agendamento] modal não encontrado no HTML.');
+            console.error('[agendamento] modal não encontrado');
             mostrarToast('Modal de agendamento não está no HTML.', 'error');
             return;
         }
 
         agendamentoPendente = { leadId, tag, modo };
 
-        // Título
         if (tag === 'agendado') {
-            agendamentoTitulo.innerHTML = '<i class="fas fa-calendar-check"></i> Agendamento';
-            agendamentoSubtitulo.textContent = 'Informe data, hora e local do agendamento';
+            if (agendamentoTitulo)    agendamentoTitulo.innerHTML = '<i class="fas fa-calendar-check"></i> Agendamento';
+            if (agendamentoSubtitulo) agendamentoSubtitulo.textContent = 'Informe data, hora e local do agendamento';
         } else {
-            agendamentoTitulo.innerHTML = '<i class="fas fa-clock"></i> Retornar depois';
-            agendamentoSubtitulo.textContent = 'Informe quando quer retornar a ligar';
+            if (agendamentoTitulo)    agendamentoTitulo.innerHTML = '<i class="fas fa-clock"></i> Retornar depois';
+            if (agendamentoSubtitulo) agendamentoSubtitulo.textContent = 'Informe quando quer retornar a ligar';
         }
 
-        // Info do lead
-        agendamentoLeadNome.textContent     = leadNome || '—';
-        agendamentoLeadTelefone.textContent = Acoes.formatarTelefone(leadTelefone) || '—';
+        if (agendamentoLeadNome)     agendamentoLeadNome.textContent = leadNome || '—';
+        if (agendamentoLeadTelefone) agendamentoLeadTelefone.textContent = Acoes.formatarTelefone(leadTelefone) || '—';
 
-        // Limpa erros
-        agendamentoDataError.textContent = '';
-        agendamentoHoraError.textContent = '';
-        agendamentoDataError.classList.remove('visible');
-        agendamentoHoraError.classList.remove('visible');
-        agendamentoData.classList.remove('error');
-        agendamentoHora.classList.remove('error');
+        if (agendamentoDataError) agendamentoDataError.textContent = '';
+        if (agendamentoHoraError) agendamentoHoraError.textContent = '';
+        if (agendamentoDataError) agendamentoDataError.classList.remove('visible');
+        if (agendamentoHoraError) agendamentoHoraError.classList.remove('visible');
+        if (agendamentoData) agendamentoData.classList.remove('error');
+        if (agendamentoHora) agendamentoHora.classList.remove('error');
 
-        // Preenche valores
         if (agendamentoAtual) {
             try {
                 const dt = new Date(String(agendamentoAtual).replace(' ', 'T'));
@@ -535,32 +437,31 @@ document.addEventListener('DOMContentLoaded', () => {
                 const hora   = String(dt.getHours()).padStart(2, '0');
                 const minuto = String(dt.getMinutes()).padStart(2, '0');
 
-                agendamentoData.value = `${ano}-${mes}-${dia}`;
-                agendamentoHora.value = `${hora}:${minuto}`;
+                if (agendamentoData) agendamentoData.value = `${ano}-${mes}-${dia}`;
+                if (agendamentoHora) agendamentoHora.value = `${hora}:${minuto}`;
             } catch {
-                agendamentoData.value = '';
-                agendamentoHora.value = '';
+                if (agendamentoData) agendamentoData.value = '';
+                if (agendamentoHora) agendamentoHora.value = '';
             }
         } else {
-            agendamentoData.value = '';
-            agendamentoHora.value = '';
+            if (agendamentoData) agendamentoData.value = '';
+            if (agendamentoHora) agendamentoHora.value = '';
         }
 
-        agendamentoLocal.value = localAtual || '';
+        if (agendamentoLocal) agendamentoLocal.value = localAtual || '';
 
-        // Data mínima = hoje
         const hoje = new Date();
         const anoHoje = hoje.getFullYear();
         const mesHoje = String(hoje.getMonth() + 1).padStart(2, '0');
         const diaHoje = String(hoje.getDate()).padStart(2, '0');
-        agendamentoData.min = `${anoHoje}-${mesHoje}-${diaHoje}`;
+        if (agendamentoData) agendamentoData.min = `${anoHoje}-${mesHoje}-${diaHoje}`;
 
-        btnSalvarAgendamentoTexto.textContent = modo === 'novo'
-            ? 'Salvar agendamento'
-            : 'Salvar alteração';
+        if (btnSalvarAgendamentoTexto) {
+            btnSalvarAgendamentoTexto.textContent = modo === 'novo' ? 'Salvar agendamento' : 'Salvar alteração';
+        }
 
         modalAgendamento.style.display = 'flex';
-        setTimeout(() => agendamentoData.focus(), 120);
+        setTimeout(() => { if (agendamentoData) agendamentoData.focus(); }, 120);
     }
 
     function fecharModalAgendamento() {
@@ -573,23 +474,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const { leadId, tag, modo } = agendamentoPendente;
 
-        const data  = agendamentoData.value;
-        const hora  = agendamentoHora.value;
-        const local = agendamentoLocal.value.trim();
+        const data  = agendamentoData ? agendamentoData.value : '';
+        const hora  = agendamentoHora ? agendamentoHora.value : '';
+        const local = agendamentoLocal ? agendamentoLocal.value.trim() : '';
 
         let temErro = false;
 
         if (!data) {
-            agendamentoDataError.textContent = 'Informe a data.';
-            agendamentoDataError.classList.add('visible');
-            agendamentoData.classList.add('error');
+            if (agendamentoDataError) {
+                agendamentoDataError.textContent = 'Informe a data.';
+                agendamentoDataError.classList.add('visible');
+            }
+            if (agendamentoData) agendamentoData.classList.add('error');
             temErro = true;
         }
 
         if (!hora) {
-            agendamentoHoraError.textContent = 'Informe a hora.';
-            agendamentoHoraError.classList.add('visible');
-            agendamentoHora.classList.add('error');
+            if (agendamentoHoraError) {
+                agendamentoHoraError.textContent = 'Informe a hora.';
+                agendamentoHoraError.classList.add('visible');
+            }
+            if (agendamentoHora) agendamentoHora.classList.add('error');
             temErro = true;
         }
 
@@ -597,14 +502,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const agendamentoDataISO = `${data} ${hora}:00`;
 
-        btnSalvarAgendamento.disabled = true;
-        btnSalvarAgendamentoTexto.textContent = 'Salvando...';
+        if (btnSalvarAgendamento) btnSalvarAgendamento.disabled = true;
+        if (btnSalvarAgendamentoTexto) btnSalvarAgendamentoTexto.textContent = 'Salvando...';
 
         try {
             if (modo === 'novo') {
                 await ApiClient.post(`/api/corretor/leads/${leadId}/resultado`, {
                     resultado: tag,
-                    observacao: observacao.value.trim(),
+                    observacao: observacao ? observacao.value.trim() : '',
                     agendamento_data: agendamentoDataISO,
                     agendamento_local: local
                 });
@@ -625,7 +530,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
 
                 mostrarToast('Agendamento atualizado', 'success');
-
                 fecharModalAgendamento();
                 await carregarCarteira();
             }
@@ -633,10 +537,10 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (err) {
             mostrarToast(err.message || 'Erro ao salvar.', 'error');
         } finally {
-            btnSalvarAgendamento.disabled = false;
-            btnSalvarAgendamentoTexto.textContent = modo === 'novo'
-                ? 'Salvar agendamento'
-                : 'Salvar alteração';
+            if (btnSalvarAgendamento) btnSalvarAgendamento.disabled = false;
+            if (btnSalvarAgendamentoTexto) {
+                btnSalvarAgendamentoTexto.textContent = modo === 'novo' ? 'Salvar agendamento' : 'Salvar alteração';
+            }
         }
     }
 
@@ -646,7 +550,7 @@ document.addEventListener('DOMContentLoaded', () => {
     async function abrirHistorico() {
         carteiraAtual = null;
         leadsDaCarteiraAtual = [];
-        modalHistorico.style.display = 'flex';
+        if (modalHistorico) modalHistorico.style.display = 'flex';
 
         historicoLista.innerHTML = `
             <div class="historico-loading">
@@ -654,8 +558,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 <p>Carregando...</p>
             </div>
         `;
-        historicoVazio.style.display = 'none';
-        historicoResumo.textContent = 'Carregando...';
+        if (historicoVazio) historicoVazio.style.display = 'none';
+        if (historicoResumo) historicoResumo.textContent = 'Carregando...';
 
         await carregarCarteiras();
     }
@@ -667,17 +571,19 @@ document.addEventListener('DOMContentLoaded', () => {
             historicoLista.innerHTML = '';
 
             if (!carteiras.length) {
-                historicoVazio.style.display = 'block';
+                if (historicoVazio) historicoVazio.style.display = 'block';
                 historicoLista.style.display = 'none';
-                historicoResumo.textContent = 'Você ainda não qualificou nenhum cliente.';
+                if (historicoResumo) historicoResumo.textContent = 'Você ainda não trabalhou nenhum cliente.';
                 return;
             }
 
-            historicoVazio.style.display = 'none';
+            if (historicoVazio) historicoVazio.style.display = 'none';
             historicoLista.style.display = 'flex';
 
-                const totalTrabalhados = carteiras.reduce((acc, c) => acc + c.total_qualificados, 0);
-            historicoResumo.textContent = `${carteiras.length} ${carteiras.length === 1 ? 'carteira' : 'carteiras'} · ${totalTrabalhados} trabalhados`;
+            const totalTrabalhados = carteiras.reduce((acc, c) => acc + c.total_qualificados, 0);
+            if (historicoResumo) {
+                historicoResumo.textContent = `${carteiras.length} ${carteiras.length === 1 ? 'carteira' : 'carteiras'} · ${totalTrabalhados} trabalhados`;
+            }
 
             historicoLista.innerHTML = carteiras.map(c => `
                 <button class="carteira-item" data-lista-id="${c.lista_id}">
@@ -706,8 +612,8 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (err) {
             console.error('[historico] erro:', err);
             historicoLista.innerHTML = '';
-            historicoVazio.style.display = 'block';
-            historicoResumo.textContent = 'Erro ao carregar.';
+            if (historicoVazio) historicoVazio.style.display = 'block';
+            if (historicoResumo) historicoResumo.textContent = 'Erro ao carregar.';
         }
     }
 
@@ -738,12 +644,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const { lista, leads } = await ApiClient.get(url);
 
-            // Guarda pra usar no editor de tag
             leadsDaCarteiraAtual = leads;
 
-            historicoResumo.textContent = `${lista.nome} · ${leads.length} ${
-                leads.length === 1 ? 'cliente' : 'clientes'
-            }`;
+            if (historicoResumo) {
+                historicoResumo.textContent = `${lista.nome} · ${leads.length} ${
+                    leads.length === 1 ? 'cliente' : 'clientes'
+                }`;
+            }
 
             historicoLista.innerHTML = `
                 <div class="carteira-header">
@@ -765,14 +672,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div id="carteiraLeadsLista"></div>
             `;
 
-            // Voltar
             document.getElementById('btnVoltarCarteiras').addEventListener('click', () => {
                 carteiraAtual = null;
                 leadsDaCarteiraAtual = [];
                 carregarCarteiras();
             });
 
-            // Busca
             const inputBusca = document.getElementById('carteiraBusca');
             let timeoutBusca = null;
             inputBusca.addEventListener('input', (e) => {
@@ -784,7 +689,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 }, 300);
             });
 
-            // Leads
             const leadsContainer = document.getElementById('carteiraLeadsLista');
 
             if (!leads.length) {
@@ -805,7 +709,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     hour: '2-digit', minute: '2-digit'
                 });
 
-                // Linha extra se tiver agendamento
                 let linhaAgendamento = '';
                 if (item.agendamento_data) {
                     const dtAg = new Date(String(item.agendamento_data).replace(' ', 'T'));
@@ -850,7 +753,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 `;
             }).join('');
 
-            // Listeners de edição
             leadsContainer.querySelectorAll('.tag-editavel').forEach(btn => {
                 btn.addEventListener('click', () => abrirSeletorTag(btn));
             });
@@ -858,8 +760,8 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (err) {
             console.error('[historico-carteira] erro:', err);
             historicoLista.innerHTML = '';
-            historicoVazio.style.display = 'block';
-            historicoResumo.textContent = 'Erro ao carregar carteira.';
+            if (historicoVazio) historicoVazio.style.display = 'block';
+            if (historicoResumo) historicoResumo.textContent = 'Erro ao carregar carteira.';
         }
     }
 
@@ -913,7 +815,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         document.body.appendChild(editor);
 
-        // Posicionamento
         const rect = btn.getBoundingClientRect();
         const editorWidth = 260;
         const margem = 8;
@@ -933,7 +834,6 @@ document.addEventListener('DOMContentLoaded', () => {
         editor.style.left = `${left + window.scrollX}px`;
         editor.style.top  = `${top + window.scrollY}px`;
 
-        // Fechar
         editor.querySelector('.tag-editor-close').addEventListener('click', () => editor.remove());
 
         setTimeout(() => {
@@ -946,7 +846,6 @@ document.addEventListener('DOMContentLoaded', () => {
             document.addEventListener('click', fechar);
         }, 0);
 
-        // Clique numa opção
         editor.querySelectorAll('.tag-opcao').forEach(opc => {
             opc.addEventListener('click', async () => {
                 const novoResultado = opc.dataset.novoResultado;
@@ -956,10 +855,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     return;
                 }
 
-                // Agendado / Retornar depois → abre modal
                 if (novoResultado === 'agendado' || novoResultado === 'retornar_depois') {
                     const lead = leadsDaCarteiraAtual.find(l => Number(l.id) === Number(leadId));
-
                     editor.remove();
 
                     abrirModalAgendamento({
@@ -974,7 +871,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     return;
                 }
 
-                // Outras → salva direto
                 try {
                     await ApiClient.patch(`/api/corretor/leads/${leadId}/qualificacao`, {
                         resultado: novoResultado
@@ -1009,24 +905,26 @@ document.addEventListener('DOMContentLoaded', () => {
                 const chave30 = `30min-${ag.id}`;
                 const chaveHora = `hora-${ag.id}`;
 
-                // Faltando 30min
                 if (diffMin > 25 && diffMin <= 35 && !agendamentosNotificados[chave30]) {
                     agendamentosNotificados[chave30] = true;
                     mostrarNotificacao({
                         tipo: 'warning',
                         titulo: `Faltam 30min — ${ag.nome}`,
-                        msg: `...`,
+                        msg: `${ag.resultado === 'agendado' ? 'Agendamento' : 'Retorno'} às ${
+                            dataAgendada.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+                        }${ag.agendamento_local ? ` · ${ag.agendamento_local}` : ''}`,
                         leadId: ag.id
                     });
                 }
 
-                // Na hora
                 if (diffMin >= -5 && diffMin <= 5 && !agendamentosNotificados[chaveHora]) {
                     agendamentosNotificados[chaveHora] = true;
                     mostrarNotificacao({
                         tipo: 'danger',
                         titulo: `É agora! — ${ag.nome}`,
-                        msg: `...`,
+                        msg: `Ligar para ${Acoes.formatarTelefone(ag.telefone)}${
+                            ag.agendamento_local ? ` · ${ag.agendamento_local}` : ''
+                        }`,
                         leadId: ag.id
                     });
                 }
@@ -1059,13 +957,11 @@ document.addEventListener('DOMContentLoaded', () => {
             e.stopPropagation();
             el.remove();
         });
-        el.addEventListener('click', async (e) => {
-            // Se clicou no X, não faz nada (o próprio X já remove)
-            if (e.target.closest('.notif-close')) return;
 
+        el.addEventListener('click', async (e) => {
+            if (e.target.closest('.notif-close')) return;
             el.remove();
 
-            // Se a notificação tem um leadId, abre ele
             if (leadId) {
                 await abrirLeadEspecifico(leadId);
             }
@@ -1073,10 +969,86 @@ document.addEventListener('DOMContentLoaded', () => {
 
         notifContainer.appendChild(el);
 
-        // Auto-remove depois de 2 minutos
         setTimeout(() => {
             if (el.parentElement) el.remove();
         }, 120000);
+    }
+
+    /* =========================================================
+       ABRIR LEAD ESPECÍFICO (via notificação)
+       ========================================================= */
+    async function abrirLeadEspecifico(leadId) {
+        try {
+            const { lead } = await ApiClient.get(`/api/corretor/lead/${leadId}`);
+
+            if (!lead) {
+                mostrarToast('Lead não encontrado.', 'error');
+                return;
+            }
+
+            leadEmModoAgendamento = true;
+            leadAtual = lead;
+            processando = false;
+
+            if (leadNome)     leadNome.textContent = lead.nome;
+            if (leadTelefone) leadTelefone.textContent = Acoes.formatarTelefone(lead.telefone) || lead.telefone;
+            if (leadOrigem)   leadOrigem.textContent = lead.lista_nome || 'SR Lançamentos';
+
+            mostrarBadgeAgendamento(lead);
+
+            if (resultList) {
+                resultList.querySelectorAll('.result-tag').forEach(btn => {
+                    btn.classList.remove('processing');
+                });
+            }
+
+            if (observacao) observacao.value = lead.observacao || '';
+            if (callNotice) callNotice.style.display = 'none';
+
+            mostrarTelaLead();
+            await atualizarEstatisticas();
+
+            mostrarToast('Lead agendado aberto', 'info');
+
+        } catch (err) {
+            console.error('[abrir-lead] erro:', err);
+            mostrarToast(err.message || 'Erro ao abrir lead.', 'error');
+        }
+    }
+
+    function mostrarBadgeAgendamento(lead) {
+        const antigo = document.getElementById('badgeAgendamento');
+        if (antigo) antigo.remove();
+
+        if (!lead.agendamento_data) return;
+
+        const dt = new Date(String(lead.agendamento_data).replace(' ', 'T'));
+        const dataStr = dt.toLocaleString('pt-BR', {
+            day: '2-digit', month: '2-digit', year: '2-digit',
+            hour: '2-digit', minute: '2-digit'
+        });
+
+        const badge = document.createElement('div');
+        badge.id = 'badgeAgendamento';
+        badge.className = 'badge-agendamento';
+        badge.innerHTML = `
+            <i class="fas fa-calendar-check"></i>
+            <span>
+                <strong>${lead.resultado === 'agendado' ? 'Agendamento' : 'Retorno'}</strong>
+                ${dataStr}
+                ${lead.agendamento_local ? ` · ${escapeHtml(lead.agendamento_local)}` : ''}
+            </span>
+        `;
+
+        const leadCard = document.querySelector('.lead-card');
+        if (leadCard) {
+            leadCard.insertBefore(badge, leadCard.firstChild);
+        }
+    }
+
+    function removerBadgeAgendamento() {
+        const badge = document.getElementById('badgeAgendamento');
+        if (badge) badge.remove();
     }
 
     /* =========================================================

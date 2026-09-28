@@ -146,32 +146,36 @@
                 </div>
             </div>
 
-            <div class="dashboard-grid">
+            <!-- SEÇÃO 1 -->
+            <section class="dashboard-card mb-2">
+                <header class="card-header">
+                    <h2>
+                        <i class="fas fa-chart-bar"></i>
+                        Total de carteiras prospectadas
+                    </h2>
+                    <span class="card-badge" id="badgeTotalCorretores">0</span>
+                </header>
 
-                <section class="dashboard-card">
-                    <header class="card-header">
-                        <h2>
-                            <i class="fas fa-users"></i>
-                            Carteira por corretor
-                        </h2>
-                        <span class="card-badge" id="badgeTotalCorretores">0</span>
-                    </header>
+                <div class="corretores-carteira" id="corretoresCarteira"></div>
+            </section>
 
-                    <div class="corretores-carteira" id="corretoresCarteira"></div>
-                </section>
+            <!-- SEÇÃO 2 -->
+            <section class="dashboard-card">
+                <header class="card-header">
+                    <h2>
+                        <i class="fas fa-folder-open"></i>
+                        Carteira por lista
+                    </h2>
+                    <span class="card-badge" id="badgeTotalCarteiras">0</span>
+                </header>
 
-                <section class="dashboard-card">
-                    <header class="card-header">
-                        <h2>
-                            <i class="fas fa-filter"></i>
-                            Segmentação por qualificação
-                        </h2>
-                    </header>
+                <div class="carteiras-grid" id="carteirasGrid"></div>
 
-                    <div class="qualificacao-list" id="qualificacaoList"></div>
-                </section>
-
-            </div>
+                <div class="empty-state small" id="carteirasVazio" style="display: none;">
+                    <i class="fas fa-inbox"></i>
+                    <p>Nenhuma carteira subida ainda.</p>
+                </div>
+            </section>
 
         </section>
 

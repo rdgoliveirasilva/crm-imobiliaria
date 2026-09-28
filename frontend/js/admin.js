@@ -1,6 +1,5 @@
 /* =========================================================
-   ADMIN.JS — Painel do Administrador (integrado com API)
-   Depende de: api-client.js
+   ADMIN.JS — Painel Admin (com polling e carteiras)
    ========================================================= */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -11,67 +10,60 @@ document.addEventListener('DOMContentLoaded', () => {
     let todosContatosDaLista = [];
     let confirmCallback = null;
     let toastTimer = null;
+    let pollingTimer = null;
 
     /* =========================================================
-       ELEMENTOS — HEADER
+       ELEMENTOS
        ========================================================= */
+
+    // Header
     const headerUserName = $('headerUserName');
-    const btnLogout      = $('btnLogout');
 
-    /* =========================================================
-       ELEMENTOS — NAVEGAÇÃO
-       ========================================================= */
-    const navTabs   = document.querySelectorAll('.nav-tab');
+    // Nav
+    const navTabs = document.querySelectorAll('.nav-tab');
     const tabPanels = document.querySelectorAll('.tab-panel');
 
-    /* =========================================================
-       ELEMENTOS — DASHBOARD
-       ========================================================= */
+    // Dashboard
     const kpiListas            = $('kpiListas');
     const kpiTotal             = $('kpiTotal');
     const kpiQualificados      = $('kpiQualificados');
     const kpiAguardando        = $('kpiAguardando');
     const corretoresCarteira   = $('corretoresCarteira');
-    const qualificacaoList     = $('qualificacaoList');
+    const carteirasGrid        = $('carteirasGrid');
+    const carteirasVazio       = $('carteirasVazio');
     const badgeTotalCorretores = $('badgeTotalCorretores');
+    const badgeTotalCarteiras  = $('badgeTotalCarteiras');
 
-    /* =========================================================
-       ELEMENTOS — SUBIR LISTA
-       ========================================================= */
-    const modoBtns            = document.querySelectorAll('.modo-btn');
-    const blocoArquivo        = $('blocoArquivo');
-    const blocoTexto          = $('blocoTexto');
-    const nomeListaInput      = $('nomeLista');
-    const textoListaInput     = $('textoLista');
-    const nomeListaError      = $('nomeListaError');
-    const textoListaError     = $('textoListaError');
-    const corretoresError     = $('corretoresError');
-    const previewContatos     = $('previewContatos');
-    const previewCount        = $('previewCount');
-    const previewList         = $('previewList');
-    const corretoresSelector  = $('corretoresSelector');
-    const btnSubirLista       = $('btnSubirLista');
-    const infoRoleta          = $('infoRoleta');
+    // Upload
+    const modoBtns           = document.querySelectorAll('.modo-btn');
+    const blocoArquivo       = $('blocoArquivo');
+    const blocoTexto         = $('blocoTexto');
+    const nomeListaInput     = $('nomeLista');
+    const textoListaInput    = $('textoLista');
+    const nomeListaError     = $('nomeListaError');
+    const textoListaError    = $('textoListaError');
+    const corretoresError    = $('corretoresError');
+    const previewContatos    = $('previewContatos');
+    const previewCount       = $('previewCount');
+    const previewList        = $('previewList');
+    const corretoresSelector = $('corretoresSelector');
+    const btnSubirLista      = $('btnSubirLista');
+    const infoRoleta         = $('infoRoleta');
+    const fileDrop           = $('fileDrop');
+    const arquivoCsv         = $('arquivoCsv');
+    const fileDropContent    = $('fileDropContent');
+    const fileInfo           = $('fileInfo');
+    const fileInfoNome       = $('fileInfoNome');
+    const fileInfoTamanho    = $('fileInfoTamanho');
+    const btnRemoverArquivo  = $('btnRemoverArquivo');
+    const arquivoCsvError    = $('arquivoCsvError');
 
-    const fileDrop            = $('fileDrop');
-    const arquivoCsv          = $('arquivoCsv');
-    const fileDropContent     = $('fileDropContent');
-    const fileInfo            = $('fileInfo');
-    const fileInfoNome        = $('fileInfoNome');
-    const fileInfoTamanho     = $('fileInfoTamanho');
-    const btnRemoverArquivo   = $('btnRemoverArquivo');
-    const arquivoCsvError     = $('arquivoCsvError');
-
-    /* =========================================================
-       ELEMENTOS — LISTAS
-       ========================================================= */
+    // Listas
     const listasGrid       = $('listasGrid');
     const listasVazio      = $('listasVazio');
     const badgeTotalListas = $('badgeTotalListas');
 
-    /* =========================================================
-       ELEMENTOS — CORRETORES
-       ========================================================= */
+    // Corretores
     const novoNomeInput            = $('novoNome');
     const novoUsuarioInput         = $('novoUsuario');
     const novaSenhaInput           = $('novaSenha');
@@ -83,21 +75,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const corretoresVazio          = $('corretoresVazio');
     const badgeTotalCorretoresList = $('badgeTotalCorretoresList');
 
-    /* =========================================================
-       ELEMENTOS — MODAL LISTA
-       ========================================================= */
+    // Modal lista
     const modalLista          = $('modalLista');
     const modalListaNome      = $('modalListaNome');
     const modalListaInfo      = $('modalListaInfo');
     const btnFecharModalLista = $('btnFecharModalLista');
     const modalSearchContato  = $('modalSearchContato');
-    const contatosTableBody   = $('contatosTableBody');
     const contatosVazio       = $('contatosVazio');
     const btnDeletarLista     = $('btnDeletarLista');
 
-    /* =========================================================
-       ELEMENTOS — MODAL CONFIRMAÇÃO
-       ========================================================= */
+    // Modal confirmação
     const modalConfirm     = $('modalConfirm');
     const confirmTitle     = $('confirmTitle');
     const confirmMessage   = $('confirmMessage');
@@ -105,9 +92,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnConfirmNao    = $('btnConfirmNao');
     const btnConfirmSim    = $('btnConfirmSim');
 
-    /* =========================================================
-       ELEMENTOS — TOAST
-       ========================================================= */
+    // Toast
     const toast = $('toast');
 
     /* =========================================================
@@ -115,6 +100,7 @@ document.addEventListener('DOMContentLoaded', () => {
        ========================================================= */
     let modoAtual = 'arquivo';
     let contatosDoArquivo = [];
+    let enviandoLista = false;
 
     /* =========================================================
        TOAST
@@ -124,6 +110,72 @@ document.addEventListener('DOMContentLoaded', () => {
         toast.className = `toast show ${tipo}`;
         clearTimeout(toastTimer);
         toastTimer = setTimeout(() => toast.className = 'toast', 2800);
+    }
+
+    /* =========================================================
+       UTILS
+       ========================================================= */
+    function escapeHtml(str) {
+        return String(str || '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+
+    function iniciais(nome) {
+        return String(nome || '')
+            .trim()
+            .split(/\s+/)
+            .filter(Boolean)
+            .slice(0, 2)
+            .map(p => p[0].toUpperCase())
+            .join('');
+    }
+
+    function formatarTelefone(tel) {
+        const n = String(tel).replace(/\D/g, '');
+        if (n.length === 13) return `+${n.slice(0,2)} (${n.slice(2,4)}) ${n.slice(4,9)}-${n.slice(9)}`;
+        if (n.length === 11) return `(${n.slice(0,2)}) ${n.slice(2,7)}-${n.slice(7)}`;
+        if (n.length === 10) return `(${n.slice(0,2)}) ${n.slice(2,6)}-${n.slice(6)}`;
+        return tel;
+    }
+
+    function dataCurta(iso) {
+        if (!iso) return '—';
+        const d = new Date(iso);
+        return d.toLocaleString('pt-BR', {
+            day: '2-digit', month: '2-digit', year: '2-digit'
+        });
+    }
+
+    function formatarUltimoAcesso(iso) {
+        if (!iso) return 'Nunca acessou';
+
+        const d = new Date(iso);
+        const agora = new Date();
+
+        const inicioHoje = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate());
+        const inicioOntem = new Date(inicioHoje);
+        inicioOntem.setDate(inicioOntem.getDate() - 1);
+
+        const hora = d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+        if (d >= inicioHoje) {
+            return `hoje às ${hora}`;
+        } else if (d >= inicioOntem) {
+            return `ontem às ${hora}`;
+        } else {
+            const data = d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+            return `${data} às ${hora}`;
+        }
+    }
+
+    function formatarTamanho(bytes) {
+        if (bytes < 1024) return `${bytes} B`;
+        if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+        return `${(bytes / 1024 / 1024).toFixed(2)} MB`;
     }
 
     /* =========================================================
@@ -177,49 +229,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     /* =========================================================
-       UTILS
-       ========================================================= */
-    function escapeHtml(str) {
-        return String(str || '')
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;')
-            .replace(/'/g, '&#039;');
-    }
-
-    function iniciais(nome) {
-        return String(nome || '')
-            .split(' ')
-            .filter(Boolean)
-            .slice(0, 2)
-            .map(p => p[0].toUpperCase())
-            .join('');
-    }
-
-    function formatarTelefone(tel) {
-        const n = String(tel).replace(/\D/g, '');
-        if (n.length === 13) return `+${n.slice(0,2)} (${n.slice(2,4)}) ${n.slice(4,9)}-${n.slice(9)}`;
-        if (n.length === 11) return `(${n.slice(0,2)}) ${n.slice(2,7)}-${n.slice(7)}`;
-        if (n.length === 10) return `(${n.slice(0,2)}) ${n.slice(2,6)}-${n.slice(6)}`;
-        return tel;
-    }
-
-    function dataCurta(iso) {
-        if (!iso) return '—';
-        const d = new Date(iso);
-        return d.toLocaleString('pt-BR', {
-            day: '2-digit', month: '2-digit', year: '2-digit'
-        });
-    }
-
-    function formatarTamanho(bytes) {
-        if (bytes < 1024) return `${bytes} B`;
-        if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-        return `${(bytes / 1024 / 1024).toFixed(2)} MB`;
-    }
-
-    /* =========================================================
        DASHBOARD
        ========================================================= */
     async function atualizarDashboard() {
@@ -231,12 +240,13 @@ document.addEventListener('DOMContentLoaded', () => {
             kpiQualificados.textContent = stats.qualificados;
             kpiAguardando.textContent   = stats.aguardando;
 
-            renderizarCarteira(stats.porCorretor || []);
-            renderizarSegmentacao(stats.porTag || {}, stats.totalContatos);
+            const { corretoresResumo, carteiras } = await ApiClient.get('/api/admin/dashboard/carteiras');
 
-            if (badgeTotalCorretores) {
-                badgeTotalCorretores.textContent = (stats.porCorretor || []).length;
-            }
+            renderizarCorretoresResumo(corretoresResumo);
+            renderizarCarteiras(carteiras);
+
+            if (badgeTotalCorretores) badgeTotalCorretores.textContent = corretoresResumo.length;
+            if (badgeTotalCarteiras)  badgeTotalCarteiras.textContent  = carteiras.length;
 
             adicionarSparklines();
 
@@ -246,8 +256,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function renderizarCarteira(porCorretor) {
-        if (!porCorretor.length) {
+    function renderizarCorretoresResumo(corretores) {
+        if (!corretores.length) {
             corretoresCarteira.innerHTML = `
                 <div class="empty-state small">
                     <i class="fas fa-users"></i>
@@ -257,29 +267,40 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        corretoresCarteira.innerHTML = porCorretor.map(c => {
-            const pct = c.total > 0 ? Math.round((c.qualificados / c.total) * 100) : 0;
+        corretoresCarteira.innerHTML = corretores.map(c => {
+            const statusLabel = {
+                online:  'Online agora',
+                ausente: 'Ausente',
+                offline: c.ultimo_acesso
+                    ? `Último acesso: ${formatarUltimoAcesso(c.ultimo_acesso)}`
+                    : 'Nunca acessou'
+            }[c.status];
+
             return `
                 <div class="corretor-carteira-item">
-                    <div class="corretor-avatar">${iniciais(c.nome)}</div>
+                    <div class="corretor-avatar">
+                        ${iniciais(c.nome)}
+                        <span class="corretor-avatar-status ${c.status}"></span>
+                    </div>
                     <div class="corretor-info">
                         <strong>${escapeHtml(c.nome)}</strong>
                         <small>@${escapeHtml(c.usuario)}</small>
-                        <div class="corretor-progress">
-                            <div class="corretor-progress-fill" style="width: ${pct}%"></div>
-                        </div>
+                        <span class="corretor-status-text ${c.status}">
+                            <i class="fas fa-circle"></i>
+                            ${escapeHtml(statusLabel)}
+                        </span>
                     </div>
                     <div class="corretor-stats">
                         <div class="corretor-stat total">
-                            <strong>${c.total}</strong>
+                            <strong>${c.total_carteira}</strong>
                             <small>total</small>
                         </div>
                         <div class="corretor-stat qualif">
-                            <strong>${c.qualificados || 0}</strong>
+                            <strong>${c.total_qualificados}</strong>
                             <small>qualif</small>
                         </div>
                         <div class="corretor-stat novos">
-                            <strong>${c.aguardando || 0}</strong>
+                            <strong>${c.total_fila}</strong>
                             <small>fila</small>
                         </div>
                     </div>
@@ -288,42 +309,163 @@ document.addEventListener('DOMContentLoaded', () => {
         }).join('');
     }
 
-    function renderizarSegmentacao(porTag, totalGeral) {
-        const tags = [
-            { key: 'agendado',          label: 'Agendado',              cor: 'success' },
-            { key: 'em_atendimento',    label: 'Em atendimento',        cor: 'success' },
-            { key: 'retornar_depois',   label: 'Retornar depois',       cor: 'warning' },
-            { key: 'sem_interesse',     label: 'Cliente sem interesse', cor: 'warning' },
-            { key: 'mensagem_enviada',  label: 'Mensagem enviada',      cor: 'warning' },
-            { key: 'sem_sucesso',       label: 'Contato sem sucesso',   cor: 'danger'  },
-            { key: 'telefone_invalido', label: 'Telefone inexistente',  cor: 'danger'  },
-            { key: 'nao_perturbe',      label: 'Não perturbe',          cor: 'danger'  }
-        ];
+    function renderizarCarteiras(carteiras) {
+        if (!carteiras.length) {
+            carteirasGrid.innerHTML = '';
+            carteirasVazio.style.display = 'block';
+            return;
+        }
 
-        qualificacaoList.innerHTML = tags.map(t => {
-            const count = porTag[t.key] || 0;
-            const pct = totalGeral > 0 ? Math.round((count / totalGeral) * 100) : 0;
-            const ringValue = Math.min(pct, 100);
+        carteirasVazio.style.display = 'none';
+
+        carteirasGrid.innerHTML = carteiras.map(c => {
+            const totalQualif = c.corretores.reduce((acc, x) => acc + x.qualificou, 0);
+            const totalFila   = c.corretores.reduce((acc, x) => acc + x.fila, 0);
+
+            const avataresHtml = c.corretores.slice(0, 3).map(cor => `
+                <div class="carteira-avatar-mini" title="${escapeHtml(cor.nome)}">
+                    ${iniciais(cor.nome)}
+                </div>
+            `).join('');
+
+            const maisHtml = c.corretores.length > 3
+                ? `<div class="carteira-avatar-mais">+${c.corretores.length - 3}</div>`
+                : '';
 
             return `
-                <div class="qualificacao-item">
-                    <div class="qualificacao-ring ${t.cor}">
-                        <svg viewBox="0 0 36 36">
-                            <circle class="ring-bg" cx="18" cy="18" r="15"></circle>
-                            <circle class="ring-fill" cx="18" cy="18" r="15"
-                                    style="stroke-dasharray: ${ringValue} 100;"></circle>
-                        </svg>
-                        <span class="ring-label">${pct}%</span>
+                <div class="carteira-card" data-lista-id="${c.lista_id}">
+                    <div class="carteira-card-top">
+                        <div class="carteira-card-icon">
+                            <i class="fas fa-folder-open"></i>
+                        </div>
+                        <div class="carteira-card-data">${dataCurta(c.criado_em)}</div>
                     </div>
-                    <div class="qualificacao-label">
-                        <span>${t.label}</span>
+
+                    <div class="carteira-card-nome">${escapeHtml(c.nome)}</div>
+                    <div class="carteira-card-total">
+                        <i class="fas fa-users"></i>
+                        ${c.total} ${c.total === 1 ? 'contato' : 'contatos'}
                     </div>
-                    <span class="qualificacao-count">${count}</span>
+
+                    <div class="carteira-avatares">
+                        ${avataresHtml}
+                        ${maisHtml}
+                    </div>
+
+                    <div class="carteira-card-stats">
+                        <div class="carteira-stat">
+                            <strong>${c.corretores.length}</strong>
+                            <small>corretores</small>
+                        </div>
+                        <div class="carteira-stat green">
+                            <strong>${totalQualif}</strong>
+                            <small>qualif</small>
+                        </div>
+                        <div class="carteira-stat orange">
+                            <strong>${totalFila}</strong>
+                            <small>fila</small>
+                        </div>
+                    </div>
                 </div>
             `;
         }).join('');
+
+        carteirasGrid.querySelectorAll('.carteira-card').forEach(card => {
+            card.addEventListener('click', () => {
+                const listaId = Number(card.dataset.listaId);
+                abrirDetalheCarteira(listaId, carteiras);
+            });
+        });
     }
 
+    function abrirDetalheCarteira(listaId, carteiras) {
+        const carteira = carteiras.find(c => c.lista_id === listaId);
+        if (!carteira) return;
+
+        modalListaNome.textContent = carteira.nome;
+        modalListaInfo.textContent = `${carteira.total} contatos · subida em ${dataCurta(carteira.criado_em)}`;
+
+        if (modalSearchContato) modalSearchContato.style.display = 'none';
+        if (btnDeletarLista)    btnDeletarLista.style.display    = 'none';
+
+        const modalBody = document.querySelector('#modalLista .modal-body');
+        if (!modalBody) {
+            console.error('[detalhe-carteira] modal-body não encontrado');
+            return;
+        }
+
+        if (!carteira.corretores.length) {
+            modalBody.innerHTML = `
+                <div class="empty-state small">
+                    <i class="fas fa-users"></i>
+                    <p>Nenhum corretor nessa carteira.</p>
+                </div>
+            `;
+            modalLista.style.display = 'flex';
+            return;
+        }
+
+        modalBody.innerHTML = `
+            <div class="carteira-detalhe-lista">
+                ${carteira.corretores.map(cor => `
+                    <div class="carteira-detalhe-item">
+                        <div class="corretor-avatar">${iniciais(cor.nome)}</div>
+                        <div class="carteira-detalhe-info">
+                            <strong>${escapeHtml(cor.nome)}</strong>
+                            <small>@${escapeHtml(cor.usuario)}</small>
+                        </div>
+                        <div class="carteira-detalhe-stats">
+                            <div class="carteira-detalhe-stat total">
+                                <strong>${cor.recebeu}</strong>
+                                <small>recebeu</small>
+                            </div>
+                            <div class="carteira-detalhe-stat qualif">
+                                <strong>${cor.qualificou}</strong>
+                                <small>qualif</small>
+                            </div>
+                            <div class="carteira-detalhe-stat fila">
+                                <strong>${cor.fila}</strong>
+                                <small>fila</small>
+                            </div>
+                            <div class="carteira-detalhe-stat descart">
+                                <strong>${cor.descartou}</strong>
+                                <small>desc</small>
+                            </div>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+
+        modalLista.style.display = 'flex';
+    }
+
+    /* =========================================================
+       POLLING (atualiza dashboard a cada 60s)
+       ========================================================= */
+    function iniciarPolling() {
+        if (pollingTimer) clearInterval(pollingTimer);
+
+        pollingTimer = setInterval(() => {
+            const dashTab = document.querySelector('.nav-tab[data-tab="dashboard"]');
+            if (dashTab && dashTab.classList.contains('active')) {
+                atualizarDashboard();
+            }
+        }, 60000);
+    }
+
+    function pararPolling() {
+        if (pollingTimer) {
+            clearInterval(pollingTimer);
+            pollingTimer = null;
+        }
+    }
+
+    window.addEventListener('beforeunload', pararPolling);
+
+    /* =========================================================
+       SPARKLINES (KPIs)
+       ========================================================= */
     function adicionarSparklines() {
         const sparklines = [
             'M0,22 L20,18 L40,20 L60,12 L80,14 L100,8',
@@ -352,9 +494,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /* =========================================================
-       SUBIR LISTA — modo arquivo/texto
+       SUBIR LISTA — Modo arquivo/texto
        ========================================================= */
-
     modoBtns.forEach(btn => {
         btn.addEventListener('click', () => {
             const modo = btn.dataset.modo;
@@ -380,7 +521,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    /* Parse */
     function parseContatos(texto) {
         const linhas = String(texto || '')
             .split(/\r?\n/)
@@ -391,7 +531,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         linhas.forEach((linha, i) => {
             const lower = linha.toLowerCase();
-
             if (i === 0 && (lower.includes('nome') || lower.includes('telefone') || lower.includes('celular') || lower.includes('fone'))) {
                 return;
             }
@@ -434,7 +573,6 @@ document.addEventListener('DOMContentLoaded', () => {
         return contatos;
     }
 
-    /* Ler CSV */
     function lerArquivoCsv(file) {
         return new Promise((resolve, reject) => {
             const nome = file.name.toLowerCase();
@@ -476,7 +614,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const { contatos } = await lerArquivoCsv(file);
 
             if (!contatos.length) {
-                throw new Error('Nenhum contato válido encontrado. Confira as colunas nome, telefone.');
+                throw new Error('Nenhum contato válido encontrado. Confira as colunas nome e telefone.');
             }
 
             contatosDoArquivo = contatos;
@@ -666,6 +804,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function handleSubirLista() {
+        if (enviandoLista) return;
+        enviandoLista = true;
+
         [nomeListaError, textoListaError, corretoresError, arquivoCsvError].forEach(e => {
             e.textContent = '';
             e.classList.remove('visible');
@@ -678,6 +819,7 @@ document.addEventListener('DOMContentLoaded', () => {
             nomeListaError.textContent = 'Informe um nome pra lista.';
             nomeListaError.classList.add('visible');
             nomeListaInput.classList.add('error');
+            enviandoLista = false;
             return;
         }
 
@@ -691,6 +833,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 textoListaError.classList.add('visible');
                 textoListaInput.classList.add('error');
             }
+            enviandoLista = false;
             return;
         }
 
@@ -699,6 +842,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!marcados.length) {
             corretoresError.textContent = 'Selecione pelo menos 1 corretor.';
             corretoresError.classList.add('visible');
+            enviandoLista = false;
             return;
         }
 
@@ -734,6 +878,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } finally {
             btnSubirLista.disabled = false;
             btnSubirLista.innerHTML = '<i class="fas fa-check"></i> Subir e distribuir';
+            enviandoLista = false;
         }
     }
 
@@ -741,7 +886,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (btnSubirLista)    btnSubirLista.addEventListener('click', handleSubirLista);
 
     /* =========================================================
-       LISTAS
+       LISTAS (aba padrão — tabela de contatos)
        ========================================================= */
     async function renderizarListas() {
         try {
@@ -797,7 +942,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /* =========================================================
-       MODAL LISTA
+       MODAL LISTA — modo "tabela de contatos"
        ========================================================= */
     async function abrirModalLista(listaId) {
         try {
@@ -813,9 +958,50 @@ document.addEventListener('DOMContentLoaded', () => {
             const { contatos } = await ApiClient.get(`/api/admin/listas/${listaId}/contatos`);
             todosContatosDaLista = contatos;
 
-            renderizarContatosModal(todosContatosDaLista);
+            // 🔒 Reconstrói o modal-body do zero
+            const modalBody = document.querySelector('#modalLista .modal-body');
+            if (!modalBody) {
+                console.error('[modal-lista] modal-body não encontrado');
+                mostrarToast('Erro: estrutura do modal quebrada.', 'error');
+                return;
+            }
 
-            modalSearchContato.value = '';
+            modalBody.innerHTML = `
+                <div class="contatos-table-wrapper">
+                    <table class="contatos-table">
+                        <thead>
+                            <tr>
+                                <th>Nome</th>
+                                <th>Telefone</th>
+                                <th>Corretor</th>
+                                <th>Status</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="contatosTableBody"></tbody>
+                    </table>
+                </div>
+
+                <div class="empty-state small" id="contatosVazio" style="display: none;">
+                    <i class="fas fa-search"></i>
+                    <p>Nenhum contato encontrado.</p>
+                </div>
+            `;
+
+            const tbody = document.getElementById('contatosTableBody');
+            if (!tbody) {
+                console.error('[modal-lista] tbody não encontrado');
+                return;
+            }
+
+            renderizarContatosModal(contatos, tbody);
+
+            if (btnDeletarLista)    btnDeletarLista.style.display    = '';
+            if (modalSearchContato) {
+                modalSearchContato.style.display = '';
+                modalSearchContato.value = '';
+            }
+
             modalLista.style.display = 'flex';
 
         } catch (err) {
@@ -824,16 +1010,18 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function renderizarContatosModal(contatos) {
+    function renderizarContatosModal(contatos, tbody) {
+        const vazio = document.getElementById('contatosVazio');
+
         if (!contatos.length) {
-            contatosTableBody.innerHTML = '';
-            contatosVazio.style.display = 'block';
+            tbody.innerHTML = '';
+            vazio.style.display = 'block';
             return;
         }
 
-        contatosVazio.style.display = 'none';
+        vazio.style.display = 'none';
 
-        contatosTableBody.innerHTML = contatos.map(c => {
+        tbody.innerHTML = contatos.map(c => {
             const statusClass = c.status || 'novo';
             const nomeCorretor = c.corretor_nome || '—';
 
@@ -857,7 +1045,7 @@ document.addEventListener('DOMContentLoaded', () => {
             `;
         }).join('');
 
-        contatosTableBody.querySelectorAll('.btn-row-delete').forEach(btn => {
+        tbody.querySelectorAll('.btn-row-delete').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 const contatoId = btn.dataset.contatoId;
@@ -874,7 +1062,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                             const { contatos: atualizados } = await ApiClient.get(`/api/admin/listas/${listaSelecionadaAtual.id}/contatos`);
                             todosContatosDaLista = atualizados;
-                            renderizarContatosModal(todosContatosDaLista);
+                            renderizarContatosModal(atualizados, tbody);
                             renderizarListas();
                         } catch (err) {
                             mostrarToast('Erro ao remover contato.', 'error');
@@ -887,9 +1075,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (modalSearchContato) {
         modalSearchContato.addEventListener('input', () => {
+            const tbody = document.getElementById('contatosTableBody');
+            if (!tbody) return;
+
             const termo = modalSearchContato.value.trim().toLowerCase();
             if (!termo) {
-                renderizarContatosModal(todosContatosDaLista);
+                renderizarContatosModal(todosContatosDaLista, tbody);
                 return;
             }
 
@@ -897,7 +1088,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 c.nome.toLowerCase().includes(termo) ||
                 String(c.telefone).includes(termo)
             );
-            renderizarContatosModal(filtrados);
+            renderizarContatosModal(filtrados, tbody);
         });
     }
 
@@ -1078,24 +1269,18 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /* =========================================================
-       HEADER — LOGOUT
+       HEADER — NOME DO USUÁRIO
        ========================================================= */
     if (headerUserName) {
         const nome = localStorage.getItem('sr_usuario') || 'Administrador';
         headerUserName.textContent = nome.split(' ')[0];
     }
 
-    if (btnLogout) {
-        btnLogout.addEventListener('click', () => {
-            ApiClient.logout();
-        });
-    }
-
     /* Fechar modais com ESC */
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
-            modalLista.style.display = 'none';
-            modalConfirm.style.display = 'none';
+            if (modalLista) modalLista.style.display = 'none';
+            if (modalConfirm) modalConfirm.style.display = 'none';
         }
     });
 
@@ -1111,7 +1296,10 @@ document.addEventListener('DOMContentLoaded', () => {
         await renderizarListas();
         await renderizarCorretores();
 
-        console.log('[admin] Sistema pronto.');
+        // Inicia o polling do dashboard
+        iniciarPolling();
+
+        console.log('[admin] Sistema pronto (com polling de 60s).');
     }
 
     init();
