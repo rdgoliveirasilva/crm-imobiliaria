@@ -2101,7 +2101,26 @@
     color: #9b1c1c;
     border-color: rgba(220, 38, 38, 0.3);
 }
-
+.tag-status.success {
+    background: linear-gradient(135deg, #d6ece7, #c4e3db);
+    color: #0f5132;
+    border-color: #c8e6dd;
+}
+.tag-status.warning {
+    background: linear-gradient(135deg, #faead0, #f7dfba);
+    color: #92610a;
+    border-color: #f6e3c1;
+}
+.tag-status.danger {
+    background: linear-gradient(135deg, #fbd6d6, #f9c4c4);
+    color: #9b1c1c;
+    border-color: #f7d0d0;
+}
+.tag-status.sem_resposta {
+    background: linear-gradient(135deg, #fbd6d6, #f9c4c4);
+    color: #9b1c1c;
+    border-color: #f7d0d0;
+}
 .btn-row-delete {
     width: 30px;
     height: 30px;
@@ -2832,6 +2851,187 @@
     box-shadow:
         0 0 0 4px rgba(0, 44, 97, 0.08),
         0 4px 14px -6px rgba(0, 44, 97, 0.15);
+}
+
+/* =========================================================
+   BOTÃO "GERENCIAR CORRETORES" NO MODAL
+   ========================================================= */
+
+.btn-modal-manage {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.75rem 1.05rem;
+    border-radius: 12px;
+    background: linear-gradient(135deg, var(--primary), var(--primary-light));
+    color: var(--white);
+    border: none;
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all var(--transition);
+    white-space: nowrap;
+    flex-shrink: 0;
+    box-shadow: 0 8px 18px -10px rgba(0, 44, 97, 0.6);
+}
+
+.btn-modal-manage:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 12px 26px -10px rgba(0, 44, 97, 0.8);
+}
+
+/* =========================================================
+   MODAL — GERENCIAR CORRETORES
+   ========================================================= */
+
+.gerenciar-aviso {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.6rem;
+    background: linear-gradient(135deg, #e8f4f1, #d9ede8);
+    border: 1px solid #c8e6dd;
+    border-left: 4px solid #0f766e;
+    color: #0f5132;
+    font-size: 0.85rem;
+    line-height: 1.5;
+    padding: 0.85rem 1rem;
+    border-radius: 12px;
+    margin-bottom: 1.2rem;
+}
+
+.gerenciar-aviso i {
+    color: #0f766e;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.gerenciar-lista {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    padding: 1rem 1.4rem 1.4rem;
+}
+
+.corretor-gerenciar-item {
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+    padding: 0.95rem 1.1rem;
+    background: rgba(248, 251, 255, 0.9);
+    border: 1.5px solid rgba(0, 44, 97, 0.08);
+    border-radius: 14px;
+    cursor: pointer;
+    transition: all var(--transition);
+    position: relative;
+}
+
+.corretor-gerenciar-item:hover {
+    background: var(--white);
+    border-color: rgba(0, 44, 97, 0.18);
+}
+
+.corretor-gerenciar-item.selected {
+    border-color: var(--primary);
+    background: linear-gradient(135deg, rgba(0, 44, 97, 0.04), rgba(59, 130, 246, 0.06));
+    box-shadow: 0 6px 18px -10px rgba(0, 44, 97, 0.25);
+}
+
+.corretor-gerenciar-check {
+    width: 22px;
+    height: 22px;
+    border-radius: 7px;
+    border: 2px solid rgba(0, 44, 97, 0.25);
+    background: var(--white);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: all var(--transition);
+    color: transparent;
+    font-size: 0.72rem;
+}
+
+.corretor-gerenciar-item.selected .corretor-gerenciar-check {
+    background: linear-gradient(135deg, var(--primary), var(--primary-light));
+    border-color: var(--primary);
+    color: var(--white);
+    box-shadow: 0 0 0 4px rgba(0, 44, 97, 0.12);
+}
+
+.corretor-gerenciar-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.corretor-gerenciar-info strong {
+    display: block;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--dark-900);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    margin-bottom: 3px;
+}
+
+.corretor-gerenciar-item.selected .corretor-gerenciar-info strong {
+    color: var(--primary);
+}
+
+.corretor-gerenciar-info small {
+    font-size: 0.76rem;
+    color: var(--gray-500);
+    display: flex;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+}
+
+.corretor-gerenciar-info small b {
+    color: var(--primary);
+    font-weight: 700;
+}
+
+.corretor-gerenciar-stats {
+    display: flex;
+    gap: 0.75rem;
+    flex-shrink: 0;
+}
+
+.corretor-gerenciar-stat {
+    text-align: right;
+    line-height: 1.05;
+}
+
+.corretor-gerenciar-stat strong {
+    display: block;
+    font-size: 1rem;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+}
+
+.corretor-gerenciar-stat small {
+    font-size: 0.6rem;
+    color: var(--gray-500);
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    font-weight: 700;
+}
+
+.corretor-gerenciar-stat.pend strong  { color: #f59e0b; }
+.corretor-gerenciar-stat.qual strong  { color: #16a34a; }
+
+@media (max-width: 560px) {
+    .modal-toolbar {
+        flex-wrap: wrap;
+    }
+    .btn-modal-manage {
+        width: 100%;
+        justify-content: center;
+    }
+    .corretor-gerenciar-stats {
+        gap: 0.5rem;
+    }
 }
 
 /* =========================================================

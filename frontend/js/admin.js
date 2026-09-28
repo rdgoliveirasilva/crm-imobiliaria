@@ -83,6 +83,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const modalSearchContato  = $('modalSearchContato');
     const contatosVazio       = $('contatosVazio');
     const btnDeletarLista     = $('btnDeletarLista');
+    
+        // Modal gerenciar lista
+    const modalGerenciar          = $('modalGerenciar');
+    const gerenciarListaNome      = $('gerenciarListaNome');
+    const gerenciarListaCorretores = $('gerenciarListaCorretores');
+    const btnGerenciarCorretores  = $('btnGerenciarCorretores');
+    const btnFecharGerenciar      = $('btnFecharGerenciar');
+    const btnCancelarGerenciar    = $('btnCancelarGerenciar');
+    const btnSalvarGerenciar      = $('btnSalvarGerenciar');
+    const btnSalvarGerenciarTexto = $('btnSalvarGerenciarTexto');
 
     // Modal confirmação
     const modalConfirm     = $('modalConfirm');
@@ -119,7 +129,29 @@ document.addEventListener('DOMContentLoaded', () => {
     /* =========================================================
        UTILS
        ========================================================= */
-    function escapeHtml(str) {
+    
+    function tagParaTexto(tag) {
+        const mapa = {
+            agendado:          'Agendado',
+            em_atendimento:    'Em atendimento',
+            vendido:           'Vendido',
+            mensagem_enviada:  'Mensagem enviada',
+            retornar_depois:   'Retornar depois',
+            follow_up:         'Follow up',
+            sem_interesse:     'Cliente sem interesse',
+            telefone_invalido: 'Telefone inexistente',
+            sem_resposta:      'Sem resposta'
+        };
+        return mapa[tag] || tag;
+    }
+
+    function tagCor(tag) {
+        if (['agendado', 'em_atendimento', 'vendido'].includes(tag)) return 'success';
+        if (['mensagem_enviada', 'retornar_depois', 'follow_up'].includes(tag)) return 'warning';
+        return 'danger';
+    }
+    
+       function escapeHtml(str) {
         return String(str || '')
             .replace(/&/g, '&amp;')
             .replace(/</g, '&lt;')
@@ -950,6 +982,104 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /* =========================================================
+       GERENCIAR CORRETORES DA LISTA
+       ========================================================= */
+    async function abrirGerenciarCorretores() {
+        if (!listaSelecionadaAtual) return;
+
+        const listaId = listaSelecionadaAtual.id;
+
+        try {
+            const { lista, corretores } = await ApiClient.get(`/api/admin/listas/${listaId}/corretores`);
+
+            gerenciarListaNome.textContent = `${lista.nome} · escolha quem participa`;
+
+            gerenciarListaCorretores.innerHTML = corretores.map(c => `
+                <div class="corretor-gerenciar-item ${c.participa ? 'selected' : ''}" data-corretor-id="${c.id}">
+                    <div class="corretor-gerenciar-check">
+                        <i class="fas fa-check"></i>
+                    </div>
+                    <div class="corretor-gerenciar-info">
+                        <strong>${escapeHtml(c.nome)}</strong>
+                        <small>@${escapeHtml(c.usuario)}</small>
+                    </div>
+                    <div class="corretor-gerenciar-stats">
+                        <div class="corretor-gerenciar-stat pend">
+                            <strong>${c.pendentes_na_lista}</strong>
+                            <small>pendentes</small>
+                        </div>
+                        <div class="corretor-gerenciar-stat qual">
+                            <strong>${c.qualificados_na_lista}</strong>
+                            <small>qualif</small>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+
+            // Toggle de seleção ao clicar no item
+            gerenciarListaCorretores.querySelectorAll('.corretor-gerenciar-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    item.classList.toggle('selected');
+                });
+            });
+
+            // Fecha o modal da lista e abre o de gerenciar
+            modalLista.style.display = 'none';
+            modalGerenciar.style.display = 'flex';
+
+        } catch (err) {
+            console.error('[gerenciar-corretores] erro:', err);
+            mostrarToast('Erro ao carregar corretores.', 'error');
+        }
+    }
+
+    async function salvarGerenciarCorretores() {
+        if (!listaSelecionadaAtual) return;
+
+        const listaId = listaSelecionadaAtual.id;
+
+        const selecionados = Array.from(
+            gerenciarListaCorretores.querySelectorAll('.corretor-gerenciar-item.selected')
+        ).map(el => Number(el.dataset.corretorId));
+
+        if (!selecionados.length) {
+            mostrarToast('Selecione pelo menos 1 corretor.', 'error');
+            return;
+        }
+
+        btnSalvarGerenciar.disabled = true;
+        btnSalvarGerenciarTexto.textContent = 'Salvando...';
+
+        try {
+            const res = await ApiClient.patch(`/api/admin/listas/${listaId}/corretores`, {
+                corretoresIds: selecionados
+            });
+
+            const partes = [];
+            if (res.adicionados) partes.push(`${res.adicionados} adicionado(s)`);
+            if (res.removidos)   partes.push(`${res.removidos} removido(s)`);
+            if (res.redistribuidos) partes.push(`${res.redistribuidos} redistribuído(s)`);
+
+            mostrarToast(`✅ ${partes.join(' · ') || 'Salvo'}`, 'success');
+
+            fecharGerenciar();
+            await renderizarListas();
+            await atualizarDashboard();
+
+        } catch (err) {
+            console.error('[gerenciar-corretores salvar] erro:', err);
+            mostrarToast(err.message || 'Erro ao salvar.', 'error');
+        } finally {
+            btnSalvarGerenciar.disabled = false;
+            btnSalvarGerenciarTexto.textContent = 'Salvar alterações';
+        }
+    }
+
+    function fecharGerenciar() {
+        if (modalGerenciar) modalGerenciar.style.display = 'none';
+    }
+    
+    /* =========================================================
        MODAL LISTA — modo "tabela de contatos"
        ========================================================= */
     async function abrirModalLista(listaId) {
@@ -1030,8 +1160,27 @@ document.addEventListener('DOMContentLoaded', () => {
         vazio.style.display = 'none';
 
         tbody.innerHTML = contatos.map(c => {
-            const statusClass = c.status || 'novo';
             const nomeCorretor = c.corretor_nome || '—';
+
+            // 👇 Mostra a tag exata se tiver, senão mostra o status
+            let labelTag;
+            let classeTag;
+
+            if (c.resultado) {
+                // Tem resultado específico (Agendado, Vendido, etc)
+                labelTag = tagParaTexto(c.resultado);
+                classeTag = tagCor(c.resultado);
+            } else {
+                // Sem resultado ainda — mostra o status
+                const statusClass = c.status || 'novo';
+                labelTag = {
+                    novo: 'Novo',
+                    qualificado: 'Qualificado',
+                    descartado: 'Descartado',
+                    sem_resposta: 'Sem resposta'
+                }[statusClass] || statusClass;
+                classeTag = statusClass;
+            }
 
             return `
                 <tr>
@@ -1039,9 +1188,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     <td class="col-phone">${escapeHtml(formatarTelefone(c.telefone))}</td>
                     <td>${escapeHtml(nomeCorretor)}</td>
                     <td>
-                        <span class="tag-status ${statusClass}">
-                            ${statusClass === 'novo' ? 'Novo' :
-                              statusClass === 'qualificado' ? 'Qualificado' : 'Descartado'}
+                        <span class="tag-status ${classeTag}">
+                            ${escapeHtml(labelTag)}
                         </span>
                     </td>
                     <td>
@@ -1303,6 +1451,19 @@ document.addEventListener('DOMContentLoaded', () => {
         await renderizarSeletorCorretores();
         await renderizarListas();
         await renderizarCorretores();
+
+        // Gerenciar corretores
+        if (btnGerenciarCorretores) {
+            btnGerenciarCorretores.addEventListener('click', abrirGerenciarCorretores);
+        }
+        if (btnFecharGerenciar)   btnFecharGerenciar.addEventListener('click', fecharGerenciar);
+        if (btnCancelarGerenciar) btnCancelarGerenciar.addEventListener('click', fecharGerenciar);
+        if (btnSalvarGerenciar)   btnSalvarGerenciar.addEventListener('click', salvarGerenciarCorretores);
+        if (modalGerenciar) {
+            modalGerenciar.addEventListener('click', (e) => {
+                if (e.target === modalGerenciar) fecharGerenciar();
+            });
+        }
 
         // Botões de variáveis de mensagem
         document.querySelectorAll('.variavel-btn').forEach(btn => {
