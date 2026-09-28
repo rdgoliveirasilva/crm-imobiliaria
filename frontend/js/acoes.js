@@ -4,7 +4,7 @@
 
 const Acoes = (() => {
 
-    /* Detecta se é mobile (onde tel: funciona bem) */
+    /* Detecta se é mobile */
     function ehMobile() {
         return /Android|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/i
             .test(navigator.userAgent);
@@ -15,19 +15,14 @@ const Acoes = (() => {
         let n = telefone.replace(/\D/g, '');
         if (!n) return '';
 
-        // Se vier com DDI 55 já, mantém
         if (n.startsWith('55') && n.length >= 12) return n;
-
-        // Se tiver 13 dígitos (0 + DDD + número), remove o 0 inicial
         if (n.startsWith('0') && n.length === 12) n = n.substring(1);
 
-        // Anexa DDI Brasil
         return '55' + n;
     }
 
     /**
      * Inicia ligação.
-     * Retorna { ok, modo, url } — se modo = 'desktop', abre modal com o número.
      */
     function ligar(telefone) {
         const numero = normalizarTelefone(telefone);
@@ -40,50 +35,75 @@ const Acoes = (() => {
             return { ok: true, modo: 'mobile', url };
         }
 
-        // Desktop → devolve o número pro modal
         return { ok: true, modo: 'desktop', numero, url };
     }
 
     /**
-     * Abre WhatsApp com mensagem pronta.
+     * Monta a mensagem final.
+     * - Se o lead veio com `lista_mensagem`, usa ela.
+     * - Senão, usa o template padrão.
+     * - Substitui as variáveis.
+     */
+    function montarMensagem(lead, nomeCorretor = 'Corretor') {
+        const primeiroNome = (lead.nome || 'cliente').split(' ')[0] || 'cliente';
+        const nomeCompleto = lead.nome || 'cliente';
+
+        // Mensagem da lista OU template padrão
+        let mensagemBase = lead.lista_mensagem && lead.lista_mensagem.trim()
+            ? lead.lista_mensagem
+            : 'Olá {nome}, tudo bem? Sou {corretor} da {empresa}. Vi que você demonstrou interesse em "{interesse}". Podemos conversar?';
+
+        // Substitui variáveis
+        const mensagemFinal = mensagemBase
+            .replace(/\{nome\}/g, primeiroNome)
+            .replace(/\{nome_completo\}/g, nomeCompleto)
+            .replace(/\{corretor\}/g, nomeCorretor)
+            .replace(/\{empresa\}/g, 'SR Lançamentos')
+            .replace(/\{interesse\}/g, lead.interesse || 'um imóvel');
+
+        return mensagemFinal;
+    }
+
+    /**
+     * Abre WhatsApp com a mensagem (personalizada ou padrão).
      */
     function abrirWhatsApp(lead, nomeCorretor = 'Corretor') {
         const numero = normalizarTelefone(lead.telefone);
         if (!numero) return { ok: false, erro: 'Telefone inválido.' };
 
-        const primeiroNome = (lead.nome || '').split(' ')[0] || 'cliente';
-        const mensagem = `Olá ${primeiroNome}, tudo bem? ` +
-                         `Sou ${nomeCorretor} da SR Lançamentos. ` +
-                         `Vi que você demonstrou interesse em "${lead.interesse}". ` +
-                         `Podemos conversar? 😊`;
-
+        const mensagem = montarMensagem(lead, nomeCorretor);
         const url = `https://wa.me/${numero}?text=${encodeURIComponent(mensagem)}`;
+
         window.open(url, '_blank');
         return { ok: true, url };
     }
 
     /**
-     * Só retorna a URL de WhatsApp (pra usar em link <a>).
+     * Só retorna a URL (pra usar em link <a>).
      */
     function linkWhatsApp(lead, nomeCorretor = 'Corretor') {
         const numero = normalizarTelefone(lead.telefone);
         if (!numero) return '#';
-        const primeiroNome = (lead.nome || '').split(' ')[0] || 'cliente';
-        const mensagem = `Olá ${primeiroNome}, tudo bem? ` +
-                         `Sou ${nomeCorretor} da SR Lançamentos. ` +
-                         `Vi que você demonstrou interesse em "${lead.interesse}". ` +
-                         `Podemos conversar? 😊`;
+        const mensagem = montarMensagem(lead, nomeCorretor);
         return `https://wa.me/${numero}?text=${encodeURIComponent(mensagem)}`;
     }
 
     function formatarTelefone(tel) {
-        const n = tel.replace(/\D/g, '');
+        const n = String(tel).replace(/\D/g, '');
         if (n.length === 13) return `+${n.slice(0,2)} (${n.slice(2,4)}) ${n.slice(4,9)}-${n.slice(9)}`;
         if (n.length === 11) return `(${n.slice(0,2)}) ${n.slice(2,7)}-${n.slice(7)}`;
         if (n.length === 10) return `(${n.slice(0,2)}) ${n.slice(2,6)}-${n.slice(6)}`;
         return tel;
     }
 
-    return { ligar, abrirWhatsApp, linkWhatsApp, formatarTelefone, ehMobile, normalizarTelefone };
+    return {
+        ligar,
+        abrirWhatsApp,
+        linkWhatsApp,
+        montarMensagem,
+        formatarTelefone,
+        ehMobile,
+        normalizarTelefone
+    };
 
 })();

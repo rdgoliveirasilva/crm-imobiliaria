@@ -156,7 +156,7 @@ router.get('/listas', async (req, res) => {
 router.post('/listas', async (req, res) => {
     const client = await pool.connect();
     try {
-        const { nome, contatos, corretoresIds } = req.body || {};
+        const { nome, contatos, corretoresIds, mensagemWhatsapp } = req.body || {};
 
         if (!nome || !Array.isArray(contatos) || !contatos.length) {
             return res.status(400).json({ erro: 'Informe o nome da lista e pelo menos 1 contato.' });
@@ -188,8 +188,8 @@ router.post('/listas', async (req, res) => {
         await client.query('BEGIN');
 
         const listaResult = await client.query(
-            'INSERT INTO listas (nome, total) VALUES ($1, $2) RETURNING id',
-            [nome.trim(), contatos.length]
+            'INSERT INTO listas (nome, total, mensagem_whatsapp) VALUES ($1, $2, $3) RETURNING id',
+            [nome.trim(), contatos.length, mensagemWhatsapp || null]
         );
         const listaId = listaResult.rows[0].id;
 

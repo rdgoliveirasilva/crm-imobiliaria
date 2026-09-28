@@ -298,6 +298,48 @@
                             <div class="preview-list" id="previewList"></div>
                         </div>
 
+                        <!-- MENSAGEM DO WHATSAPP -->
+                        <div class="form-group">
+                            <label for="mensagemWhatsapp">
+                                Mensagem do WhatsApp
+                                <small style="font-weight: 400; color: var(--gray-500);">(opcional)</small>
+                            </label>
+                            <p class="form-subtitle">
+                                Se preenchida, essa mensagem será usada quando o corretor clicar em "WhatsApp" para leads desta lista.
+                            </p>
+
+                            <!-- Botões de variáveis -->
+                            <div class="variaveis-wrap">
+                                <span class="variaveis-label">Inserir variável:</span>
+                                <button type="button" class="variavel-btn" data-var="{nome}">
+                                    <i class="fas fa-plus"></i> {nome}
+                                </button>
+                                <button type="button" class="variavel-btn" data-var="{nome_completo}">
+                                    <i class="fas fa-plus"></i> {nome_completo}
+                                </button>
+                                <button type="button" class="variavel-btn" data-var="{corretor}">
+                                    <i class="fas fa-plus"></i> {corretor}
+                                </button>
+                                <button type="button" class="variavel-btn" data-var="{empresa}">
+                                    <i class="fas fa-plus"></i> {empresa}
+                                </button>
+                                <button type="button" class="variavel-btn" data-var="{interesse}">
+                                    <i class="fas fa-plus"></i> {interesse}
+                                </button>
+                            </div>
+
+                            <textarea
+                                id="mensagemWhatsapp"
+                                rows="5"
+                                maxlength="800"
+                                placeholder="Olá {nome}, tudo bem? Sou {corretor} da {empresa}. Vi que você demonstrou interesse e gostaria de conversar. Podemos falar agora?"
+                            ></textarea>
+                            <span class="form-hint">
+                                <i class="fas fa-info-circle"></i>
+                                As variáveis são substituídas automaticamente pelo sistema antes do envio.
+                            </span>
+                        </div>
+
                         <!-- SELETOR DE CORRETORES -->
                         <div class="form-group">
                             <label>Quem entra na roleta? <span class="required">*</span></label>

@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS listas (
     id SERIAL PRIMARY KEY,
     nome VARCHAR(120) NOT NULL,
     total INTEGER NOT NULL,
+    mensagem_whatsapp TEXT,
     criado_em TIMESTAMP DEFAULT NOW()
 );
 

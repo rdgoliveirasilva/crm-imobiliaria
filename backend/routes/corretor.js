@@ -19,7 +19,7 @@ router.get('/proximo-lead', async (req, res) => {
         const corretorId = req.usuario.id;
 
         const result = await pool.query(`
-            SELECT l.*, li.nome AS lista_nome
+            SELECT l.*, li.nome AS lista_nome, li.mensagem_whatsapp AS lista_mensagem
             FROM leads l
             LEFT JOIN listas li ON li.id = l.lista_id
             WHERE l.corretor_id = $1 AND l.status = 'novo'
@@ -45,7 +45,7 @@ router.get('/lead/:id', async (req, res) => {
         const leadId = Number(req.params.id);
 
         const result = await pool.query(`
-            SELECT l.*, li.nome AS lista_nome
+            SELECT l.*, li.nome AS lista_nome, li.mensagem_whatsapp AS lista_mensagem
             FROM leads l
             LEFT JOIN listas li ON li.id = l.lista_id
             WHERE l.id = $1 AND l.corretor_id = $2

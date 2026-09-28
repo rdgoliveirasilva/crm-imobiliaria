@@ -92,6 +92,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnConfirmNao    = $('btnConfirmNao');
     const btnConfirmSim    = $('btnConfirmSim');
 
+    // Mensagem Whatsapp
+    const mensagemWhatsappInput = $('mensagemWhatsapp');
+
+
     // Toast
     const toast = $('toast');
 
@@ -850,16 +854,20 @@ document.addEventListener('DOMContentLoaded', () => {
         btnSubirLista.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Distribuindo...';
 
         try {
+            const mensagemWhatsapp = mensagemWhatsappInput ? mensagemWhatsappInput.value.trim() : '';
+
             const res = await ApiClient.post('/api/admin/listas', {
                 nome,
                 contatos,
-                corretoresIds: marcados
+                corretoresIds: marcados,
+                mensagemWhatsapp: mensagemWhatsapp || null
             });
 
             mostrarToast(`✅ ${res.total} contatos distribuídos com sucesso!`, 'success');
 
             nomeListaInput.value = '';
             textoListaInput.value = '';
+            if (mensagemWhatsappInput) mensagemWhatsappInput.value = '';
             limparArquivo();
             previewContatos.style.display = 'none';
             infoRoleta.innerHTML = `
@@ -1284,7 +1292,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    /* =========================================================
+       /* =========================================================
        INIT
        ========================================================= */
     async function init() {
@@ -1295,6 +1303,26 @@ document.addEventListener('DOMContentLoaded', () => {
         await renderizarSeletorCorretores();
         await renderizarListas();
         await renderizarCorretores();
+
+        // Botões de variáveis de mensagem
+        document.querySelectorAll('.variavel-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (!mensagemWhatsappInput) return;
+
+                const variavel = btn.dataset.var;
+                const textarea = mensagemWhatsappInput;
+
+                const inicio = textarea.selectionStart;
+                const fim = textarea.selectionEnd;
+                const texto = textarea.value;
+
+                textarea.value = texto.substring(0, inicio) + variavel + texto.substring(fim);
+
+                const novaPos = inicio + variavel.length;
+                textarea.setSelectionRange(novaPos, novaPos);
+                textarea.focus();
+            });
+        });
 
         // Inicia o polling do dashboard
         iniciarPolling();
