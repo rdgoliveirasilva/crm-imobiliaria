@@ -536,7 +536,6 @@
                             <tr>
                                 <th>Nome</th>
                                 <th>Telefone</th>
-                                <th>Interesse</th>
                                 <th>Corretor</th>
                                 <th>Status</th>
                                 <th></th>
@@ -608,6 +607,52 @@
                 <div class="gerenciar-lista" id="gerenciarListaCorretores">
                     <!-- Preenchido via JS -->
                 </div>
+
+                <!-- =====================================================
+                     MENSAGEM DO WHATSAPP DA LISTA
+                     ===================================================== -->
+                <div class="gerenciar-mensagem">
+                    <div class="gerenciar-mensagem-header">
+                        <i class="fab fa-whatsapp"></i>
+                        <div>
+                            <strong>Mensagem do WhatsApp</strong>
+                            <small>Usada quando o corretor clicar em "WhatsApp" para leads desta lista</small>
+                        </div>
+                    </div>
+
+                    <div class="variaveis-wrap">
+                        <span class="variaveis-label">Inserir variável:</span>
+                        <button type="button" class="variavel-btn" data-var="{nome}">
+                            <i class="fas fa-plus"></i> {nome}
+                        </button>
+                        <button type="button" class="variavel-btn" data-var="{nome_completo}">
+                            <i class="fas fa-plus"></i> {nome_completo}
+                        </button>
+                        <button type="button" class="variavel-btn" data-var="{corretor}">
+                            <i class="fas fa-plus"></i> {corretor}
+                        </button>
+                        <button type="button" class="variavel-btn" data-var="{empresa}">
+                            <i class="fas fa-plus"></i> {empresa}
+                        </button>
+                        <button type="button" class="variavel-btn" data-var="{interesse}">
+                            <i class="fas fa-plus"></i> {interesse}
+                        </button>
+                    </div>
+
+                    <textarea
+                        id="gerenciarMensagem"
+                        rows="2"
+                        maxlength="800"
+                        placeholder="Olá {nome}, tudo bem? Sou {corretor} da {empresa}..."
+                    ></textarea>
+
+                    <div class="form-actions" style="margin-top: 0.8rem;">
+                        <button type="button" class="btn-modal-manage" id="btnSalvarMensagem" style="width: 100%;">
+                            <i class="fas fa-save"></i>
+                            <span id="btnSalvarMensagemTexto">Salvar mensagem</span>
+                        </button>
+                    </div>
+                </div>
             </div>
 
             <div class="modal-actions-row">
@@ -624,9 +669,9 @@
 
     <div class="toast" id="toast"></div>
 
-<script src="js/api-client.js"></script>
-<script src="js/avatar.js"></script>
-<script src="js/admin.js"></script>
-    
+    <script src="js/api-client.js"></script>
+    <script src="js/avatar.js"></script>
+    <script src="js/admin.js"></script>
+
 </body>
 </html>

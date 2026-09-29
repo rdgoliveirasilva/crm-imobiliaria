@@ -93,6 +93,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnCancelarGerenciar     = $('btnCancelarGerenciar');
     const btnSalvarGerenciar       = $('btnSalvarGerenciar');
     const btnSalvarGerenciarTexto  = $('btnSalvarGerenciarTexto');
+    
 
     // Modal confirmação
     const modalConfirm     = $('modalConfirm');
@@ -104,6 +105,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Mensagem WhatsApp
     const mensagemWhatsappInput = $('mensagemWhatsapp');
+    const gerenciarMensagem          = $('gerenciarMensagem');
+    const btnSalvarMensagem          = $('btnSalvarMensagem');
+    const btnSalvarMensagemTexto     = $('btnSalvarMensagemTexto');
 
     // Toast
     const toast = $('toast');
@@ -805,14 +809,50 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         try {
+            // 1. Consulta o back pra saber quais telefones já existem
+            const dedupe = await ApiClient.post('/api/admin/listas/preview-dedupe', {
+                contatos
+            });
+
+            const totalNovos = dedupe.novos;
+            const totalDescartados = dedupe.descartados;
+
+            // 2. Se TODOS forem duplicados → mostra aviso
+            if (totalNovos === 0) {
+                infoRoleta.innerHTML = `
+                    <div class="info-empty" style="color: #b91c1c;">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <p><strong>Nenhum contato novo.</strong><br>
+                        Todos os ${totalDescartados} contatos já existem no sistema.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            // 3. Busca os corretores pra distribuição (só dos novos)
             const { corretores } = await ApiClient.get('/api/admin/corretores');
             const selecionados = corretores.filter(c => marcados.includes(c.id));
 
             const distribuicao = {};
             selecionados.forEach(c => distribuicao[c.id] = 0);
-            for (let i = 0; i < contatos.length; i++) {
+            for (let i = 0; i < totalNovos; i++) {
                 const c = selecionados[i % selecionados.length];
                 distribuicao[c.id]++;
+            }
+
+            // 4. Monta o aviso de descartados (se tiver)
+            let avisoDescartados = '';
+            if (totalDescartados > 0) {
+                avisoDescartados = `
+                    <div class="roleta-descartados">
+                        <i class="fas fa-info-circle"></i>
+                        <span>
+                            <strong>${totalDescartados}</strong>
+                            ${totalDescartados === 1 ? 'contato foi descartado' : 'contatos foram descartados'}
+                            por já existir no sistema.
+                        </span>
+                    </div>
+                `;
             }
 
             infoRoleta.innerHTML = `
@@ -826,10 +866,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     `).join('')}
                 </div>
                 <div class="roleta-resumo">
-                    <strong>${contatos.length}</strong> contatos serão distribuídos entre
-                    <strong>${selecionados.length}</strong> ${selecionados.length === 1 ? 'corretor' : 'corretores'},
+                    <strong>${totalNovos}</strong> ${totalNovos === 1 ? 'contato novo será distribuído' : 'contatos novos serão distribuídos'}
+                    entre <strong>${selecionados.length}</strong>
+                    ${selecionados.length === 1 ? 'corretor' : 'corretores'},
                     de forma equilibrada e aleatória.
                 </div>
+                ${avisoDescartados}
             `;
 
         } catch (err) {
@@ -1205,6 +1247,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
             gerenciarListaNome.textContent = `${lista.nome} · escolha quem participa`;
 
+             if (gerenciarMensagem) {
+                gerenciarMensagem.value = lista.mensagem_whatsapp || '';
+            }
+
             gerenciarListaCorretores.innerHTML = corretores.map(c => `
                 <div class="corretor-gerenciar-item ${c.participa ? 'selected' : ''}" data-corretor-id="${c.id}">
                     <div class="corretor-gerenciar-check">
@@ -1281,6 +1327,36 @@ document.addEventListener('DOMContentLoaded', () => {
         } finally {
             btnSalvarGerenciar.disabled = false;
             btnSalvarGerenciarTexto.textContent = 'Salvar alterações';
+        }
+    }
+
+    async function salvarMensagemWhatsApp() {
+        if (!listaSelecionadaAtual) return;
+
+        const listaId = listaSelecionadaAtual.id;
+        const mensagem = gerenciarMensagem ? gerenciarMensagem.value.trim() : '';
+
+        btnSalvarMensagem.disabled = true;
+        btnSalvarMensagemTexto.textContent = 'Salvando...';
+
+        try {
+            await ApiClient.patch(`/api/admin/listas/${listaId}/mensagem`, {
+                mensagemWhatsapp: mensagem || null
+            });
+
+            mostrarToast('✅ Mensagem atualizada!', 'success');
+
+            // Atualiza o objeto local
+            if (listaSelecionadaAtual) {
+                listaSelecionadaAtual.mensagem_whatsapp = mensagem || null;
+            }
+
+        } catch (err) {
+            console.error('[salvar-mensagem] erro:', err);
+            mostrarToast(err.message || 'Erro ao salvar mensagem.', 'error');
+        } finally {
+            btnSalvarMensagem.disabled = false;
+            btnSalvarMensagemTexto.textContent = 'Salvar mensagem';
         }
     }
 
@@ -1456,15 +1532,36 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (e.target === modalGerenciar) fecharGerenciar();
             });
         }
+        if (btnSalvarMensagem) {
+            btnSalvarMensagem.addEventListener('click', salvarMensagemWhatsApp);
+        }
 
         // Botões de variáveis de mensagem WhatsApp
+        // Botões de variáveis de mensagem (funcionam em ambos textareas)
         document.querySelectorAll('.variavel-btn').forEach(btn => {
             btn.addEventListener('click', () => {
-                if (!mensagemWhatsappInput) return;
+                // Descobre qual textarea está mais próxima
+                const wrap = btn.closest('.variaveis-wrap');
+                const grupo = wrap ? wrap.parentElement : null;
+                const textarea = grupo ? grupo.querySelector('textarea') : null;
+
+                if (!textarea) {
+                    // Fallback: usa o do subir lista
+                    const fallback = mensagemWhatsappInput;
+                    if (fallback) {
+                        const varText = btn.dataset.var;
+                        const inicio = fallback.selectionStart;
+                        const fim = fallback.selectionEnd;
+                        const texto = fallback.value;
+                        fallback.value = texto.substring(0, inicio) + varText + texto.substring(fim);
+                        const novaPos = inicio + varText.length;
+                        fallback.setSelectionRange(novaPos, novaPos);
+                        fallback.focus();
+                    }
+                    return;
+                }
 
                 const variavel = btn.dataset.var;
-                const textarea = mensagemWhatsappInput;
-
                 const inicio = textarea.selectionStart;
                 const fim = textarea.selectionEnd;
                 const texto = textarea.value;
