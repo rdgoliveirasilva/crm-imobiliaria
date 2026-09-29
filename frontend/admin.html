@@ -667,6 +667,78 @@
         </div>
     </div>
 
+    <!-- =====================================================
+         MODAL — EDITAR CORRETOR
+         ===================================================== -->
+    <div class="modal-overlay" id="modalEditarCorretor" style="display: none;">
+        <div class="modal-card modal-small">
+            <header class="modal-header">
+                <div>
+                    <h2><i class="fas fa-user-edit"></i> Editar corretor</h2>
+                    <p id="editarCorretorSub">Atualize os dados do corretor</p>
+                </div>
+                <button class="modal-close" id="btnFecharEditarCorretor" aria-label="Fechar">
+                    <i class="fas fa-times"></i>
+                </button>
+            </header>
+
+            <div class="modal-body" style="padding: 1.3rem 1.5rem 1.5rem;">
+                <div class="form-group">
+                    <label for="editarNome">Nome completo <span class="required">*</span></label>
+                    <input
+                        type="text"
+                        id="editarNome"
+                        maxlength="80"
+                        placeholder="Ex: João Silva"
+                    >
+                    <span class="form-error" id="editarNomeError"></span>
+                </div>
+
+                <div class="form-group" style="margin-top: 1rem;">
+                    <label for="editarUsuario">Usuário <span class="required">*</span></label>
+                    <input
+                        type="text"
+                        id="editarUsuario"
+                        maxlength="30"
+                        autocapitalize="none"
+                        autocorrect="off"
+                        spellcheck="false"
+                        placeholder="Ex: joao.silva"
+                    >
+                    <span class="form-error" id="editarUsuarioError"></span>
+                </div>
+
+                <div class="form-group" style="margin-top: 1rem;">
+                    <label for="editarSenha">
+                        Nova senha
+                        <small style="font-weight: 400; color: var(--gray-500);">(deixe vazio para manter)</small>
+                    </label>
+                    <input
+                        type="text"
+                        id="editarSenha"
+                        maxlength="30"
+                        placeholder="Mínimo 4 caracteres"
+                    >
+                    <span class="form-hint">
+                        <i class="fas fa-info-circle"></i>
+                        Só preencha se quiser trocar a senha atual.
+                    </span>
+                    <span class="form-error" id="editarSenhaError"></span>
+                </div>
+            </div>
+
+            <div class="modal-actions-row">
+                <button class="btn-modal-cancel" id="btnCancelarEditarCorretor" type="button">
+                    Cancelar
+                </button>
+                <button class="btn-modal-confirm" id="btnSalvarEditarCorretor" type="button">
+                    <i class="fas fa-check"></i>
+                    <span id="btnSalvarEditarCorretorTexto">Salvar</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
     <div class="toast" id="toast"></div>
 
     <script src="js/api-client.js"></script>

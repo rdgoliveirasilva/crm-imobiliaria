@@ -109,6 +109,21 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnSalvarMensagem          = $('btnSalvarMensagem');
     const btnSalvarMensagemTexto     = $('btnSalvarMensagemTexto');
 
+    // Modal editar corretor
+    const modalEditarCorretor          = $('modalEditarCorretor');
+    const editarNomeInput              = $('editarNome');
+    const editarUsuarioInput           = $('editarUsuario');
+    const editarSenhaInput             = $('editarSenha');
+    const editarNomeError              = $('editarNomeError');
+    const editarUsuarioError           = $('editarUsuarioError');
+    const editarSenhaError             = $('editarSenhaError');
+    const btnFecharEditarCorretor      = $('btnFecharEditarCorretor');
+    const btnCancelarEditarCorretor    = $('btnCancelarEditarCorretor');
+    const btnSalvarEditarCorretor      = $('btnSalvarEditarCorretor');
+    const btnSalvarEditarCorretorTexto = $('btnSalvarEditarCorretorTexto');
+
+    let corretorEditandoId = null;
+
     // Toast
     const toast = $('toast');
 
@@ -1392,7 +1407,7 @@ document.addEventListener('DOMContentLoaded', () => {
             corretoresList.innerHTML = corretores.map(c => {
                 const total = c.total_leads || 0;
                 return `
-                    <div class="corretor-item">
+                    <div class="corretor-item" data-corretor-id="${c.id}" style="cursor: pointer;">
                         <div class="corretor-avatar">${iniciais(c.nome)}</div>
                         <div class="corretor-info">
                             <strong>${escapeHtml(c.nome)}</strong>
@@ -1408,8 +1423,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 `;
             }).join('');
 
+            // Clique no item → abre edição
+            corretoresList.querySelectorAll('.corretor-item').forEach(item => {
+                item.addEventListener('click', (e) => {
+                    // Se clicou no botão de excluir, ignora
+                    if (e.target.closest('.btn-corretor-delete')) return;
+
+                    const id = Number(item.dataset.corretorId);
+                    const corretor = corretores.find(c => c.id === id);
+                    if (corretor) abrirEditarCorretor(corretor);
+                });
+            });
+
+            // Botão excluir (já existia)
             corretoresList.querySelectorAll('.btn-corretor-delete').forEach(btn => {
-                btn.addEventListener('click', () => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
                     const id = Number(btn.dataset.corretorId);
                     const corretor = corretores.find(c => c.id === id);
                     if (!corretor) return;
@@ -1503,6 +1532,104 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /* =========================================================
+       EDITAR CORRETOR
+       ========================================================= */
+    function abrirEditarCorretor(corretor) {
+        corretorEditandoId = corretor.id;
+
+        editarNomeInput.value = corretor.nome || '';
+        editarUsuarioInput.value = corretor.usuario || '';
+        editarSenhaInput.value = '';
+
+        // Limpa erros
+        [editarNomeError, editarUsuarioError, editarSenhaError].forEach(e => {
+            e.textContent = '';
+            e.classList.remove('visible');
+        });
+        [editarNomeInput, editarUsuarioInput, editarSenhaInput].forEach(i => i.classList.remove('error'));
+
+        modalEditarCorretor.style.display = 'flex';
+        setTimeout(() => editarNomeInput.focus(), 100);
+    }
+
+    function fecharEditarCorretor() {
+        modalEditarCorretor.style.display = 'none';
+        corretorEditandoId = null;
+    }
+
+    async function salvarEditarCorretor() {
+        if (!corretorEditandoId) return;
+
+        [editarNomeError, editarUsuarioError, editarSenhaError].forEach(e => {
+            e.textContent = '';
+            e.classList.remove('visible');
+        });
+        [editarNomeInput, editarUsuarioInput, editarSenhaInput].forEach(i => i.classList.remove('error'));
+
+        const nome    = editarNomeInput.value.trim();
+        const usuario = editarUsuarioInput.value.trim().toLowerCase();
+        const senha   = editarSenhaInput.value.trim();
+
+        let temErro = false;
+
+        if (!nome || nome.length < 3) {
+            editarNomeError.textContent = 'Nome muito curto (mínimo 3 caracteres).';
+            editarNomeError.classList.add('visible');
+            editarNomeInput.classList.add('error');
+            temErro = true;
+        }
+
+        if (!usuario || usuario.length < 3) {
+            editarUsuarioError.textContent = 'Usuário muito curto (mínimo 3 caracteres).';
+            editarUsuarioError.classList.add('visible');
+            editarUsuarioInput.classList.add('error');
+            temErro = true;
+        } else if (!/^[a-z0-9._-]+$/.test(usuario)) {
+            editarUsuarioError.textContent = 'Use apenas letras minúsculas, números, ponto, hífen ou underline.';
+            editarUsuarioError.classList.add('visible');
+            editarUsuarioInput.classList.add('error');
+            temErro = true;
+        }
+
+        if (senha && senha.length < 4) {
+            editarSenhaError.textContent = 'A nova senha precisa ter no mínimo 4 caracteres.';
+            editarSenhaError.classList.add('visible');
+            editarSenhaInput.classList.add('error');
+            temErro = true;
+        }
+
+        if (temErro) return;
+
+        btnSalvarEditarCorretor.disabled = true;
+        btnSalvarEditarCorretorTexto.textContent = 'Salvando...';
+
+        try {
+            const body = { nome, usuario };
+            if (senha) body.senha = senha;
+
+            await ApiClient.patch(`/api/admin/corretores/${corretorEditandoId}`, body);
+
+            mostrarToast('✅ Corretor atualizado!', 'success');
+            fecharEditarCorretor();
+            renderizarCorretores();
+
+        } catch (err) {
+            console.error('[editar-corretor] erro:', err);
+
+            if (err.message && err.message.toLowerCase().includes('usuário')) {
+                editarUsuarioError.textContent = err.message;
+                editarUsuarioError.classList.add('visible');
+                editarUsuarioInput.classList.add('error');
+            } else {
+                mostrarToast(err.message || 'Erro ao salvar.', 'error');
+            }
+        } finally {
+            btnSalvarEditarCorretor.disabled = false;
+            btnSalvarEditarCorretorTexto.textContent = 'Salvar';
+        }
+    }
+
+    /* =========================================================
        HEADER — NOME DO USUÁRIO
        ========================================================= */
     if (headerUserName) {
@@ -1534,6 +1661,16 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         if (btnSalvarMensagem) {
             btnSalvarMensagem.addEventListener('click', salvarMensagemWhatsApp);
+        }
+
+        // Modal editar corretor
+        if (btnFecharEditarCorretor)   btnFecharEditarCorretor.addEventListener('click', fecharEditarCorretor);
+        if (btnCancelarEditarCorretor) btnCancelarEditarCorretor.addEventListener('click', fecharEditarCorretor);
+        if (btnSalvarEditarCorretor)   btnSalvarEditarCorretor.addEventListener('click', salvarEditarCorretor);
+        if (modalEditarCorretor) {
+            modalEditarCorretor.addEventListener('click', (e) => {
+                if (e.target === modalEditarCorretor) fecharEditarCorretor();
+            });
         }
 
         // Botões de variáveis de mensagem WhatsApp
@@ -1577,11 +1714,13 @@ document.addEventListener('DOMContentLoaded', () => {
         // Fecha modais com ESC
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
-                if (modalLista)      modalLista.style.display = 'none';
-                if (modalConfirm)    modalConfirm.style.display = 'none';
-                if (modalGerenciar)  modalGerenciar.style.display = 'none';
+                if (modalLista)          modalLista.style.display = 'none';
+                if (modalConfirm)        modalConfirm.style.display = 'none';
+                if (modalGerenciar)      modalGerenciar.style.display = 'none';
+                if (modalEditarCorretor) modalEditarCorretor.style.display = 'none';
             }
         });
+
 
         // Inicia o polling do dashboard
         iniciarPolling();

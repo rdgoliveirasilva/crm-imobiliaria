@@ -888,4 +888,76 @@ router.patch('/listas/:id/mensagem', async (req, res) => {
     }
 });
 
+/* =========================================================
+   EDITAR CADASTRO DO CORRETOR
+   ========================================================= */
+
+// PATCH /api/admin/corretores/:id
+// Body: { nome, usuario, senha } — senha é opcional (se vazia, mantém atual)
+router.patch('/corretores/:id', async (req, res) => {
+    try {
+        const id = Number(req.params.id);
+        const { nome, usuario, senha } = req.body || {};
+
+        if (!nome || !usuario) {
+            return res.status(400).json({ erro: 'Informe nome e usuário.' });
+        }
+
+        const usuarioLimpo = usuario.toLowerCase().trim();
+
+        if (!/^[a-z0-9._-]{3,}$/.test(usuarioLimpo)) {
+            return res.status(400).json({ erro: 'Usuário inválido. Use 3+ caracteres (letras, números, . _ -).' });
+        }
+
+        // Verifica se o corretor existe
+        const corretorCheck = await pool.query(
+            'SELECT id FROM usuarios WHERE id = $1 AND tipo = $2',
+            [id, 'corretor']
+        );
+
+        if (!corretorCheck.rows.length) {
+            return res.status(404).json({ erro: 'Corretor não encontrado.' });
+        }
+
+        // Verifica se o usuário já está em uso por outro
+        const existeOutro = await pool.query(
+            'SELECT id FROM usuarios WHERE usuario = $1 AND id != $2',
+            [usuarioLimpo, id]
+        );
+
+        if (existeOutro.rows.length) {
+            return res.status(409).json({ erro: 'Este usuário já está em uso por outro cadastro.' });
+        }
+
+        // Se veio senha nova, atualiza. Senão, mantém a atual.
+        if (senha && senha.trim().length >= 4) {
+            const hash = bcrypt.hashSync(senha.trim(), 10);
+            await pool.query(`
+                UPDATE usuarios
+                SET nome = $1, usuario = $2, senha_hash = $3
+                WHERE id = $4
+            `, [nome.trim(), usuarioLimpo, hash, id]);
+        } else if (senha && senha.trim().length > 0 && senha.trim().length < 4) {
+            return res.status(400).json({ erro: 'A senha precisa ter no mínimo 4 caracteres.' });
+        } else {
+            await pool.query(`
+                UPDATE usuarios
+                SET nome = $1, usuario = $2
+                WHERE id = $3
+            `, [nome.trim(), usuarioLimpo, id]);
+        }
+
+        const atualizado = await pool.query(
+            'SELECT id, nome, usuario, criado_em FROM usuarios WHERE id = $1',
+            [id]
+        );
+
+        res.json({ corretor: atualizado.rows[0] });
+
+    } catch (err) {
+        console.error('[admin/corretores PATCH] erro:', err);
+        res.status(500).json({ erro: 'Erro ao atualizar corretor.' });
+    }
+});
+
 module.exports = router;
