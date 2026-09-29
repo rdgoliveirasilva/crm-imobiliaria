@@ -59,6 +59,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnRemoverArquivo  = $('btnRemoverArquivo');
     const arquivoCsvError    = $('arquivoCsvError');
 
+    // Atualização de lista (custom select)
+    const selectAtualizacaoLista      = $('selectAtualizacaoLista');
+    const selectAtualizacaoListaError = $('selectAtualizacaoListaError');
+    const customAtualizacao           = $('customAtualizacao');
+    const customAtualizacaoTrigger    = $('customAtualizacaoTrigger');
+    const customAtualizacaoText       = $('customAtualizacaoText');
+    const customAtualizacaoMenu       = $('customAtualizacaoMenu');
+
     // Listas
     const listasGrid       = $('listasGrid');
     const listasVazio      = $('listasVazio');
@@ -131,6 +139,10 @@ document.addEventListener('DOMContentLoaded', () => {
     let modoAtual = 'arquivo';
     let contatosDoArquivo = [];
     let enviandoLista = false;
+
+    let listasDisponiveis = [];              // cache das listas pro dropdown
+    let listaAtualizacaoSelecionada = null;  // { id, nome, mensagem_whatsapp }
+    let statsListaAtual = {};                // { [corretorId]: { total, qualif, fila } }
 
     /* =========================================================
        TOAST
@@ -273,7 +285,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if (panel) panel.classList.add('active');
 
             if (alvo === 'dashboard')  atualizarDashboard();
-            if (alvo === 'upload')     renderizarSeletorCorretores();
+            if (alvo === 'upload') {
+                renderizarSeletorCorretores();
+                carregarListasParaAtualizacao();
+            }
             if (alvo === 'listas')     renderizarListas();
             if (alvo === 'corretores') renderizarCorretores();
         });
@@ -370,7 +385,6 @@ document.addEventListener('DOMContentLoaded', () => {
         carteirasVazio.style.display = 'none';
 
         carteirasGrid.innerHTML = carteiras.map(c => {
-            // Qualif = todos que foram trabalhados (verdes + vermelhos)
             const totalQualif = c.corretores.reduce((acc, x) => acc + x.qualificou, 0);
             const totalFila   = c.corretores.reduce((acc, x) => acc + x.fila, 0);
 
@@ -767,6 +781,233 @@ document.addEventListener('DOMContentLoaded', () => {
         atualizarPreviewRoleta();
     }
 
+    /* =========================================================
+       CUSTOM SELECT — ATUALIZAÇÃO DE LISTA
+       ========================================================= */
+
+    function atualizarTriggerCustomSelect(valor) {
+        if (!customAtualizacaoText) return;
+
+        if (!valor) {
+            customAtualizacaoText.textContent = 'Não — criar lista nova';
+            return;
+        }
+
+        const lista = listasDisponiveis.find(l => String(l.id) === String(valor));
+        customAtualizacaoText.textContent = lista
+            ? `${lista.nome} · ${lista.total} contatos`
+            : 'Não — criar lista nova';
+    }
+
+    function fecharCustomSelect() {
+        if (customAtualizacaoMenu) customAtualizacaoMenu.classList.remove('open');
+        if (customAtualizacaoTrigger) customAtualizacaoTrigger.classList.remove('open');
+    }
+
+    async function carregarListasParaAtualizacao() {
+        if (!customAtualizacaoMenu || !selectAtualizacaoLista) return;
+
+        try {
+            const { listas } = await ApiClient.get('/api/admin/listas');
+            listasDisponiveis = listas || [];
+
+            const valorAtual = selectAtualizacaoLista.value;
+
+            let html = `
+                <button type="button"
+                        class="custom-select-option ${!valorAtual ? 'selected' : ''}"
+                        data-value="">
+                    <i class="fas fa-plus-circle opt-icon"></i>
+                    <span class="opt-text">Não — criar lista nova</span>
+                </button>
+            `;
+
+            if (listasDisponiveis.length) {
+                html += `<div class="custom-select-divider"></div>`;
+                html += listasDisponiveis.map(l => `
+                    <button type="button"
+                            class="custom-select-option ${String(l.id) === String(valorAtual) ? 'selected' : ''}"
+                            data-value="${l.id}">
+                        <i class="fas fa-folder-open opt-icon"></i>
+                        <span class="opt-text">${escapeHtml(l.nome)}</span>
+                        <span class="opt-count">${l.total}</span>
+                    </button>
+                `).join('');
+            } else {
+                html += `
+                    <div class="custom-select-empty">
+                        Nenhuma lista criada ainda.
+                    </div>
+                `;
+            }
+
+            customAtualizacaoMenu.innerHTML = html;
+
+            atualizarTriggerCustomSelect(valorAtual);
+
+            customAtualizacaoMenu.querySelectorAll('.custom-select-option').forEach(opc => {
+                opc.addEventListener('click', () => {
+                    const novoValor = opc.dataset.value || '';
+                    selectAtualizacaoLista.value = novoValor;
+
+                    fecharCustomSelect();
+
+                    customAtualizacaoMenu.querySelectorAll('.custom-select-option')
+                        .forEach(o => o.classList.toggle('selected', o === opc));
+                    atualizarTriggerCustomSelect(novoValor);
+
+                    handleMudancaAtualizacao();
+                });
+            });
+
+        } catch (err) {
+            console.error('[atualizacao] erro ao carregar listas:', err);
+        }
+    }
+
+    async function buscarStatsDaLista(listaId) {
+        try {
+            const { corretores } = await ApiClient.get(`/api/admin/listas/${listaId}/corretores`);
+
+            const mapa = {};
+            corretores.forEach(c => {
+                mapa[c.id] = {
+                    total:  c.total_na_lista,
+                    qualif: c.qualificados_na_lista,
+                    fila:   c.pendentes_na_lista
+                };
+            });
+            statsListaAtual = mapa;
+
+        } catch (err) {
+            console.error('[atualizacao] erro ao buscar stats:', err);
+            statsListaAtual = {};
+        }
+    }
+
+    function renderizarStatsNosCorretores() {
+        if (!corretoresSelector) return;
+
+        corretoresSelector.querySelectorAll('.corretor-check').forEach(label => {
+            const antigo = label.querySelector('.corretor-check-stats');
+            if (antigo) antigo.remove();
+
+            const input = label.querySelector('input[type="checkbox"]');
+            if (!input) return;
+
+            const corretorId = Number(input.value);
+            const stats = statsListaAtual[corretorId];
+
+            if (!listaAtualizacaoSelecionada || !stats) return;
+
+            const statsEl = document.createElement('div');
+            statsEl.className = 'corretor-check-stats';
+            statsEl.innerHTML = `
+                <div class="corretor-check-stat total">
+                    <strong>${stats.total}</strong>
+                    <small>total</small>
+                </div>
+                <div class="corretor-check-stat qualif">
+                    <strong>${stats.qualif}</strong>
+                    <small>qualif</small>
+                </div>
+                <div class="corretor-check-stat fila">
+                    <strong>${stats.fila}</strong>
+                    <small>fila</small>
+                </div>
+            `;
+            label.appendChild(statsEl);
+        });
+    }
+
+    function limparContatosColados() {
+        contatosDoArquivo = [];
+        if (arquivoCsv) arquivoCsv.value = '';
+        if (textoListaInput) textoListaInput.value = '';
+        if (fileDrop) fileDrop.classList.remove('has-file');
+        if (fileDropContent) fileDropContent.style.display = 'flex';
+        if (fileInfo) fileInfo.style.display = 'none';
+        if (previewContatos) previewContatos.style.display = 'none';
+    }
+
+    function atualizarBotaoSubirLista() {
+        if (!btnSubirLista) return;
+        if (listaAtualizacaoSelecionada) {
+            btnSubirLista.innerHTML = '<i class="fas fa-plus-circle"></i> Atualizar lista';
+        } else {
+            btnSubirLista.innerHTML = '<i class="fas fa-check"></i> Subir e distribuir';
+        }
+    }
+
+    async function handleMudancaAtualizacao() {
+        if (!selectAtualizacaoLista) return;
+
+        const valor = selectAtualizacaoLista.value;
+
+        if (selectAtualizacaoListaError) {
+            selectAtualizacaoListaError.textContent = '';
+            selectAtualizacaoListaError.classList.remove('visible');
+        }
+
+        limparContatosColados();
+
+        if (!valor) {
+            // ===== Modo "lista nova" =====
+            listaAtualizacaoSelecionada = null;
+            statsListaAtual = {};
+
+            if (nomeListaInput) {
+                nomeListaInput.disabled = false;
+                nomeListaInput.value = '';
+            }
+            if (mensagemWhatsappInput) {
+                mensagemWhatsappInput.disabled = false;
+                mensagemWhatsappInput.value = '';
+            }
+
+            corretoresSelector.querySelectorAll('input[type="checkbox"]').forEach(chk => {
+                chk.checked = false;
+            });
+
+            atualizarBotaoSubirLista();
+            renderizarStatsNosCorretores();
+            atualizarPreviewRoleta();
+            return;
+        }
+
+        // ===== Modo "atualização" =====
+        const lista = listasDisponiveis.find(l => String(l.id) === String(valor));
+        if (!lista) return;
+
+        listaAtualizacaoSelecionada = {
+            id: lista.id,
+            nome: lista.nome,
+            mensagem_whatsapp: lista.mensagem_whatsapp || ''
+        };
+
+        if (nomeListaInput) {
+            nomeListaInput.value = lista.nome;
+            nomeListaInput.disabled = true;
+        }
+        if (mensagemWhatsappInput) {
+            mensagemWhatsappInput.value = lista.mensagem_whatsapp || '';
+            mensagemWhatsappInput.disabled = true;
+        }
+
+        corretoresSelector.querySelectorAll('input[type="checkbox"]').forEach(chk => {
+            chk.checked = false;
+        });
+
+        await buscarStatsDaLista(lista.id);
+
+        atualizarBotaoSubirLista();
+        renderizarStatsNosCorretores();
+        atualizarPreviewRoleta();
+    }
+
+    /* =========================================================
+       SELETOR DE CORRETORES
+       ========================================================= */
     async function renderizarSeletorCorretores() {
         try {
             const { corretores } = await ApiClient.get('/api/admin/corretores');
@@ -780,15 +1021,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            const marcadosAntes = new Set(
-                Array.from(corretoresSelector.querySelectorAll('input:checked'))
-                    .map(i => i.value)
-            );
+            const marcadosAntes = listaAtualizacaoSelecionada
+                ? new Set()
+                : new Set(
+                    Array.from(corretoresSelector.querySelectorAll('input:checked'))
+                        .map(i => i.value)
+                );
 
             corretoresSelector.innerHTML = corretores.map(c => `
                 <label class="corretor-check">
                     <input type="checkbox" value="${c.id}"
-                        ${marcadosAntes.size === 0 || marcadosAntes.has(String(c.id)) ? 'checked' : ''}>
+                        ${marcadosAntes.has(String(c.id)) ? 'checked' : ''}>
                     <span class="check-box"><i class="fas fa-check"></i></span>
                     <span class="corretor-check-info">
                         <strong>${escapeHtml(c.nome)}</strong>
@@ -800,6 +1043,7 @@ document.addEventListener('DOMContentLoaded', () => {
             corretoresSelector.querySelectorAll('input[type="checkbox"]')
                 .forEach(chk => chk.addEventListener('change', atualizarPreviewRoleta));
 
+            renderizarStatsNosCorretores();
             atualizarPreviewRoleta();
 
         } catch (err) {
@@ -812,8 +1056,19 @@ document.addEventListener('DOMContentLoaded', () => {
         const marcados = Array.from(corretoresSelector.querySelectorAll('input:checked'))
             .map(i => Number(i.value));
 
+        const avisoModo = listaAtualizacaoSelecionada
+            ? `<div class="roleta-modo-atualizacao">
+                   <i class="fas fa-sync-alt"></i>
+                   <span>
+                       Atualizando <strong>${escapeHtml(listaAtualizacaoSelecionada.nome)}</strong> —
+                       apenas contatos novos serão adicionados.
+                   </span>
+               </div>`
+            : '';
+
         if (!contatos.length || !marcados.length) {
             infoRoleta.innerHTML = `
+                ${avisoModo}
                 <div class="info-empty">
                     <i class="fas fa-chart-pie"></i>
                     <p>Envie os contatos e selecione os corretores para ver como será a distribuição.</p>
@@ -832,6 +1087,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (totalNovos === 0) {
                 infoRoleta.innerHTML = `
+                    ${avisoModo}
                     <div class="info-empty" style="color: #b91c1c;">
                         <i class="fas fa-exclamation-triangle"></i>
                         <p><strong>Nenhum contato novo.</strong><br>
@@ -866,6 +1122,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             infoRoleta.innerHTML = `
+                ${avisoModo}
                 <div class="roleta-preview-list">
                     ${selecionados.map(c => `
                         <div class="roleta-preview-item">
@@ -889,26 +1146,37 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    /* =========================================================
+       SUBMETER LISTA
+       ========================================================= */
     async function handleSubirLista() {
         if (enviandoLista) return;
         enviandoLista = true;
 
-        [nomeListaError, textoListaError, corretoresError, arquivoCsvError].forEach(e => {
-            e.textContent = '';
-            e.classList.remove('visible');
-        });
+        [nomeListaError, textoListaError, corretoresError, arquivoCsvError, selectAtualizacaoListaError]
+            .forEach(e => { if (e) { e.textContent = ''; e.classList.remove('visible'); } });
+
         nomeListaInput.classList.remove('error');
         textoListaInput.classList.remove('error');
 
-        const nome = nomeListaInput.value.trim();
-        if (!nome) {
-            nomeListaError.textContent = 'Informe um nome pra lista.';
-            nomeListaError.classList.add('visible');
-            nomeListaInput.classList.add('error');
-            enviandoLista = false;
-            return;
+        const emModoAtualizacao = !!listaAtualizacaoSelecionada;
+
+        // ----- NOME -----
+        let nome;
+        if (emModoAtualizacao) {
+            nome = listaAtualizacaoSelecionada.nome;
+        } else {
+            nome = nomeListaInput.value.trim();
+            if (!nome) {
+                nomeListaError.textContent = 'Informe um nome pra lista.';
+                nomeListaError.classList.add('visible');
+                nomeListaInput.classList.add('error');
+                enviandoLista = false;
+                return;
+            }
         }
 
+        // ----- CONTATOS -----
         const contatos = obterContatosAtuais();
         if (!contatos.length) {
             if (modoAtual === 'arquivo') {
@@ -923,6 +1191,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
+        // ----- CORRETORES -----
         const marcados = Array.from(corretoresSelector.querySelectorAll('input:checked'))
             .map(i => Number(i.value));
         if (!marcados.length) {
@@ -933,45 +1202,72 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         btnSubirLista.disabled = true;
-        btnSubirLista.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Distribuindo...';
+        btnSubirLista.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> ' +
+            (emModoAtualizacao ? 'Atualizando...' : 'Distribuindo...');
 
         try {
-            const mensagemWhatsapp = mensagemWhatsappInput ? mensagemWhatsappInput.value.trim() : '';
+            const mensagemWhatsapp = emModoAtualizacao
+                ? null
+                : (mensagemWhatsappInput ? mensagemWhatsappInput.value.trim() : '');
 
-            const res = await ApiClient.post('/api/admin/listas', {
+            const body = {
                 nome,
                 contatos,
                 corretoresIds: marcados,
                 mensagemWhatsapp: mensagemWhatsapp || null
-            });
+            };
 
-            let msg = `✅ ${res.total} contatos distribuídos`;
-            if (res.descartados > 0) {
-                msg += ` · ${res.descartados} descartado(s)`;
+            if (emModoAtualizacao) {
+                body.listaIdExistente = listaAtualizacaoSelecionada.id;
+            }
+
+            const res = await ApiClient.post('/api/admin/listas', body);
+
+            let msg;
+            if (res.atualizada) {
+                msg = `✅ ${res.adicionados} contato(s) adicionado(s) à lista`;
+                if (res.descartados > 0) msg += ` · ${res.descartados} descartado(s)`;
+            } else {
+                msg = `✅ ${res.total} contatos distribuídos`;
+                if (res.descartados > 0) msg += ` · ${res.descartados} descartado(s)`;
             }
             mostrarToast(msg, 'success');
 
-            nomeListaInput.value = '';
-            textoListaInput.value = '';
+            // Limpa tudo e volta pro estado inicial
+            if (nomeListaInput) nomeListaInput.value = '';
+            if (textoListaInput) textoListaInput.value = '';
             if (mensagemWhatsappInput) mensagemWhatsappInput.value = '';
+            if (nomeListaInput) nomeListaInput.disabled = false;
+            if (mensagemWhatsappInput) mensagemWhatsappInput.disabled = false;
+            if (selectAtualizacaoLista) selectAtualizacaoLista.value = '';
+
+            listaAtualizacaoSelecionada = null;
+            statsListaAtual = {};
+
             limparArquivo();
-            previewContatos.style.display = 'none';
+            if (previewContatos) previewContatos.style.display = 'none';
             infoRoleta.innerHTML = `
                 <div class="info-empty">
                     <i class="fas fa-chart-pie"></i>
                     <p>Envie os contatos e selecione os corretores para ver como será a distribuição.</p>
                 </div>
             `;
+            renderizarStatsNosCorretores();
+            atualizarBotaoSubirLista();
+
+            // Recarrega listas no dropdown (com o novo valor limpo)
+            await carregarListasParaAtualizacao();
+            atualizarTriggerCustomSelect('');
 
             setTimeout(() => {
                 document.querySelector('.nav-tab[data-tab="listas"]').click();
             }, 500);
 
         } catch (err) {
-            mostrarToast(err.message || 'Erro ao distribuir.', 'error');
+            mostrarToast(err.message || 'Erro ao processar.', 'error');
         } finally {
             btnSubirLista.disabled = false;
-            btnSubirLista.innerHTML = '<i class="fas fa-check"></i> Subir e distribuir';
+            atualizarBotaoSubirLista();
             enviandoLista = false;
         }
     }
@@ -1230,6 +1526,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         modalLista.style.display = 'none';
                         listaSelecionadaAtual = null;
                         renderizarListas();
+                        carregarListasParaAtualizacao();
                     } catch (err) {
                         mostrarToast('Erro ao excluir lista.', 'error');
                     }
@@ -1639,6 +1936,7 @@ document.addEventListener('DOMContentLoaded', () => {
         await renderizarSeletorCorretores();
         await renderizarListas();
         await renderizarCorretores();
+        await carregarListasParaAtualizacao();
 
         // Botão gerenciar
         if (btnGerenciarCorretores) btnGerenciarCorretores.addEventListener('click', abrirGerenciarCorretores);
@@ -1661,6 +1959,26 @@ document.addEventListener('DOMContentLoaded', () => {
         if (modalEditarCorretor) {
             modalEditarCorretor.addEventListener('click', (e) => {
                 if (e.target === modalEditarCorretor) fecharEditarCorretor();
+            });
+        }
+
+        // Custom select "É atualização de lista?"
+        if (customAtualizacaoTrigger && customAtualizacaoMenu) {
+            customAtualizacaoTrigger.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const aberto = customAtualizacaoMenu.classList.contains('open');
+                customAtualizacaoMenu.classList.toggle('open', !aberto);
+                customAtualizacaoTrigger.classList.toggle('open', !aberto);
+            });
+
+            document.addEventListener('click', (e) => {
+                if (customAtualizacao && !customAtualizacao.contains(e.target)) {
+                    fecharCustomSelect();
+                }
+            });
+
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') fecharCustomSelect();
             });
         }
 

@@ -1322,6 +1322,17 @@
 }
 .roleta-resumo strong { font-weight: 800; }
 
+#infoRoleta {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+#infoRoleta > * {
+    width: 100%;
+    box-sizing: border-box;
+}
+
 /* =========================================================
    TOGGLE ARQUIVO vs TEXTO
    ========================================================= */
@@ -3414,6 +3425,334 @@
 #modalEditarCorretor .form-group input.error {
     border-color: #dc2626;
     background: #fef2f2;
+}
+
+/* =========================================================
+   SELECT "É ATUALIZAÇÃO DE LISTA?"
+   ========================================================= */
+
+.select-lista {
+    width: 100%;
+    padding: 0.9rem 1.05rem;
+    padding-right: 2.6rem;
+    border-radius: 12px;
+    border: 1.5px solid rgba(0, 44, 97, 0.12);
+    background-color: rgba(248, 251, 255, 0.7);
+    background-image:
+        url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23002c61' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
+    background-repeat: no-repeat;
+    background-position: right 0.9rem center;
+    background-size: 16px;
+    color: var(--dark-900);
+    font-family: inherit;
+    font-size: 0.92rem;
+    line-height: 1.4;
+    cursor: pointer;
+    transition: all var(--transition);
+    box-sizing: border-box;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+}
+
+.select-lista:hover {
+    border-color: rgba(0, 44, 97, 0.22);
+    background-color: rgba(255, 255, 255, 0.9);
+}
+
+.select-lista:focus {
+    outline: none;
+    border-color: var(--primary);
+    background-color: var(--white);
+    box-shadow:
+        0 0 0 4px rgba(0, 44, 97, 0.08),
+        0 4px 14px -6px rgba(0, 44, 97, 0.15);
+}
+
+.select-lista:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.select-lista option {
+    color: var(--dark-900);
+    background: var(--white);
+}
+
+/* Inputs/textarea desabilitados no modo atualização */
+.form-group input:disabled,
+.form-group textarea:disabled {
+    background: rgba(240, 244, 250, 0.7);
+    color: var(--gray-500);
+    cursor: not-allowed;
+    border-color: rgba(0, 44, 97, 0.08);
+    opacity: 0.85;
+}
+
+/* =========================================================
+   STATS NA ROLETA (modo atualização)
+   TOTAL / QUALIF / FILA por corretor
+   ========================================================= */
+
+.corretor-check .corretor-check-stats {
+    display: flex;
+    gap: 0.9rem;
+    flex-shrink: 0;
+    margin-left: auto;
+    padding-left: 0.8rem;
+}
+
+.corretor-check .corretor-check-stat {
+    text-align: right;
+    line-height: 1.05;
+    min-width: 42px;
+}
+
+.corretor-check .corretor-check-stat strong {
+    display: block;
+    font-size: 1.05rem;
+    font-weight: 800;
+    letter-spacing: -0.3px;
+    font-variant-numeric: tabular-nums;
+    transition: all var(--transition);
+}
+
+.corretor-check .corretor-check-stat small {
+    font-size: 0.58rem;
+    color: var(--gray-500);
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    font-weight: 700;
+}
+
+.corretor-check .corretor-check-stat.total strong  { color: var(--primary); }
+.corretor-check .corretor-check-stat.qualif strong { color: var(--success); }
+.corretor-check .corretor-check-stat.fila strong   { color: var(--warning); }
+
+.corretor-check:hover .corretor-check-stat.total strong  { text-shadow: 0 0 10px rgba(0, 44, 97, 0.3); }
+.corretor-check:hover .corretor-check-stat.qualif strong { text-shadow: 0 0 10px rgba(22, 163, 74, 0.3); }
+.corretor-check:hover .corretor-check-stat.fila strong   { text-shadow: 0 0 10px rgba(245, 158, 11, 0.3); }
+
+/* Ajuste mobile: empilha os stats um pouco */
+@media (max-width: 560px) {
+    .corretor-check .corretor-check-stats {
+        gap: 0.6rem;
+        padding-left: 0.5rem;
+    }
+    .corretor-check .corretor-check-stat strong { font-size: 0.95rem; }
+    .corretor-check .corretor-check-stat small  { font-size: 0.52rem; }
+    .corretor-check .corretor-check-stat        { min-width: 34px; }
+}
+
+.roleta-modo-atualizacao {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.6rem;
+    margin-bottom: 1rem;
+    padding: 0.85rem 1rem;
+    background: linear-gradient(135deg, rgba(0, 44, 97, 0.06), rgba(59, 130, 246, 0.08));
+    border: 1px solid rgba(0, 44, 97, 0.12);
+    border-left: 4px solid var(--primary);
+    border-radius: 12px;
+    font-size: 0.82rem;
+    color: var(--primary);
+    line-height: 1.5;
+    width: 100%;
+    box-sizing: border-box;
+    animation: fadeIn 0.3s ease;
+}
+
+.roleta-modo-atualizacao i {
+    flex-shrink: 0;
+    margin-top: 2px;
+    font-size: 0.95rem;
+    color: var(--primary);
+}
+
+.roleta-modo-atualizacao span {
+    flex: 1;
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.roleta-modo-atualizacao strong {
+    font-weight: 800;
+    color: var(--primary-dark);
+}
+
+/* =========================================================
+   CUSTOM SELECT — "É ATUALIZAÇÃO DE LISTA?"
+   ========================================================= */
+
+.custom-select {
+    position: relative;
+    width: 100%;
+}
+
+.custom-select-trigger {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.9rem 1.1rem;
+    border-radius: 12px;
+    border: 1.5px solid rgba(0, 44, 97, 0.12);
+    background: rgba(248, 251, 255, 0.7);
+    color: var(--dark-900);
+    font-family: inherit;
+    font-size: 0.92rem;
+    font-weight: 600;
+    text-align: left;
+    cursor: pointer;
+    transition: all var(--transition);
+    box-sizing: border-box;
+    backdrop-filter: blur(4px);
+}
+
+.custom-select-trigger:hover {
+    border-color: rgba(0, 44, 97, 0.28);
+    background: rgba(255, 255, 255, 0.9);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 18px -10px rgba(0, 44, 97, 0.2);
+}
+
+.custom-select-trigger.open {
+    border-color: var(--primary);
+    background: var(--white);
+    box-shadow:
+        0 0 0 4px rgba(0, 44, 97, 0.08),
+        0 4px 14px -6px rgba(0, 44, 97, 0.15);
+}
+
+.custom-select-icon {
+    flex-shrink: 0;
+    color: var(--primary);
+    font-size: 0.95rem;
+    opacity: 0.75;
+}
+
+.custom-select-text {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.custom-select-arrow {
+    flex-shrink: 0;
+    color: var(--gray-500);
+    font-size: 0.8rem;
+    transition: transform var(--transition);
+}
+
+.custom-select-trigger.open .custom-select-arrow {
+    transform: rotate(180deg);
+    color: var(--primary);
+}
+
+/* Menu */
+.custom-select-menu {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    right: 0;
+    background: var(--white);
+    border: 1px solid rgba(0, 44, 97, 0.1);
+    border-radius: 14px;
+    box-shadow:
+        0 20px 45px -18px rgba(0, 44, 97, 0.4),
+        0 0 0 1px rgba(0, 44, 97, 0.04);
+    overflow: hidden;
+    z-index: 300;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(-6px);
+    transition: all var(--transition);
+    max-height: 280px;
+    overflow-y: auto;
+}
+
+.custom-select-menu.open {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateY(0);
+}
+
+.custom-select-option {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.85rem 1.1rem;
+    border: none;
+    background: transparent;
+    color: var(--dark-900);
+    font-family: inherit;
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-align: left;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.custom-select-option i.opt-icon {
+    color: var(--primary);
+    font-size: 0.9rem;
+    width: 1.1rem;
+    text-align: center;
+    flex-shrink: 0;
+    opacity: 0.7;
+}
+
+.custom-select-option .opt-text {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.custom-select-option .opt-count {
+    font-size: 0.72rem;
+    color: var(--gray-500);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    flex-shrink: 0;
+}
+
+.custom-select-option:hover {
+    background: rgba(0, 44, 97, 0.05);
+}
+
+.custom-select-option.selected {
+    background: linear-gradient(135deg, rgba(0, 44, 97, 0.06), rgba(59, 130, 246, 0.08));
+    color: var(--primary);
+}
+
+.custom-select-option.selected .opt-icon {
+    opacity: 1;
+    color: var(--primary);
+}
+
+.custom-select-option.selected .opt-count {
+    color: var(--primary);
+    opacity: 0.85;
+}
+
+.custom-select-empty {
+    padding: 1rem 1.1rem;
+    font-size: 0.85rem;
+    color: var(--gray-500);
+    text-align: center;
+}
+
+/* Divisor visual entre "Não" e as listas */
+.custom-select-divider {
+    height: 1px;
+    background: rgba(0, 44, 97, 0.06);
+    margin: 0.25rem 0;
 }
 
 /* =========================================================

@@ -207,7 +207,7 @@
                             >
                             <span class="form-error" id="nomeListaError"></span>
                         </div>
-
+                        
                         <!-- TOGGLE ARQUIVO / TEXTO -->
                         <div class="form-group">
                             <label>Como deseja enviar os contatos? <span class="required">*</span></label>
@@ -339,6 +339,33 @@
                                 As variáveis são substituídas automaticamente pelo sistema antes do envio.
                             </span>
                         </div>
+
+<!-- ================================================
+     É ATUALIZAÇÃO DE LISTA?
+     ================================================ -->
+<div class="form-group">
+    <label>É atualização de lista? <span class="required">*</span></label>
+    <p class="form-subtitle">
+        Selecione uma lista existente para adicionar <strong>apenas contatos novos</strong> aos corretores dela.
+        Nome e mensagem do WhatsApp são herdados da lista escolhida.
+    </p>
+
+    <div class="custom-select" id="customAtualizacao">
+        <input type="hidden" id="selectAtualizacaoLista" value="">
+
+        <button type="button" class="custom-select-trigger" id="customAtualizacaoTrigger">
+            <i class="fas fa-layer-group custom-select-icon"></i>
+            <span class="custom-select-text" id="customAtualizacaoText">Não — criar lista nova</span>
+            <i class="fas fa-chevron-down custom-select-arrow"></i>
+        </button>
+
+        <div class="custom-select-menu" id="customAtualizacaoMenu">
+            <!-- populado via JS -->
+        </div>
+    </div>
+
+    <span class="form-error" id="selectAtualizacaoListaError"></span>
+</div>
 
                         <!-- SELETOR DE CORRETORES -->
                         <div class="form-group">
