@@ -97,3 +97,18 @@ CREATE TABLE IF NOT EXISTS tentativas_corretores (
 
 CREATE INDEX IF NOT EXISTS idx_tentativas_lead ON tentativas_corretores(lead_id);
 CREATE INDEX IF NOT EXISTS idx_tentativas_corretor ON tentativas_corretores(corretor_id);
+
+-- =========================================================
+-- CORRETORES POR LISTA (registro explícito de participação)
+-- =========================================================
+
+CREATE TABLE IF NOT EXISTS lista_corretores (
+    id SERIAL PRIMARY KEY,
+    lista_id INTEGER NOT NULL REFERENCES listas(id) ON DELETE CASCADE,
+    corretor_id INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+    criado_em TIMESTAMP DEFAULT NOW(),
+    UNIQUE(lista_id, corretor_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_lista_corretores_lista ON lista_corretores(lista_id);
+CREATE INDEX IF NOT EXISTS idx_lista_corretores_corretor ON lista_corretores(corretor_id);

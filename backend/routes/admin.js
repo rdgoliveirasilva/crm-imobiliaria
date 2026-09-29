@@ -299,6 +299,14 @@ router.post('/listas', async (req, res) => {
         );
         const listaId = listaResult.rows[0].id;
 
+        // 👇 Registra quem participa dessa lista
+        for (const corretorId of idsValidos) {
+            await client.query(
+                'INSERT INTO lista_corretores (lista_id, corretor_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+                [listaId, corretorId]
+            );
+        }
+
         const distribuicao = await inserirLeadsEmMassa(client, listaId, contatos, idsValidos);
 
         await client.query('COMMIT');
@@ -540,7 +548,6 @@ router.get('/dashboard/carteiras', async (req, res) => {
    ========================================================= */
 
 // GET /api/admin/listas/:id/corretores
-// Retorna os corretores que participam da lista + todos os corretores disponíveis
 router.get('/listas/:id/corretores', async (req, res) => {
     try {
         const listaId = Number(req.params.id);
@@ -550,12 +557,16 @@ router.get('/listas/:id/corretores', async (req, res) => {
             return res.status(404).json({ erro: 'Lista não encontrada.' });
         }
 
-        // Todos os corretores + quantos leads têm nessa lista
+        // Todos os corretores + estatísticas + se participam (via tabela lista_corretores)
         const todos = await pool.query(`
             SELECT
                 u.id,
                 u.nome,
                 u.usuario,
+                EXISTS (
+                    SELECT 1 FROM lista_corretores 
+                    WHERE lista_id = $1 AND corretor_id = u.id
+                ) AS participa,
                 COUNT(l.id) FILTER (WHERE l.lista_id = $1 AND l.status = 'novo')        AS pendentes_na_lista,
                 COUNT(l.id) FILTER (WHERE l.lista_id = $1 AND l.status = 'qualificado') AS qualificados_na_lista,
                 COUNT(l.id) FILTER (WHERE l.lista_id = $1) AS total_na_lista
@@ -570,10 +581,10 @@ router.get('/listas/:id/corretores', async (req, res) => {
             id: c.id,
             nome: c.nome,
             usuario: c.usuario,
+            participa: c.participa,
             pendentes_na_lista: Number(c.pendentes_na_lista),
             qualificados_na_lista: Number(c.qualificados_na_lista),
-            total_na_lista: Number(c.total_na_lista),
-            participa: Number(c.total_na_lista) > 0
+            total_na_lista: Number(c.total_na_lista)
         }));
 
         res.json({
@@ -590,6 +601,7 @@ router.get('/listas/:id/corretores', async (req, res) => {
 // PATCH /api/admin/listas/:id/corretores
 // Body: { corretoresIds: [1, 2, 3] }
 // Gerencia quem participa da lista + redistribui pendentes
+// PATCH /api/admin/listas/:id/corretores
 router.patch('/listas/:id/corretores', async (req, res) => {
     const client = await pool.connect();
     try {
@@ -600,13 +612,12 @@ router.patch('/listas/:id/corretores', async (req, res) => {
             return res.status(400).json({ erro: 'Selecione pelo menos 1 corretor.' });
         }
 
-        // Verifica se a lista existe
         const listaCheck = await client.query('SELECT id, nome FROM listas WHERE id = $1', [listaId]);
         if (!listaCheck.rows.length) {
             return res.status(404).json({ erro: 'Lista não encontrada.' });
         }
 
-        // Valida os corretores
+        // Valida corretores
         const placeholders = corretoresIds.map((_, i) => `$${i + 1}`).join(',');
         const corretoresValidos = await client.query(
             `SELECT id FROM usuarios WHERE id IN (${placeholders}) AND tipo = 'corretor'`,
@@ -619,91 +630,120 @@ router.patch('/listas/:id/corretores', async (req, res) => {
 
         const idsNovos = corretoresValidos.rows.map(c => c.id);
 
-        // Descobre quem JÁ participava da lista
-        const participantesAtuais = await client.query(`
-            SELECT DISTINCT corretor_id
-            FROM leads
-            WHERE lista_id = $1 AND corretor_id IS NOT NULL
-        `, [listaId]);
+        // FONTE DE VERDADE: tabela lista_corretores
+        const atuaisResult = await client.query(
+            'SELECT corretor_id FROM lista_corretores WHERE lista_id = $1',
+            [listaId]
+        );
+        const idsAntigos = atuaisResult.rows.map(r => r.corretor_id);
 
-        const idsAntigos = participantesAtuais.rows.map(r => r.corretor_id);
-
-        // Identifica quem foi adicionado e quem foi removido
         const idsAdicionados = idsNovos.filter(id => !idsAntigos.includes(id));
-        const idsRemovidos = idsAntigos.filter(id => !idsNovos.includes(id));
-
-        // Pega os pendentes da lista
-        const pendentesResult = await client.query(`
-            SELECT id, corretor_id
-            FROM leads
-            WHERE lista_id = $1 AND status = 'novo'
-            ORDER BY id ASC
-        `, [listaId]);
-
-        const pendentes = pendentesResult.rows;
+        const idsRemovidos  = idsAntigos.filter(id => !idsNovos.includes(id));
 
         await client.query('BEGIN');
 
         /* =====================================================
-           CASO 1 — REMOÇÕES
-           Redistribui os pendentes de cada removido entre TODOS os que ficam
+           1. ATUALIZA A TABELA lista_corretores
            ===================================================== */
 
-        if (idsRemovidos.length && idsNovos.length) {
-            const pendentesRemovidos = pendentes.filter(p => idsRemovidos.includes(p.corretor_id));
+        // Remove os que saíram
+        for (const id of idsRemovidos) {
+            await client.query(
+                'DELETE FROM lista_corretores WHERE lista_id = $1 AND corretor_id = $2',
+                [listaId, id]
+            );
+        }
 
-            if (pendentesRemovidos.length) {
-                let idx = 0;
-                for (const p of pendentesRemovidos) {
-                    const novoCorretor = idsNovos[idx % idsNovos.length];
-                    await client.query('UPDATE leads SET corretor_id = $1 WHERE id = $2', [novoCorretor, p.id]);
-                    idx++;
-                }
+        // Adiciona os novos
+        for (const id of idsAdicionados) {
+            await client.query(
+                'INSERT INTO lista_corretores (lista_id, corretor_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+                [listaId, id]
+            );
+        }
+
+        /* =====================================================
+           2. ATRIBUI LEADS ÓRFÃOS (corretor_id NULL)
+           ===================================================== */
+
+        let redistribuidos = 0;
+
+        const orfaosResult = await client.query(`
+            SELECT id FROM leads
+            WHERE lista_id = $1 AND corretor_id IS NULL
+            ORDER BY id ASC
+        `, [listaId]);
+
+        const orfaos = orfaosResult.rows;
+
+        if (orfaos.length && idsNovos.length) {
+            let idx = 0;
+            for (const orfao of orfaos) {
+                const novoCorretor = idsNovos[idx % idsNovos.length];
+                await client.query('UPDATE leads SET corretor_id = $1 WHERE id = $2', [novoCorretor, orfao.id]);
+                idx++;
+                redistribuidos++;
             }
         }
 
         /* =====================================================
-           CASO 2 — ADIÇÕES
-           Redistribui os pendentes entre QUEM TEM pendentes + NOVOS
+           3. REBALANCEAMENTO DOS PENDENTES (leads já atribuídos)
            ===================================================== */
 
-        if (idsAdicionados.length) {
-            // Descobre quais corretores (que ficam) têm pelo menos 1 pendente
-            const corretoresComPendentes = new Set();
-            const pendentesPorCorretor = {};
+        // Só faz sentido se tiver pendentes atribuídos a alguém
+        const pendentesResult = await client.query(
+            `SELECT id, corretor_id FROM leads WHERE lista_id = $1 AND status = 'novo' AND corretor_id IS NOT NULL ORDER BY id ASC`,
+            [listaId]
+        );
+        const pendentes = pendentesResult.rows;
 
-            // Recalcula os pendentes depois das remoções
-            const pendentesAgora = await client.query(`
-                SELECT id, corretor_id
-                FROM leads
-                WHERE lista_id = $1 AND status = 'novo'
-                ORDER BY id ASC
-            `, [listaId]);
+        if (pendentes.length) {
 
-            pendentesAgora.rows.forEach(p => {
-                if (idsNovos.includes(p.corretor_id)) {
-                    corretoresComPendentes.add(p.corretor_id);
-                    pendentesPorCorretor[p.corretor_id] = pendentesPorCorretor[p.corretor_id] || [];
-                    pendentesPorCorretor[p.corretor_id].push(p.id);
+            /* ---------- ADIÇÕES: redistribui entre QUEM TEM pendentes + NOVOS ---------- */
+            if (idsAdicionados.length) {
+                const pendentesPorCorretor = {};
+                pendentes.forEach(p => {
+                    if (idsNovos.includes(p.corretor_id)) {
+                        pendentesPorCorretor[p.corretor_id] = pendentesPorCorretor[p.corretor_id] || [];
+                        pendentesPorCorretor[p.corretor_id].push(p.id);
+                    }
+                });
+
+                const candidatos = [...Object.keys(pendentesPorCorretor).map(Number), ...idsAdicionados];
+
+                const paraRedistribuir = [];
+                for (const corretorId of Object.keys(pendentesPorCorretor)) {
+                    paraRedistribuir.push(...pendentesPorCorretor[corretorId]);
                 }
-            });
 
-            // Candidatos da redistribuição: quem tem pendentes + os novos adicionados
-            const candidatos = [...corretoresComPendentes, ...idsAdicionados];
-
-            // Junta todos os pendentes dos corretores que têm pendentes
-            const pendentesParaRedistribuir = [];
-            for (const corretorId of corretoresComPendentes) {
-                pendentesParaRedistribuir.push(...pendentesPorCorretor[corretorId]);
+                if (paraRedistribuir.length && candidatos.length) {
+                    let idx = 0;
+                    for (const leadId of paraRedistribuir) {
+                        const novoCorretor = candidatos[idx % candidatos.length];
+                        await client.query('UPDATE leads SET corretor_id = $1 WHERE id = $2', [novoCorretor, leadId]);
+                        idx++;
+                        redistribuidos++;
+                    }
+                }
             }
 
-            // Se tem pendentes pra redistribuir, redistribui
-            if (pendentesParaRedistribuir.length && candidatos.length) {
-                let idx = 0;
-                for (const leadId of pendentesParaRedistribuir) {
-                    const novoCorretor = candidatos[idx % candidatos.length];
-                    await client.query('UPDATE leads SET corretor_id = $1 WHERE id = $2', [novoCorretor, leadId]);
-                    idx++;
+            /* ---------- REMOÇÕES: redistribui pendentes dos removidos entre TODOS os que ficam ---------- */
+            if (idsRemovidos.length && idsNovos.length) {
+                const pendentesAgora = await client.query(
+                    `SELECT id, corretor_id FROM leads WHERE lista_id = $1 AND status = 'novo' ORDER BY id ASC`,
+                    [listaId]
+                );
+
+                const pendentesDosRemovidos = pendentesAgora.rows.filter(p => idsRemovidos.includes(p.corretor_id));
+
+                if (pendentesDosRemovidos.length) {
+                    let idx = 0;
+                    for (const p of pendentesDosRemovidos) {
+                        const novoCorretor = idsNovos[idx % idsNovos.length];
+                        await client.query('UPDATE leads SET corretor_id = $1 WHERE id = $2', [novoCorretor, p.id]);
+                        idx++;
+                        redistribuidos++;
+                    }
                 }
             }
         }
@@ -714,7 +754,7 @@ router.patch('/listas/:id/corretores', async (req, res) => {
             ok: true,
             adicionados: idsAdicionados.length,
             removidos: idsRemovidos.length,
-            redistribuidos: pendentes.length
+            redistribuidos
         });
 
     } catch (err) {
@@ -725,5 +765,7 @@ router.patch('/listas/:id/corretores', async (req, res) => {
         client.release();
     }
 });
+
+
 
 module.exports = router;
