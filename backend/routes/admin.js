@@ -27,24 +27,19 @@ function embaralhar(arr) {
 
 /**
  * Normaliza telefone para comparação (dedupe).
- * Remove tudo que não é dígito e pega os últimos 10 ou 11 dígitos
- * (ignora DDI +55, +, 0 inicial, etc).
  */
 function normalizarTelefone(tel) {
     let n = String(tel || '').replace(/\D/g, '');
     if (!n) return '';
 
-    // Remove prefixo 55 (DDI Brasil) se tiver
     if (n.startsWith('55') && n.length >= 12) {
         n = n.substring(2);
     }
 
-    // Remove 0 inicial se tiver
     if (n.startsWith('0') && n.length >= 11) {
         n = n.substring(1);
     }
 
-    // Pega os últimos 10-11 dígitos (DDD + número)
     if (n.length > 11) {
         n = n.slice(-11);
     }
@@ -54,20 +49,15 @@ function normalizarTelefone(tel) {
 
 /**
  * Filtra contatos que já existem no banco.
- * Compara usando normalização (ignora formato).
- * Retorna { novos, descartados }.
  */
 async function filtrarDuplicados(client, contatos) {
     if (!contatos.length) return { novos: [], descartados: [] };
 
-    // Normaliza os telefones dos novos
     const contatosComNorm = contatos.map(c => ({
         ...c,
         _norm: normalizarTelefone(c.telefone)
     }));
 
-    // Pega todos os telefones do banco (só dígitos, últimos 11)
-    // Procuramos por correspondência nos últimos 10-11 dígitos
     const todosLeads = await client.query(`SELECT telefone FROM leads`);
 
     const normExistentes = new Set(
@@ -81,11 +71,8 @@ async function filtrarDuplicados(client, contatos) {
         if (normExistentes.has(c._norm)) {
             descartados.push({ nome: c.nome, telefone: c.telefone });
         } else {
-            // Remove o campo _norm antes de devolver
             const { _norm, ...original } = c;
             novos.push(original);
-
-            // Adiciona à lista de existentes pra evitar duplicata dentro do próprio upload
             normExistentes.add(_norm);
         }
     }
@@ -103,10 +90,8 @@ async function inserirLeadsEmMassa(client, listaId, contatos, idsValidos) {
 
     if (!contatos.length) return distribuicao;
 
-    // Embaralha os contatos
     const embaralhados = embaralhar(contatos);
 
-    // Monta os pares (contato, corretorId) em rodadas
     const pares = [];
     let idx = 0;
     for (const contato of embaralhados) {
@@ -116,7 +101,6 @@ async function inserirLeadsEmMassa(client, listaId, contatos, idsValidos) {
         idx++;
     }
 
-    // Processa em chunks
     for (let i = 0; i < pares.length; i += CHUNK_SIZE) {
         const chunk = pares.slice(i, i + CHUNK_SIZE);
 
@@ -229,6 +213,70 @@ router.delete('/corretores/:id', async (req, res) => {
     }
 });
 
+// PATCH /api/admin/corretores/:id
+router.patch('/corretores/:id', async (req, res) => {
+    try {
+        const id = Number(req.params.id);
+        const { nome, usuario, senha } = req.body || {};
+
+        if (!nome || !usuario) {
+            return res.status(400).json({ erro: 'Informe nome e usuário.' });
+        }
+
+        const usuarioLimpo = usuario.toLowerCase().trim();
+
+        if (!/^[a-z0-9._-]{3,}$/.test(usuarioLimpo)) {
+            return res.status(400).json({ erro: 'Usuário inválido. Use 3+ caracteres (letras, números, . _ -).' });
+        }
+
+        const corretorCheck = await pool.query(
+            'SELECT id FROM usuarios WHERE id = $1 AND tipo = $2',
+            [id, 'corretor']
+        );
+
+        if (!corretorCheck.rows.length) {
+            return res.status(404).json({ erro: 'Corretor não encontrado.' });
+        }
+
+        const existeOutro = await pool.query(
+            'SELECT id FROM usuarios WHERE usuario = $1 AND id != $2',
+            [usuarioLimpo, id]
+        );
+
+        if (existeOutro.rows.length) {
+            return res.status(409).json({ erro: 'Este usuário já está em uso por outro cadastro.' });
+        }
+
+        if (senha && senha.trim().length >= 4) {
+            const hash = bcrypt.hashSync(senha.trim(), 10);
+            await pool.query(`
+                UPDATE usuarios
+                SET nome = $1, usuario = $2, senha_hash = $3
+                WHERE id = $4
+            `, [nome.trim(), usuarioLimpo, hash, id]);
+        } else if (senha && senha.trim().length > 0 && senha.trim().length < 4) {
+            return res.status(400).json({ erro: 'A senha precisa ter no mínimo 4 caracteres.' });
+        } else {
+            await pool.query(`
+                UPDATE usuarios
+                SET nome = $1, usuario = $2
+                WHERE id = $3
+            `, [nome.trim(), usuarioLimpo, id]);
+        }
+
+        const atualizado = await pool.query(
+            'SELECT id, nome, usuario, criado_em FROM usuarios WHERE id = $1',
+            [id]
+        );
+
+        res.json({ corretor: atualizado.rows[0] });
+
+    } catch (err) {
+        console.error('[admin/corretores PATCH] erro:', err);
+        res.status(500).json({ erro: 'Erro ao atualizar corretor.' });
+    }
+});
+
 /* =========================================================
    LISTAS
    ========================================================= */
@@ -243,9 +291,11 @@ router.get('/listas', async (req, res) => {
             const stats = await pool.query(`
                 SELECT
                     COUNT(*) AS total,
-                    COUNT(*) FILTER (WHERE status = 'qualificado') AS qualificados,
+                    COUNT(*) FILTER (WHERE status IN ('qualificado', 'descartado')) AS qualificados,
                     COUNT(*) FILTER (WHERE status = 'descartado')  AS descartados,
-                    COUNT(*) FILTER (WHERE status = 'novo')        AS aguardando
+                    COUNT(*) FILTER (WHERE status = 'sem_resposta') AS sem_resposta,
+                    COUNT(*) FILTER (WHERE status = 'novo')        AS aguardando,
+                    COUNT(*) FILTER (WHERE status != 'novo')       AS trabalhados
                 FROM leads
                 WHERE lista_id = $1
             `, [lista.id]);
@@ -265,7 +315,9 @@ router.get('/listas', async (req, res) => {
                 total: Number(s.total),
                 qualificados: Number(s.qualificados),
                 descartados: Number(s.descartados),
+                sem_resposta: Number(s.sem_resposta),
                 aguardando: Number(s.aguardando),
+                trabalhados: Number(s.trabalhados),
                 corretores: corretores.rows
             });
         }
@@ -278,7 +330,7 @@ router.get('/listas', async (req, res) => {
     }
 });
 
-// POST /api/admin/listas — subir e distribuir (com bulk insert + dedupe)
+// POST /api/admin/listas
 router.post('/listas', async (req, res) => {
     const client = await pool.connect();
     try {
@@ -294,9 +346,7 @@ router.post('/listas', async (req, res) => {
             return res.status(400).json({ erro: 'Informe o nome da lista e pelo menos 1 contato.' });
         }
 
-        // ============================================================
-        // DEDUPE — Remove contatos que já existem no banco
-        // ============================================================
+        // DEDUPE
         const { novos: contatosNovos, descartados } = await filtrarDuplicados(client, contatos);
 
         if (!contatosNovos.length) {
@@ -306,9 +356,7 @@ router.post('/listas', async (req, res) => {
             });
         }
 
-        // ============================================================
         // CASO 1 — ATUALIZAR LISTA EXISTENTE
-        // ============================================================
         if (listaIdExistente) {
             const listaId = Number(listaIdExistente);
 
@@ -317,7 +365,6 @@ router.post('/listas', async (req, res) => {
                 return res.status(404).json({ erro: 'Lista não encontrada.' });
             }
 
-            // 🔑 FONTE DE VERDADE: tabela lista_corretores
             const corretoresResult = await client.query(
                 'SELECT corretor_id FROM lista_corretores WHERE lista_id = $1',
                 [listaId]
@@ -326,10 +373,8 @@ router.post('/listas', async (req, res) => {
             let idsValidos;
 
             if (corretoresResult.rows.length) {
-                // Usa quem está em lista_corretores
                 idsValidos = corretoresResult.rows.map(r => r.corretor_id);
             } else {
-                // Fallback: procura quem tem leads na lista (bancos antigos)
                 const fallback = await client.query(`
                     SELECT DISTINCT corretor_id
                     FROM leads
@@ -366,9 +411,7 @@ router.post('/listas', async (req, res) => {
             });
         }
 
-        // ============================================================
         // CASO 2 — CRIAR LISTA NOVA
-        // ============================================================
         if (!Array.isArray(corretoresIds) || !corretoresIds.length) {
             return res.status(400).json({ erro: 'Selecione pelo menos 1 corretor.' });
         }
@@ -393,7 +436,6 @@ router.post('/listas', async (req, res) => {
         );
         const listaId = listaResult.rows[0].id;
 
-        // Registra quem participa dessa lista
         for (const corretorId of idsValidos) {
             await client.query(
                 'INSERT INTO lista_corretores (lista_id, corretor_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
@@ -420,6 +462,29 @@ router.post('/listas', async (req, res) => {
         res.status(500).json({ erro: 'Erro ao subir lista.' });
     } finally {
         client.release();
+    }
+});
+
+// POST /api/admin/listas/preview-dedupe
+router.post('/listas/preview-dedupe', async (req, res) => {
+    try {
+        const { contatos } = req.body || {};
+
+        if (!Array.isArray(contatos) || !contatos.length) {
+            return res.json({ novos: 0, descartados: 0, duplicados: [] });
+        }
+
+        const { novos, descartados } = await filtrarDuplicados(pool, contatos);
+
+        res.json({
+            novos: novos.length,
+            descartados: descartados.length,
+            duplicados: descartados.slice(0, 10)
+        });
+
+    } catch (err) {
+        console.error('[admin/listas preview-dedupe] erro:', err);
+        res.status(500).json({ erro: 'Erro ao verificar duplicados.' });
     }
 });
 
@@ -479,7 +544,7 @@ router.get('/dashboard', async (req, res) => {
             SELECT
                 (SELECT COUNT(*) FROM listas) AS total_listas,
                 (SELECT COUNT(*) FROM leads) AS total_contatos,
-                (SELECT COUNT(*) FROM leads WHERE status = 'qualificado') AS qualificados,
+                (SELECT COUNT(*) FROM leads WHERE status IN ('qualificado', 'descartado')) AS qualificados,
                 (SELECT COUNT(*) FROM leads WHERE status = 'descartado')  AS descartados,
                 (SELECT COUNT(*) FROM leads WHERE status = 'novo')        AS aguardando
         `);
@@ -490,7 +555,7 @@ router.get('/dashboard', async (req, res) => {
             SELECT
                 u.id, u.nome, u.usuario,
                 COUNT(l.id) AS total,
-                COUNT(l.id) FILTER (WHERE l.status = 'qualificado') AS qualificados,
+                COUNT(l.id) FILTER (WHERE l.status IN ('qualificado', 'descartado')) AS qualificados,
                 COUNT(l.id) FILTER (WHERE l.status = 'descartado')  AS descartados,
                 COUNT(l.id) FILTER (WHERE l.status = 'novo')        AS aguardando
             FROM usuarios u
@@ -545,7 +610,8 @@ router.get('/dashboard/carteiras', async (req, res) => {
                 u.nome,
                 u.usuario,
                 u.ultimo_acesso,
-                COUNT(l.id) FILTER (WHERE l.status = 'qualificado') AS total_qualificados,
+                COUNT(l.id) FILTER (WHERE l.status IN ('qualificado', 'descartado')) AS total_qualificados,
+                COUNT(l.id) FILTER (WHERE l.status = 'descartado')  AS total_descartados,
                 COUNT(l.id) FILTER (WHERE l.status = 'novo')        AS total_fila,
                 COUNT(l.id) AS total_carteira
             FROM usuarios u
@@ -575,6 +641,7 @@ router.get('/dashboard/carteiras', async (req, res) => {
                 status,
                 ultimo_acesso: c.ultimo_acesso,
                 total_qualificados: Number(c.total_qualificados),
+                total_descartados: Number(c.total_descartados),
                 total_fila: Number(c.total_fila),
                 total_carteira: Number(c.total_carteira)
             };
@@ -595,7 +662,7 @@ router.get('/dashboard/carteiras', async (req, res) => {
                     u.nome,
                     u.usuario,
                     COUNT(l.id) AS recebeu,
-                    COUNT(l.id) FILTER (WHERE l.status = 'qualificado') AS qualificou,
+                    COUNT(l.id) FILTER (WHERE l.status IN ('qualificado', 'descartado')) AS qualificou,
                     COUNT(l.id) FILTER (WHERE l.status = 'novo')        AS fila,
                     COUNT(l.id) FILTER (WHERE l.status = 'descartado')  AS descartou
                 FROM usuarios u
@@ -631,7 +698,7 @@ router.get('/dashboard/carteiras', async (req, res) => {
 });
 
 /* =========================================================
-   GERENCIAR CORRETORES DA LISTA (rebalanceamento)
+   GERENCIAR CORRETORES DA LISTA
    ========================================================= */
 
 // GET /api/admin/listas/:id/corretores
@@ -654,7 +721,7 @@ router.get('/listas/:id/corretores', async (req, res) => {
                     WHERE lista_id = $1 AND corretor_id = u.id
                 ) AS participa,
                 COUNT(l.id) FILTER (WHERE l.lista_id = $1 AND l.status = 'novo')        AS pendentes_na_lista,
-                COUNT(l.id) FILTER (WHERE l.lista_id = $1 AND l.status = 'qualificado') AS qualificados_na_lista,
+                COUNT(l.id) FILTER (WHERE l.lista_id = $1 AND l.status IN ('qualificado', 'descartado')) AS qualificados_na_lista,
                 COUNT(l.id) FILTER (WHERE l.lista_id = $1) AS total_na_lista
             FROM usuarios u
             LEFT JOIN leads l ON l.corretor_id = u.id
@@ -758,7 +825,7 @@ router.patch('/listas/:id/corretores', async (req, res) => {
             }
         }
 
-        // 3. Rebalanceamento dos pendentes
+        // 3. Rebalanceamento
         const pendentesResult = await client.query(
             `SELECT id, corretor_id FROM leads WHERE lista_id = $1 AND status = 'novo' AND corretor_id IS NOT NULL ORDER BY id ASC`,
             [listaId]
@@ -830,41 +897,7 @@ router.patch('/listas/:id/corretores', async (req, res) => {
     }
 });
 
-/* =========================================================
-   PREVIEW DE DEDUPE — verifica quais telefones já existem
-   ========================================================= */
-
-// POST /api/admin/listas/preview-dedupe
-// Body: { contatos: [{nome, telefone}, ...] }
-// Retorna: { novos: X, descartados: Y, duplicados: [...] }
-router.post('/listas/preview-dedupe', async (req, res) => {
-    try {
-        const { contatos } = req.body || {};
-
-        if (!Array.isArray(contatos) || !contatos.length) {
-            return res.json({ novos: 0, descartados: 0, duplicados: [] });
-        }
-
-        const { novos, descartados } = await filtrarDuplicados(pool, contatos);
-
-        res.json({
-            novos: novos.length,
-            descartados: descartados.length,
-            duplicados: descartados.slice(0, 10) // primeiros 10 pra preview
-        });
-
-    } catch (err) {
-        console.error('[admin/listas preview-dedupe] erro:', err);
-        res.status(500).json({ erro: 'Erro ao verificar duplicados.' });
-    }
-});
-
-/* =========================================================
-   ALTERAR MENSAGEM DO WHATSAPP DA LISTA
-   ========================================================= */
-
 // PATCH /api/admin/listas/:id/mensagem
-// Body: { mensagemWhatsapp: "texto..." }
 router.patch('/listas/:id/mensagem', async (req, res) => {
     try {
         const listaId = Number(req.params.id);
@@ -885,78 +918,6 @@ router.patch('/listas/:id/mensagem', async (req, res) => {
     } catch (err) {
         console.error('[admin/listas/mensagem PATCH] erro:', err);
         res.status(500).json({ erro: 'Erro ao salvar mensagem.' });
-    }
-});
-
-/* =========================================================
-   EDITAR CADASTRO DO CORRETOR
-   ========================================================= */
-
-// PATCH /api/admin/corretores/:id
-// Body: { nome, usuario, senha } — senha é opcional (se vazia, mantém atual)
-router.patch('/corretores/:id', async (req, res) => {
-    try {
-        const id = Number(req.params.id);
-        const { nome, usuario, senha } = req.body || {};
-
-        if (!nome || !usuario) {
-            return res.status(400).json({ erro: 'Informe nome e usuário.' });
-        }
-
-        const usuarioLimpo = usuario.toLowerCase().trim();
-
-        if (!/^[a-z0-9._-]{3,}$/.test(usuarioLimpo)) {
-            return res.status(400).json({ erro: 'Usuário inválido. Use 3+ caracteres (letras, números, . _ -).' });
-        }
-
-        // Verifica se o corretor existe
-        const corretorCheck = await pool.query(
-            'SELECT id FROM usuarios WHERE id = $1 AND tipo = $2',
-            [id, 'corretor']
-        );
-
-        if (!corretorCheck.rows.length) {
-            return res.status(404).json({ erro: 'Corretor não encontrado.' });
-        }
-
-        // Verifica se o usuário já está em uso por outro
-        const existeOutro = await pool.query(
-            'SELECT id FROM usuarios WHERE usuario = $1 AND id != $2',
-            [usuarioLimpo, id]
-        );
-
-        if (existeOutro.rows.length) {
-            return res.status(409).json({ erro: 'Este usuário já está em uso por outro cadastro.' });
-        }
-
-        // Se veio senha nova, atualiza. Senão, mantém a atual.
-        if (senha && senha.trim().length >= 4) {
-            const hash = bcrypt.hashSync(senha.trim(), 10);
-            await pool.query(`
-                UPDATE usuarios
-                SET nome = $1, usuario = $2, senha_hash = $3
-                WHERE id = $4
-            `, [nome.trim(), usuarioLimpo, hash, id]);
-        } else if (senha && senha.trim().length > 0 && senha.trim().length < 4) {
-            return res.status(400).json({ erro: 'A senha precisa ter no mínimo 4 caracteres.' });
-        } else {
-            await pool.query(`
-                UPDATE usuarios
-                SET nome = $1, usuario = $2
-                WHERE id = $3
-            `, [nome.trim(), usuarioLimpo, id]);
-        }
-
-        const atualizado = await pool.query(
-            'SELECT id, nome, usuario, criado_em FROM usuarios WHERE id = $1',
-            [id]
-        );
-
-        res.json({ corretor: atualizado.rows[0] });
-
-    } catch (err) {
-        console.error('[admin/corretores PATCH] erro:', err);
-        res.status(500).json({ erro: 'Erro ao atualizar corretor.' });
     }
 });
 

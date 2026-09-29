@@ -1,5 +1,5 @@
 /* =========================================================
-   ADMIN.JS — Painel Admin (com polling e carteiras)
+   ADMIN.JS — Painel Admin
    ========================================================= */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -11,6 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let confirmCallback = null;
     let toastTimer = null;
     let pollingTimer = null;
+    let corretorEditandoId = null;
 
     /* =========================================================
        ELEMENTOS
@@ -93,7 +94,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnCancelarGerenciar     = $('btnCancelarGerenciar');
     const btnSalvarGerenciar       = $('btnSalvarGerenciar');
     const btnSalvarGerenciarTexto  = $('btnSalvarGerenciarTexto');
-    
+    const gerenciarMensagem        = $('gerenciarMensagem');
+    const btnSalvarMensagem        = $('btnSalvarMensagem');
+    const btnSalvarMensagemTexto   = $('btnSalvarMensagemTexto');
 
     // Modal confirmação
     const modalConfirm     = $('modalConfirm');
@@ -102,12 +105,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnFecharConfirm = $('btnFecharConfirm');
     const btnConfirmNao    = $('btnConfirmNao');
     const btnConfirmSim    = $('btnConfirmSim');
-
-    // Mensagem WhatsApp
-    const mensagemWhatsappInput = $('mensagemWhatsapp');
-    const gerenciarMensagem          = $('gerenciarMensagem');
-    const btnSalvarMensagem          = $('btnSalvarMensagem');
-    const btnSalvarMensagemTexto     = $('btnSalvarMensagemTexto');
 
     // Modal editar corretor
     const modalEditarCorretor          = $('modalEditarCorretor');
@@ -122,7 +119,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnSalvarEditarCorretor      = $('btnSalvarEditarCorretor');
     const btnSalvarEditarCorretorTexto = $('btnSalvarEditarCorretorTexto');
 
-    let corretorEditandoId = null;
+    // Mensagem WhatsApp (upload)
+    const mensagemWhatsappInput = $('mensagemWhatsapp');
 
     // Toast
     const toast = $('toast');
@@ -217,7 +215,7 @@ document.addEventListener('DOMContentLoaded', () => {
             vendido:           'Vendido',
             mensagem_enviada:  'Mensagem enviada',
             retornar_depois:   'Retornar depois',
-            follow_up:         'Follow up',
+            follow_up:         'Follow Up',
             sem_interesse:     'Cliente sem interesse',
             telefone_invalido: 'Telefone inexistente',
             sem_resposta:      'Sem resposta'
@@ -372,6 +370,7 @@ document.addEventListener('DOMContentLoaded', () => {
         carteirasVazio.style.display = 'none';
 
         carteirasGrid.innerHTML = carteiras.map(c => {
+            // Qualif = todos que foram trabalhados (verdes + vermelhos)
             const totalQualif = c.corretores.reduce((acc, x) => acc + x.qualificou, 0);
             const totalFila   = c.corretores.reduce((acc, x) => acc + x.fila, 0);
 
@@ -494,7 +493,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /* =========================================================
-       POLLING (atualiza dashboard a cada 60s)
+       POLLING
        ========================================================= */
     function iniciarPolling() {
         if (pollingTimer) clearInterval(pollingTimer);
@@ -517,7 +516,7 @@ document.addEventListener('DOMContentLoaded', () => {
     window.addEventListener('beforeunload', pararPolling);
 
     /* =========================================================
-       SPARKLINES (KPIs)
+       SPARKLINES
        ========================================================= */
     function adicionarSparklines() {
         const sparklines = [
@@ -547,7 +546,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /* =========================================================
-       SUBIR LISTA — Modo arquivo/texto
+       SUBIR LISTA
        ========================================================= */
     modoBtns.forEach(btn => {
         btn.addEventListener('click', () => {
@@ -824,7 +823,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         try {
-            // 1. Consulta o back pra saber quais telefones já existem
             const dedupe = await ApiClient.post('/api/admin/listas/preview-dedupe', {
                 contatos
             });
@@ -832,7 +830,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const totalNovos = dedupe.novos;
             const totalDescartados = dedupe.descartados;
 
-            // 2. Se TODOS forem duplicados → mostra aviso
             if (totalNovos === 0) {
                 infoRoleta.innerHTML = `
                     <div class="info-empty" style="color: #b91c1c;">
@@ -844,7 +841,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            // 3. Busca os corretores pra distribuição (só dos novos)
             const { corretores } = await ApiClient.get('/api/admin/corretores');
             const selecionados = corretores.filter(c => marcados.includes(c.id));
 
@@ -855,7 +851,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 distribuicao[c.id]++;
             }
 
-            // 4. Monta o aviso de descartados (se tiver)
             let avisoDescartados = '';
             if (totalDescartados > 0) {
                 avisoDescartados = `
@@ -950,7 +945,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 mensagemWhatsapp: mensagemWhatsapp || null
             });
 
-            mostrarToast(`✅ ${res.total} contatos distribuídos com sucesso!`, 'success');
+            let msg = `✅ ${res.total} contatos distribuídos`;
+            if (res.descartados > 0) {
+                msg += ` · ${res.descartados} descartado(s)`;
+            }
+            mostrarToast(msg, 'success');
 
             nomeListaInput.value = '';
             textoListaInput.value = '';
@@ -981,7 +980,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (btnSubirLista)    btnSubirLista.addEventListener('click', handleSubirLista);
 
     /* =========================================================
-       LISTAS (aba padrão — tabela de contatos)
+       LISTAS
        ========================================================= */
     async function renderizarListas() {
         try {
@@ -1037,7 +1036,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /* =========================================================
-       MODAL LISTA — modo "tabela de contatos"
+       MODAL LISTA
        ========================================================= */
     async function abrirModalLista(listaId) {
         try {
@@ -1245,7 +1244,6 @@ document.addEventListener('DOMContentLoaded', () => {
     async function abrirGerenciarCorretores() {
         if (!listaSelecionadaAtual) return;
 
-        // Esconde modal da lista, abre o de gerenciar
         modalLista.style.display = 'none';
         modalGerenciar.style.display = 'flex';
 
@@ -1262,7 +1260,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             gerenciarListaNome.textContent = `${lista.nome} · escolha quem participa`;
 
-             if (gerenciarMensagem) {
+            if (gerenciarMensagem) {
                 gerenciarMensagem.value = lista.mensagem_whatsapp || '';
             }
 
@@ -1329,10 +1327,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
             mostrarToast(`✅ ${partes.join(' · ') || 'Salvo'}`, 'success');
 
-            // 🔄 Recarrega o modal (sem fechar)
             await carregarGerenciarLista();
 
-            // Atualiza listagens em background
             renderizarListas();
             atualizarDashboard();
 
@@ -1361,7 +1357,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
             mostrarToast('✅ Mensagem atualizada!', 'success');
 
-            // Atualiza o objeto local
             if (listaSelecionadaAtual) {
                 listaSelecionadaAtual.mensagem_whatsapp = mensagem || null;
             }
@@ -1423,10 +1418,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 `;
             }).join('');
 
-            // Clique no item → abre edição
             corretoresList.querySelectorAll('.corretor-item').forEach(item => {
                 item.addEventListener('click', (e) => {
-                    // Se clicou no botão de excluir, ignora
                     if (e.target.closest('.btn-corretor-delete')) return;
 
                     const id = Number(item.dataset.corretorId);
@@ -1435,7 +1428,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             });
 
-            // Botão excluir (já existia)
             corretoresList.querySelectorAll('.btn-corretor-delete').forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     e.stopPropagation();
@@ -1541,7 +1533,6 @@ document.addEventListener('DOMContentLoaded', () => {
         editarUsuarioInput.value = corretor.usuario || '';
         editarSenhaInput.value = '';
 
-        // Limpa erros
         [editarNomeError, editarUsuarioError, editarSenhaError].forEach(e => {
             e.textContent = '';
             e.classList.remove('visible');
@@ -1630,7 +1621,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /* =========================================================
-       HEADER — NOME DO USUÁRIO
+       HEADER
        ========================================================= */
     if (headerUserName) {
         const nome = localStorage.getItem('sr_usuario') || 'Administrador';
@@ -1649,7 +1640,7 @@ document.addEventListener('DOMContentLoaded', () => {
         await renderizarListas();
         await renderizarCorretores();
 
-        // Botão de gerenciar corretores
+        // Botão gerenciar
         if (btnGerenciarCorretores) btnGerenciarCorretores.addEventListener('click', abrirGerenciarCorretores);
         if (btnFecharGerenciar)     btnFecharGerenciar.addEventListener('click', fecharGerenciar);
         if (btnCancelarGerenciar)   btnCancelarGerenciar.addEventListener('click', fecharGerenciar);
@@ -1659,9 +1650,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (e.target === modalGerenciar) fecharGerenciar();
             });
         }
-        if (btnSalvarMensagem) {
-            btnSalvarMensagem.addEventListener('click', salvarMensagemWhatsApp);
-        }
+
+        // Salvar mensagem WhatsApp
+        if (btnSalvarMensagem) btnSalvarMensagem.addEventListener('click', salvarMensagemWhatsApp);
 
         // Modal editar corretor
         if (btnFecharEditarCorretor)   btnFecharEditarCorretor.addEventListener('click', fecharEditarCorretor);
@@ -1673,30 +1664,14 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
-        // Botões de variáveis de mensagem WhatsApp
-        // Botões de variáveis de mensagem (funcionam em ambos textareas)
+        // Botões de variáveis (funciona nos 2 textareas)
         document.querySelectorAll('.variavel-btn').forEach(btn => {
             btn.addEventListener('click', () => {
-                // Descobre qual textarea está mais próxima
                 const wrap = btn.closest('.variaveis-wrap');
                 const grupo = wrap ? wrap.parentElement : null;
                 const textarea = grupo ? grupo.querySelector('textarea') : null;
 
-                if (!textarea) {
-                    // Fallback: usa o do subir lista
-                    const fallback = mensagemWhatsappInput;
-                    if (fallback) {
-                        const varText = btn.dataset.var;
-                        const inicio = fallback.selectionStart;
-                        const fim = fallback.selectionEnd;
-                        const texto = fallback.value;
-                        fallback.value = texto.substring(0, inicio) + varText + texto.substring(fim);
-                        const novaPos = inicio + varText.length;
-                        fallback.setSelectionRange(novaPos, novaPos);
-                        fallback.focus();
-                    }
-                    return;
-                }
+                if (!textarea) return;
 
                 const variavel = btn.dataset.var;
                 const inicio = textarea.selectionStart;
@@ -1721,11 +1696,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-
-        // Inicia o polling do dashboard
         iniciarPolling();
 
-        console.log('[admin] Sistema pronto (com polling de 60s).');
+        console.log('[admin] Sistema pronto.');
     }
 
     init();
