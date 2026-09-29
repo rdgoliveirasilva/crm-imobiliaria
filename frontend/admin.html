@@ -81,11 +81,11 @@
             </button>
             <button class="nav-tab" data-tab="upload">
                 <i class="fas fa-cloud-upload-alt"></i>
-                <span>Subir Lista</span>
+                <span>Subir Carteira</span>
             </button>
             <button class="nav-tab" data-tab="listas">
                 <i class="fas fa-folder-open"></i>
-                <span>Listas</span>
+                <span>Carteiras</span>
             </button>
             <button class="nav-tab" data-tab="corretores">
                 <i class="fas fa-users"></i>
@@ -110,7 +110,7 @@
                         <i class="fas fa-layer-group"></i>
                     </div>
                     <div class="kpi-info">
-                        <span class="kpi-label">Listas subidas</span>
+                        <span class="kpi-label">Carteiras ativas</span>
                         <strong class="kpi-value" id="kpiListas">0</strong>
                     </div>
                 </div>
@@ -164,7 +164,7 @@
                 <header class="card-header">
                     <h2>
                         <i class="fas fa-folder-open"></i>
-                        Carteira por lista
+                        Atendimentos por carteira
                     </h2>
                     <span class="card-badge" id="badgeTotalCarteiras">0</span>
                 </header>
@@ -344,10 +344,10 @@
      É ATUALIZAÇÃO DE LISTA?
      ================================================ -->
 <div class="form-group">
-    <label>É atualização de lista? <span class="required">*</span></label>
+    <label>É atualização de carteira? <span class="required">*</span></label>
     <p class="form-subtitle">
-        Selecione uma lista existente para adicionar <strong>apenas contatos novos</strong> aos corretores dela.
-        Nome e mensagem do WhatsApp são herdados da lista escolhida.
+        Selecione uma carteira existente para adicionar <strong>apenas contatos novos</strong> aos corretores dela.
+        Nome e mensagem do WhatsApp são herdados da carteira escolhida.
     </p>
 
     <div class="custom-select" id="customAtualizacao">
@@ -355,7 +355,7 @@
 
         <button type="button" class="custom-select-trigger" id="customAtualizacaoTrigger">
             <i class="fas fa-layer-group custom-select-icon"></i>
-            <span class="custom-select-text" id="customAtualizacaoText">Não — criar lista nova</span>
+            <span class="custom-select-text" id="customAtualizacaoText">Não — criar carteira nova</span>
             <i class="fas fa-chevron-down custom-select-arrow"></i>
         </button>
 
@@ -415,7 +415,7 @@
             <div class="listas-header">
                 <h2>
                     <i class="fas fa-folder-open"></i>
-                    Listas subidas
+                    Carteiras ativas
                 </h2>
                 <span class="card-badge" id="badgeTotalListas">0</span>
             </div>
@@ -643,7 +643,7 @@
                         <i class="fab fa-whatsapp"></i>
                         <div>
                             <strong>Mensagem do WhatsApp</strong>
-                            <small>Usada quando o corretor clicar em "WhatsApp" para leads desta lista</small>
+                            <small>Usada quando o corretor clicar em "WhatsApp" para leads desta carteira</small>
                         </div>
                     </div>
 
