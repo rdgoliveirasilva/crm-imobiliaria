@@ -15,10 +15,6 @@ router.use(autenticar, apenasAdmin);
    HELPERS
    ========================================================= */
 
-/**
- * SQL que EXCLUI leads cujo corretor é do tipo 'teste'.
- * Use em qualquer query que não deve contar usuários de teste.
- */
 function naoTeste(alias = 'l') {
     return ` AND (${alias}.corretor_id IS NULL OR ${alias}.corretor_id NOT IN (
         SELECT id FROM usuarios WHERE tipo = 'teste'
@@ -269,10 +265,6 @@ router.patch('/corretores/:id', async (req, res) => {
    ALTERNAR TIPO (corretor ↔ teste)
    ========================================================= */
 
-/* =========================================================
-   ALTERNAR TIPO (corretor ↔ teste)
-   ========================================================= */
-
 router.patch('/corretores/:id/tipo', async (req, res) => {
     try {
         const id = Number(req.params.id);
@@ -312,7 +304,6 @@ router.patch('/corretores/:id/tipo', async (req, res) => {
    LISTAS
    ========================================================= */
 
-// Stats das listas — MANTÉM a lista da Natalia contando
 router.get('/listas', async (req, res) => {
     try {
         const listasResult = await pool.query('SELECT * FROM listas ORDER BY criado_em DESC');
@@ -385,7 +376,10 @@ router.post('/listas', async (req, res) => {
             });
         }
 
+        // =====================================================
         // CASO 1 — ATUALIZAR LISTA EXISTENTE
+        // Agora RESPEITA os corretores marcados na roleta.
+        // =====================================================
         if (listaIdExistente) {
             const listaId = Number(listaIdExistente);
 
@@ -394,39 +388,61 @@ router.post('/listas', async (req, res) => {
                 return res.status(404).json({ erro: 'Lista não encontrada.' });
             }
 
-            const corretoresResult = await client.query(
-                'SELECT corretor_id FROM lista_corretores WHERE lista_id = $1',
-                [listaId]
+            // 🔑 Valida os corretores que vieram do frontend
+            if (!Array.isArray(corretoresIds) || !corretoresIds.length) {
+                return res.status(400).json({
+                    erro: 'Selecione pelo menos 1 corretor para receber os contatos novos.'
+                });
+            }
+
+            const placeholders = corretoresIds.map((_, i) => `$${i + 1}`).join(',');
+            const corretoresValidos = await client.query(
+                `SELECT id FROM usuarios WHERE id IN (${placeholders}) AND tipo IN ('corretor', 'teste')`,
+                corretoresIds
             );
 
-            let idsValidos;
-
-            if (corretoresResult.rows.length) {
-                idsValidos = corretoresResult.rows.map(r => r.corretor_id);
-            } else {
-                const fallback = await client.query(`
-                    SELECT DISTINCT corretor_id
-                    FROM leads
-                    WHERE lista_id = $1 AND corretor_id IS NOT NULL
-                `, [listaId]);
-
-                if (!fallback.rows.length) {
-                    return res.status(400).json({
-                        erro: 'Essa lista ainda não tem corretores. Adicione ao menos um antes de atualizar.'
-                    });
-                }
-                idsValidos = fallback.rows.map(r => r.corretor_id);
+            if (corretoresValidos.rows.length !== corretoresIds.length) {
+                return res.status(400).json({ erro: 'Um ou mais corretores não existem.' });
             }
+
+            const idsValidos = corretoresValidos.rows.map(c => c.id);
 
             await client.query('BEGIN');
 
+            // 1) Sincroniza lista_corretores com o que foi marcado
+            //    (adiciona novos + remove os que não estão mais marcados)
+            const atuaisResult = await client.query(
+                'SELECT corretor_id FROM lista_corretores WHERE lista_id = $1',
+                [listaId]
+            );
+            const idsAntigos = atuaisResult.rows.map(r => r.corretor_id);
+
+            const idsAdicionados = idsValidos.filter(id => !idsAntigos.includes(id));
+            const idsRemovidos  = idsAntigos.filter(id => !idsValidos.includes(id));
+
+            for (const id of idsAdicionados) {
+                await client.query(
+                    'INSERT INTO lista_corretores (lista_id, corretor_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+                    [listaId, id]
+                );
+            }
+
+            for (const id of idsRemovidos) {
+                await client.query(
+                    'DELETE FROM lista_corretores WHERE lista_id = $1 AND corretor_id = $2',
+                    [listaId, id]
+                );
+            }
+
+            // 2) Insere os contatos novos distribuindo entre os corretores MARCADOS
             const distribuicao = await inserirLeadsEmMassa(client, listaId, contatosNovos, idsValidos);
 
+            // 3) Recalcula o total da lista com base no banco (evita dessincronia)
             await client.query(`
                 UPDATE listas
-                SET total = total + $1
-                WHERE id = $2
-            `, [contatosNovos.length, listaId]);
+                SET total = (SELECT COUNT(*) FROM leads WHERE lista_id = $1)
+                WHERE id = $1
+            `, [listaId]);
 
             await client.query('COMMIT');
 
@@ -436,11 +452,15 @@ router.post('/listas', async (req, res) => {
                 atualizada: true,
                 adicionados: contatosNovos.length,
                 descartados: descartados.length,
+                corretoresAdicionados: idsAdicionados.length,
+                corretoresRemovidos: idsRemovidos.length,
                 distribuicao
             });
         }
 
+        // =====================================================
         // CASO 2 — CRIAR LISTA NOVA
+        // =====================================================
         if (!Array.isArray(corretoresIds) || !corretoresIds.length) {
             return res.status(400).json({ erro: 'Selecione pelo menos 1 corretor.' });
         }
@@ -559,7 +579,7 @@ router.delete('/leads/:id', async (req, res) => {
 });
 
 /* =========================================================
-   DASHBOARD — KPIs (exclui usuários 'teste')
+   DASHBOARD — KPIs
    ========================================================= */
 
 router.get('/dashboard', async (req, res) => {
@@ -622,14 +642,11 @@ router.get('/dashboard', async (req, res) => {
 });
 
 /* =========================================================
-   DASHBOARD — GRÁFICOS (exclui usuários 'teste')
+   DASHBOARD — GRÁFICOS
    ========================================================= */
 
 router.get('/dashboard/graficos', async (req, res) => {
     try {
-        // =====================
-        // 1. LINHA
-        // =====================
         const linhaResult = await pool.query(`
             WITH dias AS (
                 SELECT generate_series(
@@ -666,9 +683,6 @@ router.get('/dashboard/graficos', async (req, res) => {
         const linhaQualificados = linhaResult.rows.map(r => Number(r.qualificados));
         const linhaDescartados  = linhaResult.rows.map(r => Number(r.descartados));
 
-        // =====================
-        // 2. DONUT
-        // =====================
         const donutResult = await pool.query(`
             SELECT l.resultado, COUNT(*) AS count
             FROM leads l
@@ -693,9 +707,6 @@ router.get('/dashboard/graficos', async (req, res) => {
         const donutValores = donutResult.rows.map(r => Number(r.count));
         const donutChaves  = donutResult.rows.map(r => r.resultado);
 
-        // =====================
-        // 3. COLUNAS (só 'corretor' — exclui 'teste')
-        // =====================
         const colunasResult = await pool.query(`
             SELECT
                 u.id,
@@ -748,9 +759,6 @@ router.get('/dashboard/graficos', async (req, res) => {
         const colunasFila     = colunasFinal.map(c => c.fila);
         const colunasPerdidos = colunasFinal.map(c => c.perdidos);
 
-        // =====================
-        // 4. VELOCÍMETRO (exclui 'teste')
-        // =====================
         const velResult = await pool.query(`
             SELECT
                 COUNT(*) FILTER (WHERE l.status IN ('qualificado', 'descartado')) AS trabalhados,
@@ -797,7 +805,7 @@ router.get('/dashboard/graficos', async (req, res) => {
 });
 
 /* =========================================================
-   DASHBOARD — DRILL-DOWN POR TAG (exclui 'teste')
+   DASHBOARD — DRILL-DOWN POR TAG
    ========================================================= */
 
 router.get('/dashboard/tag/:tag', async (req, res) => {
@@ -858,9 +866,6 @@ router.get('/dashboard/tag/:tag', async (req, res) => {
 
 /* =========================================================
    DASHBOARD — CARTEIRAS E CORRETORES
-   (Natalia APARECE aqui — bloco "Corretores ativos" e
-    "Desempenho por carteira". Só os KPIs e gráficos é que
-    excluem ela.)
    ========================================================= */
 
 router.get('/dashboard/carteiras', async (req, res) => {
