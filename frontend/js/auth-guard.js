@@ -26,8 +26,8 @@
         return;
     }
 
-    // Corretor tentando acessar área de admin? Volta pro login (limpa)
-    if (pagina === 'corretor.html' && tipo !== 'corretor') {
+    // Corretor OU teste tentando acessar área de admin? Volta pro login (limpa)
+    if (pagina === 'corretor.html' && tipo !== 'corretor' && tipo !== 'teste') {
         localStorage.clear();
         window.location.replace('index.html');
         return;

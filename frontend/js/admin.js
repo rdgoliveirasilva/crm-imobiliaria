@@ -12,6 +12,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let toastTimer = null;
     let pollingTimer = null;
     let corretorEditandoId = null;
+    let corretorEditandoTipo = 'corretor';
 
     /* =========================================================
        ELEMENTOS
@@ -34,6 +35,26 @@ document.addEventListener('DOMContentLoaded', () => {
     const carteirasVazio       = $('carteirasVazio');
     const badgeTotalCorretores = $('badgeTotalCorretores');
     const badgeTotalCarteiras  = $('badgeTotalCarteiras');
+
+    // Gráficos
+    const graficoLinha   = $('graficoLinha');
+    const graficoDonut   = $('graficoDonut');
+    const graficoColunas = $('graficoColunas');
+    const gaugeFill      = $('gaugeFill');
+    const gaugeValor     = $('gaugeValor');
+    const gaugeLabel     = $('gaugeLabel');
+
+    // Modal tag (drill-down do donut)
+    const modalTag        = $('modalTag');
+    const modalTagTitulo  = $('modalTagTitulo');
+    const modalTagInfo    = $('modalTagInfo');
+    const modalTagTbody   = $('modalTagTbody');
+    const modalTagVazio   = $('modalTagVazio');
+    const modalTagBusca   = $('modalTagBusca');
+    const modalTagDe      = $('modalTagDe');
+    const modalTagAte     = $('modalTagAte');
+    const btnFecharModalTag  = $('btnFecharModalTag');
+    const btnLimparFiltroTag = $('btnLimparFiltroTag');
 
     // Upload
     const modoBtns           = document.querySelectorAll('.modo-btn');
@@ -127,6 +148,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnSalvarEditarCorretor      = $('btnSalvarEditarCorretor');
     const btnSalvarEditarCorretorTexto = $('btnSalvarEditarCorretorTexto');
 
+const btnToggleTipo     = $('btnToggleTipo');
+const btnToggleTipoText = $('btnToggleTipoText');
+    
     // Mensagem WhatsApp (upload)
     const mensagemWhatsappInput = $('mensagemWhatsapp');
 
@@ -140,9 +164,18 @@ document.addEventListener('DOMContentLoaded', () => {
     let contatosDoArquivo = [];
     let enviandoLista = false;
 
-    let listasDisponiveis = [];              // cache das listas pro dropdown
-    let listaAtualizacaoSelecionada = null;  // { id, nome, mensagem_whatsapp }
-    let statsListaAtual = {};                // { [corretorId]: { total, qualif, fila } }
+    let listasDisponiveis = [];
+    let listaAtualizacaoSelecionada = null;
+    let statsListaAtual = {};
+
+    // Gráficos
+    let chartLinha   = null;
+    let chartDonut   = null;
+    let chartColunas = null;
+
+    // Drill-down por tag
+    let filtroTagAtual = { chave: null, label: '', busca: '', de: '', ate: '' };
+    let leadsTagAtuais = [];
 
     /* =========================================================
        TOAST
@@ -315,6 +348,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (badgeTotalCarteiras)  badgeTotalCarteiras.textContent  = carteiras.length;
 
             adicionarSparklines();
+            await carregarGraficos();
 
         } catch (err) {
             console.error('[dashboard] erro:', err);
@@ -323,57 +357,63 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function renderizarCorretoresResumo(corretores) {
-        if (!corretores.length) {
-            corretoresCarteira.innerHTML = `
-                <div class="empty-state small">
-                    <i class="fas fa-users"></i>
-                    <p>Nenhum corretor cadastrado ainda.</p>
-                </div>
-            `;
-            return;
-        }
-
-        corretoresCarteira.innerHTML = corretores.map(c => {
-            const statusLabel = {
-                online:  'Online agora',
-                ausente: 'Ausente',
-                offline: c.ultimo_acesso
-                    ? `Último acesso: ${formatarUltimoAcesso(c.ultimo_acesso)}`
-                    : 'Nunca acessou'
-            }[c.status];
-
-            return `
-                <div class="corretor-carteira-item">
-                    <div class="corretor-avatar">
-                        ${iniciais(c.nome)}
-                        <span class="corretor-avatar-status ${c.status}"></span>
-                    </div>
-                    <div class="corretor-info">
-                        <strong>${escapeHtml(c.nome)}</strong>
-                        <small>@${escapeHtml(c.usuario)}</small>
-                        <span class="corretor-status-text ${c.status}">
-                            <i class="fas fa-circle"></i>
-                            ${escapeHtml(statusLabel)}
-                        </span>
-                    </div>
-                    <div class="corretor-stats">
-                        <div class="corretor-stat total">
-                            <strong>${c.total_carteira}</strong>
-                            <small>total</small>
-                        </div>
-                        <div class="corretor-stat qualif">
-                            <strong>${c.total_qualificados}</strong>
-                            <small>qualif</small>
-                        </div>
-                        <div class="corretor-stat novos">
-                            <strong>${c.total_fila}</strong>
-                            <small>fila</small>
-                        </div>
-                    </div>
-                </div>
-            `;
-        }).join('');
+    if (!corretores.length) {
+        corretoresCarteira.innerHTML = `
+            <div class="empty-state small">
+                <i class="fas fa-users"></i>
+                <p>Nenhum corretor cadastrado ainda.</p>
+            </div>
+        `;
+        return;
     }
+
+    corretoresCarteira.innerHTML = corretores.slice(0, 10).map(c => {
+        const statusLabel = {
+            online:  'Online agora',
+            ausente: 'Ausente',
+            offline: c.ultimo_acesso
+                ? `Último acesso: ${formatarUltimoAcesso(c.ultimo_acesso)}`
+                : 'Nunca acessou'
+        }[c.status];
+
+        const ehTeste = c.tipo === 'teste';
+
+        const badge = ehTeste
+            ? `<span class="badge-teste-inline"><i class="fas fa-flask"></i> Teste</span>`
+            : '';
+
+        return `
+            <div class="corretor-carteira-item ${ehTeste ? 'is-teste' : ''}">
+                <div class="corretor-avatar">
+                    ${iniciais(c.nome)}
+                    <span class="corretor-avatar-status ${c.status}"></span>
+                </div>
+                <div class="corretor-info">
+                    <strong>${escapeHtml(c.nome)}${badge}</strong>
+                    <small>@${escapeHtml(c.usuario)}</small>
+                    <span class="corretor-status-text ${c.status}">
+                        <i class="fas fa-circle"></i>
+                        ${escapeHtml(statusLabel)}
+                    </span>
+                </div>
+                <div class="corretor-stats">
+                    <div class="corretor-stat total">
+                        <strong>${c.total_carteira}</strong>
+                        <small>total</small>
+                    </div>
+                    <div class="corretor-stat qualif">
+                        <strong>${c.total_qualificados}</strong>
+                        <small>qualif</small>
+                    </div>
+                    <div class="corretor-stat novos">
+                        <strong>${c.total_fila}</strong>
+                        <small>fila</small>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
 
     function renderizarCarteiras(carteiras) {
         if (!carteiras.length) {
@@ -384,7 +424,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         carteirasVazio.style.display = 'none';
 
-        carteirasGrid.innerHTML = carteiras.map(c => {
+        carteirasGrid.innerHTML = carteiras.slice(0, 10).map(c => {
             const totalQualif = c.corretores.reduce((acc, x) => acc + x.qualificou, 0);
             const totalFila   = c.corretores.reduce((acc, x) => acc + x.fila, 0);
 
@@ -504,6 +544,474 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
 
         modalLista.style.display = 'flex';
+    }
+
+    /* =========================================================
+       GRÁFICOS
+       ========================================================= */
+    const CORES_DONUT = [
+        '#0a4a91', '#16a34a', '#f59e0b', '#7c3aed',
+        '#0891b2', '#dc2626', '#3b82f6', '#65a30d', '#64748b'
+    ];
+
+    async function carregarGraficos() {
+        try {
+            const dados = await ApiClient.get('/api/admin/dashboard/graficos');
+            renderizarGraficoLinha(dados.linha);
+            renderizarGraficoDonut(dados.donut);
+            renderizarGraficoColunas(dados.colunas);
+            renderizarGauge(dados.velocimetro);
+        } catch (err) {
+            console.error('[graficos] erro:', err);
+        }
+    }
+
+    function renderizarGraficoLinha(dados) {
+        if (!graficoLinha || typeof Chart === 'undefined') return;
+        if (chartLinha) chartLinha.destroy();
+
+        const ctx = graficoLinha.getContext('2d');
+
+        const gradQualif = ctx.createLinearGradient(0, 0, 0, 260);
+        gradQualif.addColorStop(0, 'rgba(22, 163, 74, 0.28)');
+        gradQualif.addColorStop(1, 'rgba(22, 163, 74, 0.02)');
+
+        const gradDesc = ctx.createLinearGradient(0, 0, 0, 260);
+        gradDesc.addColorStop(0, 'rgba(220, 38, 38, 0.22)');
+        gradDesc.addColorStop(1, 'rgba(220, 38, 38, 0.02)');
+
+        chartLinha = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: dados.labels,
+                datasets: [
+                    {
+                        label: 'Qualificados',
+                        data: dados.qualificados,
+                        borderColor: '#16a34a',
+                        backgroundColor: gradQualif,
+                        fill: true,
+                        tension: 0.35,
+                        borderWidth: 2,
+                        pointRadius: 0,
+                        pointHoverRadius: 5,
+                        pointHoverBackgroundColor: '#16a34a',
+                        pointHoverBorderColor: '#fff',
+                        pointHoverBorderWidth: 2
+                    },
+                    {
+                        label: 'Descartados',
+                        data: dados.descartados,
+                        borderColor: '#dc2626',
+                        backgroundColor: gradDesc,
+                        fill: true,
+                        tension: 0.35,
+                        borderWidth: 2,
+                        pointRadius: 0,
+                        pointHoverRadius: 5,
+                        pointHoverBackgroundColor: '#dc2626',
+                        pointHoverBorderColor: '#fff',
+                        pointHoverBorderWidth: 2
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        align: 'end',
+                        labels: {
+                            boxWidth: 10,
+                            boxHeight: 10,
+                            usePointStyle: true,
+                            pointStyle: 'circle',
+                            font: { size: 11, weight: '600', family: 'Inter' },
+                            color: '#3e5370',
+                            padding: 14
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: '#0a1628',
+                        padding: 10,
+                        cornerRadius: 8,
+                        titleFont: { family: 'Inter', size: 12, weight: '700' },
+                        bodyFont: { family: 'Inter', size: 12 },
+                        displayColors: true,
+                        boxWidth: 8,
+                        boxHeight: 8,
+                        usePointStyle: true
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: { display: false },
+                        ticks: {
+                            color: '#7a8ba8',
+                            font: { size: 10, family: 'Inter' },
+                            maxRotation: 0,
+                            autoSkip: true,
+                            maxTicksLimit: 8
+                        },
+                        border: { display: false }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        grid: { color: 'rgba(0, 44, 97, 0.05)' },
+                        ticks: {
+                            color: '#7a8ba8',
+                            font: { size: 10, family: 'Inter' },
+                            precision: 0
+                        },
+                        border: { display: false }
+                    }
+                }
+            }
+        });
+    }
+
+    function renderizarGraficoDonut(dados) {
+        if (!graficoDonut || typeof Chart === 'undefined') return;
+        if (chartDonut) chartDonut.destroy();
+
+        if (!dados.labels.length) {
+            chartDonut = null;
+            return;
+        }
+
+        const ctx = graficoDonut.getContext('2d');
+
+        chartDonut = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: dados.labels,
+                datasets: [{
+                    data: dados.valores,
+                    backgroundColor: CORES_DONUT,
+                    borderColor: '#fff',
+                    borderWidth: 3,
+                    hoverOffset: 8,
+                    hoverBorderColor: '#fff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '62%',
+                onClick: (evt, elements) => {
+                    if (!elements.length) return;
+                    const idx = elements[0].index;
+                    const chave = dados.chaves[idx];
+                    const label = dados.labels[idx];
+                    abrirModalTag(chave, label);
+                },
+                plugins: {
+                    legend: {
+                        position: 'right',
+                        labels: {
+                            boxWidth: 10,
+                            boxHeight: 10,
+                            usePointStyle: true,
+                            pointStyle: 'circle',
+                            font: { size: 11, weight: '600', family: 'Inter' },
+                            color: '#3e5370',
+                            padding: 10
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: '#0a1628',
+                        padding: 10,
+                        cornerRadius: 8,
+                        titleFont: { family: 'Inter', size: 12, weight: '700' },
+                        bodyFont: { family: 'Inter', size: 12 },
+                        displayColors: true,
+                        boxWidth: 8,
+                        boxHeight: 8,
+                        usePointStyle: true,
+                        callbacks: {
+                            label: (ctx) => {
+                                const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+                                const v = ctx.parsed;
+                                const pct = total ? ((v / total) * 100).toFixed(1) : 0;
+                                return ` ${ctx.label}: ${v} (${pct}%)`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    function renderizarGraficoColunas(dados) {
+        if (!graficoColunas || typeof Chart === 'undefined') return;
+        if (chartColunas) chartColunas.destroy();
+
+        const ctx = graficoColunas.getContext('2d');
+
+        chartColunas = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: dados.labels,
+                datasets: [
+                    {
+                        label: 'Ativos',
+                        data: dados.ativos,
+                        backgroundColor: '#16a34a',
+                        borderRadius: 4,
+                        stack: 's'
+                    },
+                    {
+                        label: 'Follow up',
+                        data: dados.follow_up,
+                        backgroundColor: '#94a3b8',
+                        borderRadius: 4,
+                        stack: 's'
+                    },
+                    {
+                        label: 'Fila',
+                        data: dados.fila,
+                        backgroundColor: '#f59e0b',
+                        borderRadius: 4,
+                        stack: 's'
+                    },
+                    {
+                        label: 'Perdidos',
+                        data: dados.perdidos,
+                        backgroundColor: '#dc2626',
+                        borderRadius: 4,
+                        stack: 's'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        align: 'end',
+                        labels: {
+                            boxWidth: 10,
+                            boxHeight: 10,
+                            usePointStyle: true,
+                            pointStyle: 'circle',
+                            font: { size: 11, weight: '600', family: 'Inter' },
+                            color: '#3e5370',
+                            padding: 14
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: '#0a1628',
+                        padding: 10,
+                        cornerRadius: 8,
+                        titleFont: { family: 'Inter', size: 12, weight: '700' },
+                        bodyFont: { family: 'Inter', size: 12 },
+                        displayColors: true,
+                        boxWidth: 8,
+                        boxHeight: 8,
+                        usePointStyle: true
+                    }
+                },
+                scales: {
+                    x: {
+                        stacked: true,
+                        grid: { display: false },
+                        ticks: {
+                            color: '#7a8ba8',
+                            font: { size: 10, family: 'Inter' },
+                            maxRotation: 35,
+                            minRotation: 0,
+                            autoSkip: false
+                        },
+                        border: { display: false }
+                    },
+                    y: {
+                        stacked: true,
+                        beginAtZero: true,
+                        grid: { color: 'rgba(0, 44, 97, 0.05)' },
+                        ticks: {
+                            color: '#7a8ba8',
+                            font: { size: 10, family: 'Inter' },
+                            precision: 0
+                        },
+                        border: { display: false }
+                    }
+                }
+            }
+        });
+    }
+
+    function renderizarGauge(dados) {
+        if (!gaugeFill || !gaugeValor) return;
+
+        const valor = Math.max(0, Math.min(100, Number(dados.valor) || 0));
+
+        let gradId = 'gaugeGradOtimo';
+        let cor = '#16a34a';
+        if (valor < 5) {
+            gradId = 'gaugeGradRuim';
+            cor = '#dc2626';
+        } else if (valor < 15) {
+            gradId = 'gaugeGradOk';
+            cor = '#f59e0b';
+        }
+
+        gaugeFill.setAttribute('stroke', `url(#${gradId})`);
+
+        const dash = valor;
+        const gap = 100 - dash;
+
+        gaugeFill.style.strokeDasharray = `0 100`;
+        requestAnimationFrame(() => {
+            gaugeFill.style.strokeDasharray = `${dash} ${gap}`;
+        });
+
+        gaugeValor.textContent = `${valor.toFixed(1).replace('.', ',')}%`;
+        gaugeValor.style.color = cor;
+
+        if (gaugeLabel) {
+            gaugeLabel.textContent = `${dados.qualificados || 0} de ${dados.trabalhados || 0}`;
+        }
+    }
+
+    /* =========================================================
+       DRILL-DOWN POR TAG
+       ========================================================= */
+    async function abrirModalTag(chave, label) {
+        filtroTagAtual = { chave, label, busca: '', de: '', ate: '' };
+        leadsTagAtuais = [];
+
+        modalTagTitulo.textContent = label || chave;
+        modalTagInfo.textContent = 'Carregando...';
+        modalTagTbody.innerHTML = '';
+        modalTagVazio.style.display = 'none';
+
+        if (modalTagBusca) modalTagBusca.value = '';
+        if (modalTagDe) modalTagDe.value = '';
+        if (modalTagAte) modalTagAte.value = '';
+
+        modalTag.style.display = 'flex';
+
+        await carregarLeadsDaTag();
+    }
+
+    async function carregarLeadsDaTag() {
+        if (!filtroTagAtual.chave) return;
+
+        modalTagInfo.textContent = 'Carregando...';
+
+        try {
+            const params = new URLSearchParams();
+            if (filtroTagAtual.de)  params.set('de', filtroTagAtual.de);
+            if (filtroTagAtual.ate) params.set('ate', filtroTagAtual.ate);
+
+            const qs = params.toString();
+            const url = `/api/admin/dashboard/tag/${encodeURIComponent(filtroTagAtual.chave)}${qs ? `?${qs}` : ''}`;
+
+            const { leads } = await ApiClient.get(url);
+            leadsTagAtuais = leads || [];
+
+            renderizarLeadsTag();
+
+        } catch (err) {
+            console.error('[modal-tag] erro:', err);
+            modalTagInfo.textContent = 'Erro ao carregar.';
+            modalTagTbody.innerHTML = '';
+            modalTagVazio.style.display = 'block';
+        }
+    }
+
+    function renderizarLeadsTag() {
+        const busca = (filtroTagAtual.busca || '').trim().toLowerCase();
+
+        let lista = leadsTagAtuais;
+
+        if (busca) {
+            lista = lista.filter(l => {
+                const nome = (l.nome || '').toLowerCase();
+                const tel = String(l.telefone || '');
+                const cor = (l.corretor_nome || '').toLowerCase();
+                return nome.includes(busca) || tel.includes(busca) || cor.includes(busca);
+            });
+        }
+
+        modalTagInfo.textContent = `${lista.length} ${lista.length === 1 ? 'cliente' : 'clientes'}`;
+
+        if (!lista.length) {
+            modalTagTbody.innerHTML = '';
+            modalTagVazio.style.display = 'block';
+            return;
+        }
+
+        modalTagVazio.style.display = 'none';
+
+        modalTagTbody.innerHTML = lista.map(l => {
+            let dataStr = '—';
+            if (l.decidido_em) {
+                const d = new Date(l.decidido_em);
+                dataStr = d.toLocaleString('pt-BR', {
+                    day: '2-digit', month: '2-digit', year: '2-digit',
+                    hour: '2-digit', minute: '2-digit'
+                });
+            }
+
+            return `
+                <tr>
+                    <td class="col-name">${escapeHtml(l.nome)}</td>
+                    <td class="col-phone">${escapeHtml(formatarTelefone(l.telefone))}</td>
+                    <td>${escapeHtml(l.corretor_nome || '—')}</td>
+                    <td class="col-phone">${dataStr}</td>
+                    <td></td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    if (btnFecharModalTag) {
+        btnFecharModalTag.addEventListener('click', () => {
+            modalTag.style.display = 'none';
+            filtroTagAtual = { chave: null, label: '', busca: '', de: '', ate: '' };
+        });
+    }
+    if (modalTag) {
+        modalTag.addEventListener('click', (e) => {
+            if (e.target === modalTag) {
+                modalTag.style.display = 'none';
+                filtroTagAtual = { chave: null, label: '', busca: '', de: '', ate: '' };
+            }
+        });
+    }
+    if (modalTagBusca) {
+        modalTagBusca.addEventListener('input', () => {
+            filtroTagAtual.busca = modalTagBusca.value;
+            renderizarLeadsTag();
+        });
+    }
+    if (modalTagDe) {
+        modalTagDe.addEventListener('change', async () => {
+            filtroTagAtual.de = modalTagDe.value;
+            await carregarLeadsDaTag();
+        });
+    }
+    if (modalTagAte) {
+        modalTagAte.addEventListener('change', async () => {
+            filtroTagAtual.ate = modalTagAte.value;
+            await carregarLeadsDaTag();
+        });
+    }
+    if (btnLimparFiltroTag) {
+        btnLimparFiltroTag.addEventListener('click', async () => {
+            filtroTagAtual.busca = '';
+            filtroTagAtual.de = '';
+            filtroTagAtual.ate = '';
+            if (modalTagBusca) modalTagBusca.value = '';
+            if (modalTagDe) modalTagDe.value = '';
+            if (modalTagAte) modalTagAte.value = '';
+            await carregarLeadsDaTag();
+        });
     }
 
     /* =========================================================
@@ -784,7 +1292,6 @@ document.addEventListener('DOMContentLoaded', () => {
     /* =========================================================
        CUSTOM SELECT — ATUALIZAÇÃO DE LISTA
        ========================================================= */
-
     function atualizarTriggerCustomSelect(valor) {
         if (!customAtualizacaoText) return;
 
@@ -952,7 +1459,6 @@ document.addEventListener('DOMContentLoaded', () => {
         limparContatosColados();
 
         if (!valor) {
-            // ===== Modo "lista nova" =====
             listaAtualizacaoSelecionada = null;
             statsListaAtual = {};
 
@@ -975,7 +1481,6 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // ===== Modo "atualização" =====
         const lista = listasDisponiveis.find(l => String(l.id) === String(valor));
         if (!lista) return;
 
@@ -1161,7 +1666,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const emModoAtualizacao = !!listaAtualizacaoSelecionada;
 
-        // ----- NOME -----
         let nome;
         if (emModoAtualizacao) {
             nome = listaAtualizacaoSelecionada.nome;
@@ -1176,7 +1680,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        // ----- CONTATOS -----
         const contatos = obterContatosAtuais();
         if (!contatos.length) {
             if (modoAtual === 'arquivo') {
@@ -1191,7 +1694,6 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // ----- CORRETORES -----
         const marcados = Array.from(corretoresSelector.querySelectorAll('input:checked'))
             .map(i => Number(i.value));
         if (!marcados.length) {
@@ -1233,7 +1735,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             mostrarToast(msg, 'success');
 
-            // Limpa tudo e volta pro estado inicial
             if (nomeListaInput) nomeListaInput.value = '';
             if (textoListaInput) textoListaInput.value = '';
             if (mensagemWhatsappInput) mensagemWhatsappInput.value = '';
@@ -1255,7 +1756,6 @@ document.addEventListener('DOMContentLoaded', () => {
             renderizarStatsNosCorretores();
             atualizarBotaoSubirLista();
 
-            // Recarrega listas no dropdown (com o novo valor limpo)
             await carregarListasParaAtualizacao();
             atualizarTriggerCustomSelect('');
 
@@ -1683,77 +2183,83 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function renderizarCorretores() {
-        try {
-            const { corretores } = await ApiClient.get('/api/admin/corretores');
+    try {
+        const { corretores } = await ApiClient.get('/api/admin/corretores');
 
-            badgeTotalCorretoresList.textContent = corretores.length;
+        badgeTotalCorretoresList.textContent = corretores.length;
 
-            if (!corretores.length) {
-                corretoresList.innerHTML = '';
-                corretoresVazio.style.display = 'block';
-                return;
-            }
-
-            corretoresVazio.style.display = 'none';
-
-            corretoresList.innerHTML = corretores.map(c => {
-                const total = c.total_leads || 0;
-                return `
-                    <div class="corretor-item" data-corretor-id="${c.id}" style="cursor: pointer;">
-                        <div class="corretor-avatar">${iniciais(c.nome)}</div>
-                        <div class="corretor-info">
-                            <strong>${escapeHtml(c.nome)}</strong>
-                            <small>
-                                <i class="fas fa-at"></i> ${escapeHtml(c.usuario)}
-                                · ${total} ${total === 1 ? 'contato' : 'contatos'}
-                            </small>
-                        </div>
-                        <button class="btn-corretor-delete" data-corretor-id="${c.id}" title="Excluir corretor">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </div>
-                `;
-            }).join('');
-
-            corretoresList.querySelectorAll('.corretor-item').forEach(item => {
-                item.addEventListener('click', (e) => {
-                    if (e.target.closest('.btn-corretor-delete')) return;
-
-                    const id = Number(item.dataset.corretorId);
-                    const corretor = corretores.find(c => c.id === id);
-                    if (corretor) abrirEditarCorretor(corretor);
-                });
-            });
-
-            corretoresList.querySelectorAll('.btn-corretor-delete').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    const id = Number(btn.dataset.corretorId);
-                    const corretor = corretores.find(c => c.id === id);
-                    if (!corretor) return;
-
-                    abrirConfirm(
-                        'Excluir corretor?',
-                        `Tem certeza que quer excluir "${corretor.nome}"? Os contatos dele continuarão no sistema, mas sem responsável.`,
-                        async () => {
-                            try {
-                                await ApiClient.del(`/api/admin/corretores/${id}`);
-                                mostrarToast('Corretor removido.', 'success');
-                                renderizarCorretores();
-                                renderizarSeletorCorretores();
-                            } catch (err) {
-                                mostrarToast('Erro ao remover corretor.', 'error');
-                            }
-                        }
-                    );
-                });
-            });
-
-        } catch (err) {
-            console.error('[corretores] erro:', err);
-            mostrarToast('Erro ao carregar corretores.', 'error');
+        if (!corretores.length) {
+            corretoresList.innerHTML = '';
+            corretoresVazio.style.display = 'block';
+            return;
         }
+
+        corretoresVazio.style.display = 'none';
+
+        corretoresList.innerHTML = corretores.map(c => {
+            const total = c.total_leads || 0;
+            const ehTeste = c.tipo === 'teste';
+
+            const badge = ehTeste
+                ? `<span class="badge-teste-inline"><i class="fas fa-flask"></i> Teste</span>`
+                : '';
+
+            return `
+                <div class="corretor-item ${ehTeste ? 'is-teste' : ''}" data-corretor-id="${c.id}" style="cursor: pointer;">
+                    <div class="corretor-avatar">${iniciais(c.nome)}</div>
+                    <div class="corretor-info">
+                        <strong>${escapeHtml(c.nome)}${badge}</strong>
+                        <small>
+                            <i class="fas fa-at"></i> ${escapeHtml(c.usuario)}
+                            · ${total} ${total === 1 ? 'contato' : 'contatos'}
+                        </small>
+                    </div>
+                    <button class="btn-corretor-delete" data-corretor-id="${c.id}" title="Excluir corretor">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            `;
+        }).join('');
+
+        corretoresList.querySelectorAll('.corretor-item').forEach(item => {
+            item.addEventListener('click', (e) => {
+                if (e.target.closest('.btn-corretor-delete')) return;
+
+                const id = Number(item.dataset.corretorId);
+                const corretor = corretores.find(c => c.id === id);
+                if (corretor) abrirEditarCorretor(corretor);
+            });
+        });
+
+        corretoresList.querySelectorAll('.btn-corretor-delete').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const id = Number(btn.dataset.corretorId);
+                const corretor = corretores.find(c => c.id === id);
+                if (!corretor) return;
+
+                abrirConfirm(
+                    'Excluir corretor?',
+                    `Tem certeza que quer excluir "${corretor.nome}"? Os contatos dele continuarão no sistema, mas sem responsável.`,
+                    async () => {
+                        try {
+                            await ApiClient.del(`/api/admin/corretores/${id}`);
+                            mostrarToast('Corretor removido.', 'success');
+                            renderizarCorretores();
+                            renderizarSeletorCorretores();
+                        } catch (err) {
+                            mostrarToast('Erro ao remover corretor.', 'error');
+                        }
+                    }
+                );
+            });
+        });
+
+    } catch (err) {
+        console.error('[corretores] erro:', err);
+        mostrarToast('Erro ao carregar corretores.', 'error');
     }
+}
 
     async function handleCadastrarCorretor() {
         limparErrosCorretor();
@@ -1823,27 +2329,90 @@ document.addEventListener('DOMContentLoaded', () => {
     /* =========================================================
        EDITAR CORRETOR
        ========================================================= */
-    function abrirEditarCorretor(corretor) {
-        corretorEditandoId = corretor.id;
+function abrirEditarCorretor(corretor) {
+    corretorEditandoId = corretor.id;
+    corretorEditandoTipo = corretor.tipo || 'corretor';
 
-        editarNomeInput.value = corretor.nome || '';
-        editarUsuarioInput.value = corretor.usuario || '';
-        editarSenhaInput.value = '';
+    editarNomeInput.value = corretor.nome || '';
+    editarUsuarioInput.value = corretor.usuario || '';
+    editarSenhaInput.value = '';
 
-        [editarNomeError, editarUsuarioError, editarSenhaError].forEach(e => {
-            e.textContent = '';
-            e.classList.remove('visible');
+    [editarNomeError, editarUsuarioError, editarSenhaError].forEach(e => {
+        e.textContent = '';
+        e.classList.remove('visible');
+    });
+    [editarNomeInput, editarUsuarioInput, editarSenhaInput].forEach(i => i.classList.remove('error'));
+
+    // Atualiza botão do tipo
+    atualizarBotaoTipo();
+
+    modalEditarCorretor.style.display = 'flex';
+    setTimeout(() => editarNomeInput.focus(), 100);
+}
+
+function fecharEditarCorretor() {
+    modalEditarCorretor.style.display = 'none';
+    corretorEditandoId = null;
+    corretorEditandoTipo = 'corretor';
+}
+
+function atualizarBotaoTipo() {
+    if (!btnToggleTipo || !btnToggleTipoText) return;
+
+    if (corretorEditandoTipo === 'teste') {
+        btnToggleTipo.classList.add('is-teste');
+        btnToggleTipo.dataset.tipo = 'teste';
+        btnToggleTipoText.textContent = 'Usuário de teste (não conta nas estatísticas)';
+    } else {
+        btnToggleTipo.classList.remove('is-teste');
+        btnToggleTipo.dataset.tipo = 'corretor';
+        btnToggleTipoText.textContent = 'Marcar como usuário de teste';
+    }
+}
+
+// Handler do botão toggle
+if (btnToggleTipo) {
+    btnToggleTipo.addEventListener('click', () => {
+        if (!corretorEditandoId) return;
+
+        const vaiVirarTeste = corretorEditandoTipo !== 'teste';
+
+        const titulo = vaiVirarTeste
+            ? 'Marcar como usuário de teste?'
+            : 'Voltar para corretor normal?';
+
+        const mensagem = vaiVirarTeste
+            ? 'Os leads dele vão parar de contar em KPIs, gráficos e estatísticas gerais. Ele continua podendo logar e trabalhar normalmente.'
+            : 'Os leads dele voltam a contar em TODAS as estatísticas (KPIs, gráficos, donut, velocímetro).';
+
+        abrirConfirm(titulo, mensagem, async () => {
+            try {
+                const novoTipo = vaiVirarTeste ? 'teste' : 'corretor';
+
+                await ApiClient.patch(`/api/admin/corretores/${corretorEditandoId}/tipo`, {
+                    tipo: novoTipo
+                });
+
+                corretorEditandoTipo = novoTipo;
+                atualizarBotaoTipo();
+
+                mostrarToast(
+                    novoTipo === 'teste'
+                        ? '✅ Marcado como usuário de teste.'
+                        : '✅ Voltou a contar nas estatísticas.',
+                    'success'
+                );
+
+                renderizarCorretores();
+                atualizarDashboard();
+
+            } catch (err) {
+                console.error('[toggle-tipo] erro:', err);
+                mostrarToast(err.message || 'Erro ao alterar tipo.', 'error');
+            }
         });
-        [editarNomeInput, editarUsuarioInput, editarSenhaInput].forEach(i => i.classList.remove('error'));
-
-        modalEditarCorretor.style.display = 'flex';
-        setTimeout(() => editarNomeInput.focus(), 100);
-    }
-
-    function fecharEditarCorretor() {
-        modalEditarCorretor.style.display = 'none';
-        corretorEditandoId = null;
-    }
+    });
+}
 
     async function salvarEditarCorretor() {
         if (!corretorEditandoId) return;
@@ -2011,6 +2580,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (modalConfirm)        modalConfirm.style.display = 'none';
                 if (modalGerenciar)      modalGerenciar.style.display = 'none';
                 if (modalEditarCorretor) modalEditarCorretor.style.display = 'none';
+                if (modalTag)            modalTag.style.display = 'none';
             }
         });
 

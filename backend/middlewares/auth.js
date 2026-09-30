@@ -20,7 +20,6 @@ function autenticar(req, res, next) {
         const payload = jwt.verify(token, process.env.JWT_SECRET);
         req.usuario = payload;
 
-        // 🔄 Atualiza "ultimo_acesso" em background (não bloqueia a resposta)
         pool.query(
             'UPDATE usuarios SET ultimo_acesso = NOW() WHERE id = $1',
             [payload.id]
@@ -42,7 +41,7 @@ function apenasAdmin(req, res, next) {
 }
 
 function apenasCorretor(req, res, next) {
-    if (!req.usuario || req.usuario.tipo !== 'corretor') {
+    if (!req.usuario || (req.usuario.tipo !== 'corretor' && req.usuario.tipo !== 'teste')) {
         return res.status(403).json({ erro: 'Acesso restrito a corretores.' });
     }
     next();

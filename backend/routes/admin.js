@@ -9,12 +9,21 @@ const { autenticar, apenasAdmin } = require('../middlewares/auth');
 
 const router = express.Router();
 
-// Todas as rotas aqui exigem login de admin
 router.use(autenticar, apenasAdmin);
 
 /* =========================================================
    HELPERS
    ========================================================= */
+
+/**
+ * SQL que EXCLUI leads cujo corretor é do tipo 'teste'.
+ * Use em qualquer query que não deve contar usuários de teste.
+ */
+function naoTeste(alias = 'l') {
+    return ` AND (${alias}.corretor_id IS NULL OR ${alias}.corretor_id NOT IN (
+        SELECT id FROM usuarios WHERE tipo = 'teste'
+    ))`;
+}
 
 function embaralhar(arr) {
     const copia = [...arr];
@@ -25,31 +34,17 @@ function embaralhar(arr) {
     return copia;
 }
 
-/**
- * Normaliza telefone para comparação (dedupe).
- */
 function normalizarTelefone(tel) {
     let n = String(tel || '').replace(/\D/g, '');
     if (!n) return '';
 
-    if (n.startsWith('55') && n.length >= 12) {
-        n = n.substring(2);
-    }
-
-    if (n.startsWith('0') && n.length >= 11) {
-        n = n.substring(1);
-    }
-
-    if (n.length > 11) {
-        n = n.slice(-11);
-    }
+    if (n.startsWith('55') && n.length >= 12) n = n.substring(2);
+    if (n.startsWith('0') && n.length >= 11) n = n.substring(1);
+    if (n.length > 11) n = n.slice(-11);
 
     return n;
 }
 
-/**
- * Filtra contatos que já existem no banco.
- */
 async function filtrarDuplicados(client, contatos) {
     if (!contatos.length) return { novos: [], descartados: [] };
 
@@ -80,9 +75,6 @@ async function filtrarDuplicados(client, contatos) {
     return { novos, descartados };
 }
 
-/**
- * Insere leads em massa (bulk insert) em chunks.
- */
 async function inserirLeadsEmMassa(client, listaId, contatos, idsValidos) {
     const CHUNK_SIZE = 500;
     const distribuicao = {};
@@ -126,14 +118,13 @@ async function inserirLeadsEmMassa(client, listaId, contatos, idsValidos) {
    CORRETORES
    ========================================================= */
 
-// GET /api/admin/corretores
 router.get('/corretores', async (req, res) => {
     try {
         const result = await pool.query(`
-            SELECT u.id, u.nome, u.usuario, u.criado_em,
+            SELECT u.id, u.nome, u.usuario, u.tipo, u.criado_em,
                    (SELECT COUNT(*) FROM leads WHERE corretor_id = u.id) AS total_leads
             FROM usuarios u
-            WHERE u.tipo = 'corretor'
+            WHERE u.tipo IN ('corretor', 'teste')
             ORDER BY u.nome ASC
         `);
 
@@ -150,7 +141,6 @@ router.get('/corretores', async (req, res) => {
     }
 });
 
-// POST /api/admin/corretores
 router.post('/corretores', async (req, res) => {
     try {
         const { nome, usuario, senha } = req.body || {};
@@ -190,14 +180,13 @@ router.post('/corretores', async (req, res) => {
     }
 });
 
-// DELETE /api/admin/corretores/:id
 router.delete('/corretores/:id', async (req, res) => {
     try {
         const id = Number(req.params.id);
 
         const exist = await pool.query(
-            'SELECT id FROM usuarios WHERE id = $1 AND tipo = $2',
-            [id, 'corretor']
+            `SELECT id FROM usuarios WHERE id = $1 AND tipo IN ('corretor', 'teste')`,
+            [id]
         );
 
         if (!exist.rows.length) {
@@ -213,7 +202,6 @@ router.delete('/corretores/:id', async (req, res) => {
     }
 });
 
-// PATCH /api/admin/corretores/:id
 router.patch('/corretores/:id', async (req, res) => {
     try {
         const id = Number(req.params.id);
@@ -230,8 +218,8 @@ router.patch('/corretores/:id', async (req, res) => {
         }
 
         const corretorCheck = await pool.query(
-            'SELECT id FROM usuarios WHERE id = $1 AND tipo = $2',
-            [id, 'corretor']
+            `SELECT id FROM usuarios WHERE id = $1 AND tipo IN ('corretor', 'teste')`,
+            [id]
         );
 
         if (!corretorCheck.rows.length) {
@@ -278,10 +266,53 @@ router.patch('/corretores/:id', async (req, res) => {
 });
 
 /* =========================================================
+   ALTERNAR TIPO (corretor ↔ teste)
+   ========================================================= */
+
+/* =========================================================
+   ALTERNAR TIPO (corretor ↔ teste)
+   ========================================================= */
+
+router.patch('/corretores/:id/tipo', async (req, res) => {
+    try {
+        const id = Number(req.params.id);
+        const { tipo } = req.body || {};
+
+        if (!['corretor', 'teste'].includes(tipo)) {
+            return res.status(400).json({ erro: 'Tipo inválido. Use "corretor" ou "teste".' });
+        }
+
+        const atual = await pool.query(
+            `SELECT id, tipo FROM usuarios WHERE id = $1 AND tipo IN ('corretor', 'teste')`,
+            [id]
+        );
+
+        if (!atual.rows.length) {
+            return res.status(404).json({ erro: 'Corretor não encontrado.' });
+        }
+
+        if (atual.rows[0].tipo === tipo) {
+            return res.json({ ok: true, tipo, mensagem: 'Nada a fazer.' });
+        }
+
+        await pool.query(
+            `UPDATE usuarios SET tipo = $1 WHERE id = $2`,
+            [tipo, id]
+        );
+
+        res.json({ ok: true, tipo });
+
+    } catch (err) {
+        console.error('[admin/corretores/tipo] erro:', err);
+        res.status(500).json({ erro: 'Erro ao alterar tipo do corretor.' });
+    }
+});
+
+/* =========================================================
    LISTAS
    ========================================================= */
 
-// GET /api/admin/listas
+// Stats das listas — MANTÉM a lista da Natalia contando
 router.get('/listas', async (req, res) => {
     try {
         const listasResult = await pool.query('SELECT * FROM listas ORDER BY criado_em DESC');
@@ -330,7 +361,6 @@ router.get('/listas', async (req, res) => {
     }
 });
 
-// POST /api/admin/listas
 router.post('/listas', async (req, res) => {
     const client = await pool.connect();
     try {
@@ -346,7 +376,6 @@ router.post('/listas', async (req, res) => {
             return res.status(400).json({ erro: 'Informe o nome da lista e pelo menos 1 contato.' });
         }
 
-        // DEDUPE
         const { novos: contatosNovos, descartados } = await filtrarDuplicados(client, contatos);
 
         if (!contatosNovos.length) {
@@ -418,7 +447,7 @@ router.post('/listas', async (req, res) => {
 
         const placeholders = corretoresIds.map((_, i) => `$${i + 1}`).join(',');
         const corretoresValidos = await client.query(
-            `SELECT id FROM usuarios WHERE id IN (${placeholders}) AND tipo = 'corretor'`,
+            `SELECT id FROM usuarios WHERE id IN (${placeholders}) AND tipo IN ('corretor', 'teste')`,
             corretoresIds
         );
 
@@ -465,7 +494,6 @@ router.post('/listas', async (req, res) => {
     }
 });
 
-// POST /api/admin/listas/preview-dedupe
 router.post('/listas/preview-dedupe', async (req, res) => {
     try {
         const { contatos } = req.body || {};
@@ -488,7 +516,6 @@ router.post('/listas/preview-dedupe', async (req, res) => {
     }
 });
 
-// GET /api/admin/listas/:id/contatos
 router.get('/listas/:id/contatos', async (req, res) => {
     try {
         const id = Number(req.params.id);
@@ -509,7 +536,6 @@ router.get('/listas/:id/contatos', async (req, res) => {
     }
 });
 
-// DELETE /api/admin/listas/:id
 router.delete('/listas/:id', async (req, res) => {
     try {
         const id = Number(req.params.id);
@@ -521,7 +547,6 @@ router.delete('/listas/:id', async (req, res) => {
     }
 });
 
-// DELETE /api/admin/leads/:id
 router.delete('/leads/:id', async (req, res) => {
     try {
         const id = Number(req.params.id);
@@ -534,19 +559,18 @@ router.delete('/leads/:id', async (req, res) => {
 });
 
 /* =========================================================
-   DASHBOARD
+   DASHBOARD — KPIs (exclui usuários 'teste')
    ========================================================= */
 
-// GET /api/admin/dashboard
 router.get('/dashboard', async (req, res) => {
     try {
         const totais = await pool.query(`
             SELECT
                 (SELECT COUNT(*) FROM listas) AS total_listas,
-                (SELECT COUNT(*) FROM leads) AS total_contatos,
-                (SELECT COUNT(*) FROM leads WHERE status IN ('qualificado', 'descartado')) AS qualificados,
-                (SELECT COUNT(*) FROM leads WHERE status = 'descartado')  AS descartados,
-                (SELECT COUNT(*) FROM leads WHERE status = 'novo')        AS aguardando
+                (SELECT COUNT(*) FROM leads l WHERE 1=1 ${naoTeste('l')}) AS total_contatos,
+                (SELECT COUNT(*) FROM leads l WHERE l.status IN ('qualificado', 'descartado') ${naoTeste('l')}) AS qualificados,
+                (SELECT COUNT(*) FROM leads l WHERE l.status = 'descartado' ${naoTeste('l')})  AS descartados,
+                (SELECT COUNT(*) FROM leads l WHERE l.status = 'novo' ${naoTeste('l')})        AS aguardando
         `);
 
         const t = totais.rows[0];
@@ -566,10 +590,10 @@ router.get('/dashboard', async (req, res) => {
         `);
 
         const porTag = await pool.query(`
-            SELECT resultado, COUNT(*) AS count
-            FROM leads
-            WHERE resultado IS NOT NULL
-            GROUP BY resultado
+            SELECT l.resultado, COUNT(*) AS count
+            FROM leads l
+            WHERE l.resultado IS NOT NULL ${naoTeste('l')}
+            GROUP BY l.resultado
         `);
 
         const porTagObj = {};
@@ -598,10 +622,247 @@ router.get('/dashboard', async (req, res) => {
 });
 
 /* =========================================================
-   DASHBOARD — CARTEIRAS E CORRETORES
+   DASHBOARD — GRÁFICOS (exclui usuários 'teste')
    ========================================================= */
 
-// GET /api/admin/dashboard/carteiras
+router.get('/dashboard/graficos', async (req, res) => {
+    try {
+        // =====================
+        // 1. LINHA
+        // =====================
+        const linhaResult = await pool.query(`
+            WITH dias AS (
+                SELECT generate_series(
+                    CURRENT_DATE - INTERVAL '29 days',
+                    CURRENT_DATE,
+                    INTERVAL '1 day'
+                )::date AS dia
+            )
+            SELECT
+                d.dia,
+                COALESCE(COUNT(h.id) FILTER (
+                    WHERE h.acao IN ('agendado', 'em_atendimento', 'mensagem_enviada',
+                                     'retornar_depois', 'follow_up', 'vendido')
+                ), 0) AS qualificados,
+                COALESCE(COUNT(h.id) FILTER (
+                    WHERE h.acao IN ('sem_interesse', 'telefone_invalido', 'sem_resposta')
+                ), 0) AS descartados
+            FROM dias d
+            LEFT JOIN historico h
+                ON h.criado_em::date = d.dia
+                AND (h.corretor_id IS NULL OR h.corretor_id NOT IN (
+                    SELECT id FROM usuarios WHERE tipo = 'teste'
+                ))
+            GROUP BY d.dia
+            ORDER BY d.dia ASC
+        `);
+
+        const linhaLabels = linhaResult.rows.map(r => {
+            const d = new Date(r.dia);
+            const dia = String(d.getUTCDate()).padStart(2, '0');
+            const mes = String(d.getUTCMonth() + 1).padStart(2, '0');
+            return `${dia}/${mes}`;
+        });
+        const linhaQualificados = linhaResult.rows.map(r => Number(r.qualificados));
+        const linhaDescartados  = linhaResult.rows.map(r => Number(r.descartados));
+
+        // =====================
+        // 2. DONUT
+        // =====================
+        const donutResult = await pool.query(`
+            SELECT l.resultado, COUNT(*) AS count
+            FROM leads l
+            WHERE l.resultado IS NOT NULL ${naoTeste('l')}
+            GROUP BY l.resultado
+            ORDER BY count DESC
+        `);
+
+        const mapaTags = {
+            agendado:          'Agendado',
+            em_atendimento:    'Em atendimento',
+            vendido:           'Vendido',
+            mensagem_enviada:  'Mensagem enviada',
+            retornar_depois:   'Retornar depois',
+            follow_up:         'Follow up',
+            sem_interesse:     'Sem interesse',
+            telefone_invalido: 'Telefone inválido',
+            sem_resposta:      'Sem resposta'
+        };
+
+        const donutLabels = donutResult.rows.map(r => mapaTags[r.resultado] || r.resultado);
+        const donutValores = donutResult.rows.map(r => Number(r.count));
+        const donutChaves  = donutResult.rows.map(r => r.resultado);
+
+        // =====================
+        // 3. COLUNAS (só 'corretor' — exclui 'teste')
+        // =====================
+        const colunasResult = await pool.query(`
+            SELECT
+                u.id,
+                u.nome,
+                COUNT(l.id) FILTER (
+                    WHERE l.resultado IN ('agendado', 'em_atendimento', 'mensagem_enviada',
+                                          'retornar_depois', 'vendido')
+                ) AS ativos,
+                COUNT(l.id) FILTER (WHERE l.resultado = 'follow_up') AS follow_up,
+                COUNT(l.id) FILTER (WHERE l.status = 'novo') AS fila,
+                COUNT(l.id) FILTER (
+                    WHERE l.resultado IN ('sem_interesse', 'telefone_invalido', 'sem_resposta')
+                ) AS perdidos
+            FROM usuarios u
+            LEFT JOIN leads l ON l.corretor_id = u.id
+            WHERE u.tipo = 'corretor'
+            GROUP BY u.id
+        `);
+
+        const colunasArr = colunasResult.rows.map(c => ({
+            nome:      c.nome,
+            ativos:    Number(c.ativos),
+            follow_up: Number(c.follow_up),
+            fila:      Number(c.fila),
+            perdidos:  Number(c.perdidos),
+            total:     Number(c.ativos) + Number(c.follow_up) + Number(c.fila) + Number(c.perdidos)
+        }));
+
+        colunasArr.sort((a, b) => b.total - a.total);
+
+        const top10 = colunasArr.slice(0, 10);
+        const resto = colunasArr.slice(10);
+
+        let outros = null;
+        if (resto.length) {
+            outros = {
+                nome: 'Outros',
+                ativos:    resto.reduce((s, c) => s + c.ativos, 0),
+                follow_up: resto.reduce((s, c) => s + c.follow_up, 0),
+                fila:      resto.reduce((s, c) => s + c.fila, 0),
+                perdidos:  resto.reduce((s, c) => s + c.perdidos, 0)
+            };
+        }
+
+        const colunasFinal = outros ? [...top10, outros] : top10;
+
+        const colunasLabels   = colunasFinal.map(c => c.nome);
+        const colunasAtivos   = colunasFinal.map(c => c.ativos);
+        const colunasFollowUp = colunasFinal.map(c => c.follow_up);
+        const colunasFila     = colunasFinal.map(c => c.fila);
+        const colunasPerdidos = colunasFinal.map(c => c.perdidos);
+
+        // =====================
+        // 4. VELOCÍMETRO (exclui 'teste')
+        // =====================
+        const velResult = await pool.query(`
+            SELECT
+                COUNT(*) FILTER (WHERE l.status IN ('qualificado', 'descartado')) AS trabalhados,
+                COUNT(*) FILTER (WHERE l.status = 'qualificado') AS qualificados
+            FROM leads l
+            WHERE 1=1 ${naoTeste('l')}
+        `);
+
+        const trabalhados = Number(velResult.rows[0].trabalhados) || 0;
+        const qualificados = Number(velResult.rows[0].qualificados) || 0;
+        const taxaConversao = trabalhados > 0
+            ? Number(((qualificados / trabalhados) * 100).toFixed(1))
+            : 0;
+
+        res.json({
+            linha: {
+                labels: linhaLabels,
+                qualificados: linhaQualificados,
+                descartados: linhaDescartados
+            },
+            donut: {
+                labels: donutLabels,
+                valores: donutValores,
+                chaves: donutChaves
+            },
+            colunas: {
+                labels: colunasLabels,
+                ativos: colunasAtivos,
+                follow_up: colunasFollowUp,
+                fila: colunasFila,
+                perdidos: colunasPerdidos
+            },
+            velocimetro: {
+                valor: taxaConversao,
+                trabalhados,
+                qualificados
+            }
+        });
+
+    } catch (err) {
+        console.error('[admin/dashboard/graficos] erro:', err);
+        res.status(500).json({ erro: 'Erro ao carregar gráficos.' });
+    }
+});
+
+/* =========================================================
+   DASHBOARD — DRILL-DOWN POR TAG (exclui 'teste')
+   ========================================================= */
+
+router.get('/dashboard/tag/:tag', async (req, res) => {
+    try {
+        const tag = String(req.params.tag || '').trim();
+        const { de, ate } = req.query;
+
+        if (!tag) {
+            return res.status(400).json({ erro: 'Tag não informada.' });
+        }
+
+        const params = [tag];
+        let sql = `
+            SELECT
+                l.id,
+                l.nome,
+                l.telefone,
+                l.resultado,
+                l.observacao,
+                l.decidido_em,
+                l.agendamento_data,
+                l.agendamento_local,
+                u.nome AS corretor_nome,
+                u.usuario AS corretor_usuario
+            FROM leads l
+            LEFT JOIN usuarios u ON u.id = l.corretor_id
+            WHERE l.resultado = $1
+              AND (l.corretor_id IS NULL OR l.corretor_id NOT IN (
+                  SELECT id FROM usuarios WHERE tipo = 'teste'
+              ))
+        `;
+
+        if (de) {
+            params.push(de);
+            sql += ` AND l.decidido_em >= $${params.length}::date`;
+        }
+
+        if (ate) {
+            params.push(ate);
+            sql += ` AND l.decidido_em < ($${params.length}::date + INTERVAL '1 day')`;
+        }
+
+        sql += ` ORDER BY l.decidido_em DESC NULLS LAST`;
+
+        const result = await pool.query(sql, params);
+
+        res.json({
+            tag,
+            total: result.rows.length,
+            leads: result.rows
+        });
+
+    } catch (err) {
+        console.error('[admin/dashboard/tag] erro:', err);
+        res.status(500).json({ erro: 'Erro ao carregar leads da tag.' });
+    }
+});
+
+/* =========================================================
+   DASHBOARD — CARTEIRAS E CORRETORES
+   (Natalia APARECE aqui — bloco "Corretores ativos" e
+    "Desempenho por carteira". Só os KPIs e gráficos é que
+    excluem ela.)
+   ========================================================= */
+
 router.get('/dashboard/carteiras', async (req, res) => {
     try {
         const corretoresResult = await pool.query(`
@@ -609,6 +870,7 @@ router.get('/dashboard/carteiras', async (req, res) => {
                 u.id,
                 u.nome,
                 u.usuario,
+                u.tipo,
                 u.ultimo_acesso,
                 COUNT(l.id) FILTER (WHERE l.status IN ('qualificado', 'descartado')) AS total_qualificados,
                 COUNT(l.id) FILTER (WHERE l.status = 'descartado')  AS total_descartados,
@@ -616,7 +878,7 @@ router.get('/dashboard/carteiras', async (req, res) => {
                 COUNT(l.id) AS total_carteira
             FROM usuarios u
             LEFT JOIN leads l ON l.corretor_id = u.id
-            WHERE u.tipo = 'corretor'
+            WHERE u.tipo IN ('corretor', 'teste')
             GROUP BY u.id
             ORDER BY u.nome ASC
         `);
@@ -638,6 +900,7 @@ router.get('/dashboard/carteiras', async (req, res) => {
                 id: c.id,
                 nome: c.nome,
                 usuario: c.usuario,
+                tipo: c.tipo,
                 status,
                 ultimo_acesso: c.ultimo_acesso,
                 total_qualificados: Number(c.total_qualificados),
@@ -701,7 +964,6 @@ router.get('/dashboard/carteiras', async (req, res) => {
    GERENCIAR CORRETORES DA LISTA
    ========================================================= */
 
-// GET /api/admin/listas/:id/corretores
 router.get('/listas/:id/corretores', async (req, res) => {
     try {
         const listaId = Number(req.params.id);
@@ -716,6 +978,7 @@ router.get('/listas/:id/corretores', async (req, res) => {
                 u.id,
                 u.nome,
                 u.usuario,
+                u.tipo,
                 EXISTS (
                     SELECT 1 FROM lista_corretores 
                     WHERE lista_id = $1 AND corretor_id = u.id
@@ -725,7 +988,7 @@ router.get('/listas/:id/corretores', async (req, res) => {
                 COUNT(l.id) FILTER (WHERE l.lista_id = $1) AS total_na_lista
             FROM usuarios u
             LEFT JOIN leads l ON l.corretor_id = u.id
-            WHERE u.tipo = 'corretor'
+            WHERE u.tipo IN ('corretor', 'teste')
             GROUP BY u.id
             ORDER BY u.nome ASC
         `, [listaId]);
@@ -734,6 +997,7 @@ router.get('/listas/:id/corretores', async (req, res) => {
             id: c.id,
             nome: c.nome,
             usuario: c.usuario,
+            tipo: c.tipo,
             participa: c.participa,
             pendentes_na_lista: Number(c.pendentes_na_lista),
             qualificados_na_lista: Number(c.qualificados_na_lista),
@@ -751,7 +1015,6 @@ router.get('/listas/:id/corretores', async (req, res) => {
     }
 });
 
-// PATCH /api/admin/listas/:id/corretores
 router.patch('/listas/:id/corretores', async (req, res) => {
     const client = await pool.connect();
     try {
@@ -769,7 +1032,7 @@ router.patch('/listas/:id/corretores', async (req, res) => {
 
         const placeholders = corretoresIds.map((_, i) => `$${i + 1}`).join(',');
         const corretoresValidos = await client.query(
-            `SELECT id FROM usuarios WHERE id IN (${placeholders}) AND tipo = 'corretor'`,
+            `SELECT id FROM usuarios WHERE id IN (${placeholders}) AND tipo IN ('corretor', 'teste')`,
             corretoresIds
         );
 
@@ -790,7 +1053,6 @@ router.patch('/listas/:id/corretores', async (req, res) => {
 
         await client.query('BEGIN');
 
-        // 1. Atualiza lista_corretores
         for (const id of idsRemovidos) {
             await client.query(
                 'DELETE FROM lista_corretores WHERE lista_id = $1 AND corretor_id = $2',
@@ -804,7 +1066,6 @@ router.patch('/listas/:id/corretores', async (req, res) => {
             );
         }
 
-        // 2. Atribui leads órfãos
         let redistribuidos = 0;
 
         const orfaosResult = await client.query(`
@@ -825,7 +1086,6 @@ router.patch('/listas/:id/corretores', async (req, res) => {
             }
         }
 
-        // 3. Rebalanceamento
         const pendentesResult = await client.query(
             `SELECT id, corretor_id FROM leads WHERE lista_id = $1 AND status = 'novo' AND corretor_id IS NOT NULL ORDER BY id ASC`,
             [listaId]
@@ -897,7 +1157,6 @@ router.patch('/listas/:id/corretores', async (req, res) => {
     }
 });
 
-// PATCH /api/admin/listas/:id/mensagem
 router.patch('/listas/:id/mensagem', async (req, res) => {
     try {
         const listaId = Number(req.params.id);

@@ -35,6 +35,9 @@
 
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/admin.css">
+
+    <!-- Chart.js (gráficos do dashboard) -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 </head>
 <body class="admin-page">
 
@@ -81,11 +84,11 @@
             </button>
             <button class="nav-tab" data-tab="upload">
                 <i class="fas fa-cloud-upload-alt"></i>
-                <span>Subir Carteira</span>
+                <span>Subir Lista</span>
             </button>
             <button class="nav-tab" data-tab="listas">
                 <i class="fas fa-folder-open"></i>
-                <span>Carteiras</span>
+                <span>Listas</span>
             </button>
             <button class="nav-tab" data-tab="corretores">
                 <i class="fas fa-users"></i>
@@ -104,13 +107,14 @@
              ================================================ -->
         <section class="tab-panel active" id="tab-dashboard">
 
+            <!-- KPIs -->
             <div class="kpi-grid">
                 <div class="kpi-card">
                     <div class="kpi-icon blue">
                         <i class="fas fa-layer-group"></i>
                     </div>
                     <div class="kpi-info">
-                        <span class="kpi-label">Carteiras ativas</span>
+                        <span class="kpi-label">Listas subidas</span>
                         <strong class="kpi-value" id="kpiListas">0</strong>
                     </div>
                 </div>
@@ -146,36 +150,117 @@
                 </div>
             </div>
 
-            <!-- SEÇÃO 1 -->
-            <section class="dashboard-card mb-2">
-                <header class="card-header">
-                    <h2>
-                        <i class="fas fa-chart-bar"></i>
-                        Total de carteiras prospectadas
-                    </h2>
-                    <span class="card-badge" id="badgeTotalCorretores">0</span>
-                </header>
+            <!-- GRÁFICOS (2x2) -->
+            <div class="graficos-grid">
 
-                <div class="corretores-carteira" id="corretoresCarteira"></div>
-            </section>
+                <section class="dashboard-card grafico-card">
+                    <header class="card-header">
+                        <h2><i class="fas fa-chart-line"></i> Trabalhados por dia</h2>
+                        <span class="card-badge card-badge-soft">últimos 30 dias</span>
+                    </header>
+                    <div class="grafico-body">
+                        <canvas id="graficoLinha"></canvas>
+                    </div>
+                </section>
 
-            <!-- SEÇÃO 2 -->
-            <section class="dashboard-card">
-                <header class="card-header">
-                    <h2>
-                        <i class="fas fa-folder-open"></i>
-                        Atendimentos por carteira
-                    </h2>
-                    <span class="card-badge" id="badgeTotalCarteiras">0</span>
-                </header>
+                <section class="dashboard-card grafico-card">
+                    <header class="card-header">
+                        <h2><i class="fas fa-chart-pie"></i> Distribuição por tag</h2>
+                    </header>
+                    <div class="grafico-body">
+                        <canvas id="graficoDonut"></canvas>
+                    </div>
+                </section>
 
-                <div class="carteiras-grid" id="carteirasGrid"></div>
+                <section class="dashboard-card grafico-card">
+                    <header class="card-header">
+                        <h2><i class="fas fa-chart-bar"></i> Desempenho por corretor</h2>
+                    </header>
+                    <div class="grafico-body">
+                        <canvas id="graficoColunas"></canvas>
+                    </div>
+                </section>
 
-                <div class="empty-state small" id="carteirasVazio" style="display: none;">
-                    <i class="fas fa-inbox"></i>
-                    <p>Nenhuma carteira subida ainda.</p>
-                </div>
-            </section>
+                <section class="dashboard-card grafico-card">
+                    <header class="card-header">
+                        <h2><i class="fas fa-tachometer-alt"></i> Taxa de conversão</h2>
+                    </header>
+                    <div class="grafico-body grafico-body-gauge">
+                        <div class="gauge-wrap" id="gaugeWrap">
+                            <svg viewBox="0 0 220 130" class="gauge-svg">
+                                <defs>
+                                    <linearGradient id="gaugeGradRuim" x1="0" x2="1">
+                                        <stop offset="0%"   stop-color="#dc2626"/>
+                                        <stop offset="100%" stop-color="#ef4444"/>
+                                    </linearGradient>
+                                    <linearGradient id="gaugeGradOk" x1="0" x2="1">
+                                        <stop offset="0%"   stop-color="#f59e0b"/>
+                                        <stop offset="100%" stop-color="#fbbf24"/>
+                                    </linearGradient>
+                                    <linearGradient id="gaugeGradOtimo" x1="0" x2="1">
+                                        <stop offset="0%"   stop-color="#16a34a"/>
+                                        <stop offset="100%" stop-color="#22c55e"/>
+                                    </linearGradient>
+                                </defs>
+
+                                <path class="gauge-track"
+                                      d="M 20 110 A 90 90 0 0 1 200 110"
+                                      fill="none"
+                                      stroke="#e6eef8"
+                                      stroke-width="16"
+                                      stroke-linecap="round"/>
+
+                                <path class="gauge-fill"
+                                      id="gaugeFill"
+                                      d="M 20 110 A 90 90 0 0 1 200 110"
+                                      fill="none"
+                                      stroke="url(#gaugeGradOtimo)"
+                                      stroke-width="16"
+                                      stroke-linecap="round"
+                                      pathLength="100"
+                                      stroke-dasharray="0 100"/>
+                            </svg>
+
+                            <div class="gauge-center">
+                                <strong id="gaugeValor">0%</strong>
+                                <small id="gaugeLabel">conversão</small>
+                            </div>
+                        </div>
+
+                        <div class="gauge-legenda">
+                            <span><i class="dot red"></i> 0–5%</span>
+                            <span><i class="dot yellow"></i> 5–15%</span>
+                            <span><i class="dot green"></i> 15%+</span>
+                        </div>
+                    </div>
+                </section>
+
+            </div>
+
+            <!-- BLOCOS DE BAIXO (2 colunas) -->
+            <div class="dashboard-blocks">
+
+                <section class="dashboard-card block-card">
+                    <header class="card-header">
+                        <h2><i class="fas fa-users"></i> Corretores ativos</h2>
+                        <span class="card-badge" id="badgeTotalCorretores">0</span>
+                    </header>
+                    <div class="corretores-carteira" id="corretoresCarteira"></div>
+                </section>
+
+                <section class="dashboard-card block-card">
+                    <header class="card-header">
+                        <h2><i class="fas fa-folder-open"></i> Desempenho por carteira</h2>
+                        <span class="card-badge" id="badgeTotalCarteiras">0</span>
+                    </header>
+                    <div class="carteiras-grid" id="carteirasGrid"></div>
+                    <div class="empty-state small" id="carteirasVazio" style="display: none;">
+                        <i class="fas fa-inbox"></i>
+                        <p>Nenhuma carteira subida ainda.</p>
+                    </div>
+                </section>
+
+            </div>
 
         </section>
 
@@ -207,7 +292,7 @@
                             >
                             <span class="form-error" id="nomeListaError"></span>
                         </div>
-                        
+
                         <!-- TOGGLE ARQUIVO / TEXTO -->
                         <div class="form-group">
                             <label>Como deseja enviar os contatos? <span class="required">*</span></label>
@@ -340,32 +425,30 @@
                             </span>
                         </div>
 
-<!-- ================================================
-     É ATUALIZAÇÃO DE LISTA?
-     ================================================ -->
-<div class="form-group">
-    <label>É atualização de carteira? <span class="required">*</span></label>
-    <p class="form-subtitle">
-        Selecione uma carteira existente para adicionar <strong>apenas contatos novos</strong> aos corretores dela.
-        Nome e mensagem do WhatsApp são herdados da carteira escolhida.
-    </p>
+                        <!-- É ATUALIZAÇÃO DE LISTA? -->
+                        <div class="form-group">
+                            <label>É atualização de lista? <span class="required">*</span></label>
+                            <p class="form-subtitle">
+                                Selecione uma lista existente para adicionar <strong>apenas contatos novos</strong> aos corretores dela.
+                                Nome e mensagem do WhatsApp são herdados da lista escolhida.
+                            </p>
 
-    <div class="custom-select" id="customAtualizacao">
-        <input type="hidden" id="selectAtualizacaoLista" value="">
+                            <div class="custom-select" id="customAtualizacao">
+                                <input type="hidden" id="selectAtualizacaoLista" value="">
 
-        <button type="button" class="custom-select-trigger" id="customAtualizacaoTrigger">
-            <i class="fas fa-layer-group custom-select-icon"></i>
-            <span class="custom-select-text" id="customAtualizacaoText">Não — criar carteira nova</span>
-            <i class="fas fa-chevron-down custom-select-arrow"></i>
-        </button>
+                                <button type="button" class="custom-select-trigger" id="customAtualizacaoTrigger">
+                                    <i class="fas fa-layer-group custom-select-icon"></i>
+                                    <span class="custom-select-text" id="customAtualizacaoText">Não — criar lista nova</span>
+                                    <i class="fas fa-chevron-down custom-select-arrow"></i>
+                                </button>
 
-        <div class="custom-select-menu" id="customAtualizacaoMenu">
-            <!-- populado via JS -->
-        </div>
-    </div>
+                                <div class="custom-select-menu" id="customAtualizacaoMenu">
+                                    <!-- populado via JS -->
+                                </div>
+                            </div>
 
-    <span class="form-error" id="selectAtualizacaoListaError"></span>
-</div>
+                            <span class="form-error" id="selectAtualizacaoListaError"></span>
+                        </div>
 
                         <!-- SELETOR DE CORRETORES -->
                         <div class="form-group">
@@ -415,7 +498,7 @@
             <div class="listas-header">
                 <h2>
                     <i class="fas fa-folder-open"></i>
-                    Carteiras ativas
+                    Listas subidas
                 </h2>
                 <span class="card-badge" id="badgeTotalListas">0</span>
             </div>
@@ -643,7 +726,7 @@
                         <i class="fab fa-whatsapp"></i>
                         <div>
                             <strong>Mensagem do WhatsApp</strong>
-                            <small>Usada quando o corretor clicar em "WhatsApp" para leads desta carteira</small>
+                            <small>Usada quando o corretor clicar em "WhatsApp" para leads desta lista</small>
                         </div>
                     </div>
 
@@ -710,6 +793,13 @@
             </header>
 
             <div class="modal-body" style="padding: 1.3rem 1.5rem 1.5rem;">
+
+                <!-- ✅ BOTÃO DE ALTERNAR TIPO (corretor ↔ teste) -->
+                <button type="button" class="btn-tipo-toggle" id="btnToggleTipo" data-tipo="corretor">
+                    <i class="fas fa-flask"></i>
+                    <span class="btn-tipo-text" id="btnToggleTipoText">Marcar como usuário de teste</span>
+                </button>
+
                 <div class="form-group">
                     <label for="editarNome">Nome completo <span class="required">*</span></label>
                     <input
@@ -762,6 +852,56 @@
                     <i class="fas fa-check"></i>
                     <span id="btnSalvarEditarCorretorTexto">Salvar</span>
                 </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- =====================================================
+         MODAL — LEADS POR TAG (drill-down do donut)
+         ===================================================== -->
+    <div class="modal-overlay" id="modalTag" style="display: none;">
+        <div class="modal-card">
+            <header class="modal-header">
+                <div>
+                    <h2 id="modalTagTitulo">—</h2>
+                    <p id="modalTagInfo">—</p>
+                </div>
+                <button class="modal-close" id="btnFecharModalTag" aria-label="Fechar">
+                    <i class="fas fa-times"></i>
+                </button>
+            </header>
+
+            <div class="modal-toolbar">
+                <input type="text" class="modal-search" id="modalTagBusca"
+                       placeholder="Buscar por nome, telefone ou corretor...">
+                <input type="date" class="modal-search modal-date" id="modalTagDe" title="De">
+                <input type="date" class="modal-search modal-date" id="modalTagAte" title="Até">
+                <button class="btn-modal-manage" id="btnLimparFiltroTag" type="button" title="Limpar filtros">
+                    <i class="fas fa-eraser"></i>
+                    Limpar
+                </button>
+            </div>
+
+            <div class="modal-body">
+                <div class="contatos-table-wrapper">
+                    <table class="contatos-table">
+                        <thead>
+                            <tr>
+                                <th>Nome</th>
+                                <th>Telefone</th>
+                                <th>Corretor</th>
+                                <th>Data / Hora</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="modalTagTbody"></tbody>
+                    </table>
+                </div>
+
+                <div class="empty-state small" id="modalTagVazio" style="display: none;">
+                    <i class="fas fa-search"></i>
+                    <p>Nenhum cliente encontrado.</p>
+                </div>
             </div>
         </div>
     </div>
