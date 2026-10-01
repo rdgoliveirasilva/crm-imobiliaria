@@ -356,7 +356,7 @@ const btnToggleTipoText = $('btnToggleTipoText');
         }
     }
 
-    function renderizarCorretoresResumo(corretores) {
+function renderizarCorretoresResumo(corretores) {
     if (!corretores.length) {
         corretoresCarteira.innerHTML = `
             <div class="empty-state small">
@@ -395,20 +395,6 @@ const btnToggleTipoText = $('btnToggleTipoText');
                         <i class="fas fa-circle"></i>
                         ${escapeHtml(statusLabel)}
                     </span>
-                </div>
-                <div class="corretor-stats">
-                    <div class="corretor-stat total">
-                        <strong>${c.total_carteira}</strong>
-                        <small>total</small>
-                    </div>
-                    <div class="corretor-stat qualif">
-                        <strong>${c.total_qualificados}</strong>
-                        <small>qualif</small>
-                    </div>
-                    <div class="corretor-stat novos">
-                        <strong>${c.total_fila}</strong>
-                        <small>fila</small>
-                    </div>
                 </div>
             </div>
         `;
@@ -484,43 +470,49 @@ const btnToggleTipoText = $('btnToggleTipoText');
         });
     }
 
-    function abrirDetalheCarteira(listaId, carteiras) {
-        const carteira = carteiras.find(c => c.lista_id === listaId);
-        if (!carteira) return;
+  function abrirDetalheCarteira(listaId, carteiras) {
+    const carteira = carteiras.find(c => c.lista_id === listaId);
+    if (!carteira) return;
 
-        modalListaNome.textContent = carteira.nome;
-        modalListaInfo.textContent = `${carteira.total} contatos · subida em ${dataCurta(carteira.criado_em)}`;
+    modalListaNome.textContent = carteira.nome;
+    modalListaInfo.textContent = `${carteira.total} contatos · subida em ${dataCurta(carteira.criado_em)}`;
 
-        if (modalSearchContato) modalSearchContato.style.display = 'none';
-        if (btnDeletarLista)    btnDeletarLista.style.display    = 'none';
+    if (modalSearchContato) modalSearchContato.style.display = 'none';
+    if (btnDeletarLista)    btnDeletarLista.style.display    = 'none';
 
-        const modalBody = document.querySelector('#modalLista .modal-body');
-        if (!modalBody) {
-            console.error('[detalhe-carteira] modal-body não encontrado');
-            return;
-        }
+    const modalBody = document.querySelector('#modalLista .modal-body');
+    if (!modalBody) {
+        console.error('[detalhe-carteira] modal-body não encontrado');
+        return;
+    }
 
-        if (!carteira.corretores.length) {
-            modalBody.innerHTML = `
-                <div class="empty-state small">
-                    <i class="fas fa-users"></i>
-                    <p>Nenhum corretor nessa carteira.</p>
-                </div>
-            `;
-            modalLista.style.display = 'flex';
-            return;
-        }
-
+    if (!carteira.corretores.length) {
         modalBody.innerHTML = `
+            <div class="empty-state small">
+                <i class="fas fa-users"></i>
+                <p>Nenhum corretor nessa carteira.</p>
+            </div>
+        `;
+        modalLista.style.display = 'flex';
+        return;
+    }
+
+    modalBody.innerHTML = `
+        <div class="carteira-detalhe-wrapper">
             <div class="carteira-detalhe-lista">
                 ${carteira.corretores.map(cor => `
-                    <div class="carteira-detalhe-item">
-                        <div class="corretor-avatar">${iniciais(cor.nome)}</div>
-                        <div class="carteira-detalhe-info">
-                            <strong>${escapeHtml(cor.nome)}</strong>
-                            <small>@${escapeHtml(cor.usuario)}</small>
+                    <div class="carteira-detalhe-card">
+                        <div class="carteira-detalhe-card-header">
+                            <div class="corretor-avatar">
+                                ${iniciais(cor.nome)}
+                            </div>
+                            <div class="carteira-detalhe-card-ident">
+                                <strong>${escapeHtml(cor.nome)}</strong>
+                                <small>@${escapeHtml(cor.usuario)}</small>
+                            </div>
                         </div>
-                        <div class="carteira-detalhe-stats">
+
+                        <div class="carteira-detalhe-card-stats">
                             <div class="carteira-detalhe-stat total">
                                 <strong>${cor.recebeu}</strong>
                                 <small>recebeu</small>
@@ -541,10 +533,11 @@ const btnToggleTipoText = $('btnToggleTipoText');
                     </div>
                 `).join('')}
             </div>
-        `;
+        </div>
+    `;
 
-        modalLista.style.display = 'flex';
-    }
+    modalLista.style.display = 'flex';
+}
 
     /* =========================================================
        GRÁFICOS

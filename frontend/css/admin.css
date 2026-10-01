@@ -935,6 +935,26 @@
 
 .corretor-carteira-item:hover::before { transform: scaleY(1); }
 
+/* Modo teste — card acinzentado */
+.corretor-carteira-item.is-teste {
+    opacity: 0.55;
+    filter: grayscale(60%);
+    background: rgba(240, 244, 250, 0.7) !important;
+    border-color: rgba(0, 44, 97, 0.06) !important;
+}
+
+.corretor-carteira-item.is-teste:hover {
+    opacity: 0.8;
+    filter: grayscale(30%);
+}
+
+.corretor-carteira-item.is-teste .corretor-avatar-status {
+    background: #94a3b8 !important;
+    box-shadow: none !important;
+}
+
+/* ---------- Avatar ---------- */
+
 .corretor-avatar {
     width: 42px;
     height: 42px;
@@ -975,10 +995,13 @@
 .corretor-avatar-status.ausente { background: #f59e0b; }
 .corretor-avatar-status.offline { background: #94a3b8; }
 
+/* ---------- Info (nome + @user + status) ---------- */
+
 .corretor-info {
     flex: 1;
     min-width: 0;
 }
+
 .corretor-info strong {
     display: block;
     font-size: 0.92rem;
@@ -987,10 +1010,20 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    transition: color var(--transition);
 }
+
+.corretor-carteira-item:hover .corretor-info strong {
+    color: var(--primary);
+}
+
 .corretor-info small {
+    display: block;
     font-size: 0.75rem;
     color: var(--gray-500);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .corretor-status-text {
@@ -999,43 +1032,15 @@
     gap: 0.4rem;
     font-size: 0.75rem;
     font-weight: 600;
-    margin-top: 2px;
+    margin-top: 3px;
+    transition: color var(--transition);
 }
 
 .corretor-status-text.online  { color: #16a34a; }
 .corretor-status-text.ausente { color: #d97706; }
 .corretor-status-text.offline { color: #94a3b8; }
 
-.corretor-status-text i { font-size: 0.65rem; }
-
-.corretor-stats {
-    display: flex;
-    gap: 0.9rem;
-    flex-shrink: 0;
-}
-
-.corretor-stat {
-    text-align: right;
-    line-height: 1.1;
-}
-.corretor-stat strong {
-    display: block;
-    font-size: 1.1rem;
-    font-weight: 800;
-    letter-spacing: -0.3px;
-    font-variant-numeric: tabular-nums;
-    transition: all var(--transition);
-}
-.corretor-stat small {
-    font-size: 0.6rem;
-    color: var(--gray-500);
-    text-transform: uppercase;
-    letter-spacing: 0.3px;
-    font-weight: 700;
-}
-.corretor-stat.total strong  { color: var(--primary); }
-.corretor-stat.qualif strong { color: var(--success); }
-.corretor-stat.novos strong  { color: var(--warning); }
+.corretor-status-text i { font-size: 0.6rem; }
 
 /* =========================================================
    CARTEIRAS GRID
@@ -1271,6 +1276,184 @@
 
 .block-card .carteira-stat strong { font-size: 1rem; }
 .block-card .carteira-stat small  { font-size: 0.6rem; }
+
+/* =========================================================
+   MODAL — DETALHE DA CARTEIRA (cards de corretores)
+   ========================================================= */
+
+.carteira-detalhe-wrapper {
+    padding: 1.2rem 1.4rem 1.4rem;
+}
+
+.carteira-detalhe-lista {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.9rem;
+}
+
+.carteira-detalhe-card {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(248, 251, 255, 0.9));
+    border: 1px solid rgba(0, 44, 97, 0.08);
+    border-radius: 16px;
+    padding: 1rem 1.15rem 1.05rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+    transition: all var(--transition);
+    position: relative;
+    overflow: hidden;
+    animation: cardFadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+@keyframes cardFadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.carteira-detalhe-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--primary), var(--primary-light), var(--accent));
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.carteira-detalhe-card:hover {
+    transform: translateY(-3px);
+    border-color: rgba(0, 44, 97, 0.18);
+    box-shadow:
+        0 20px 45px -18px rgba(0, 44, 97, 0.28),
+        inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+.carteira-detalhe-card:hover::before { transform: scaleX(1); }
+
+.carteira-detalhe-card-header {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+}
+
+.carteira-detalhe-card-header .corretor-avatar {
+    width: 46px;
+    height: 46px;
+    font-size: 0.95rem;
+    flex-shrink: 0;
+    transition: all var(--transition);
+    box-shadow: 0 6px 16px -6px rgba(0, 44, 97, 0.5);
+}
+
+.carteira-detalhe-card:hover .corretor-avatar {
+    transform: scale(1.08) rotate(-3deg);
+    box-shadow:
+        0 10px 22px -6px rgba(0, 44, 97, 0.6),
+        0 0 0 4px rgba(59, 130, 246, 0.12);
+}
+
+.carteira-detalhe-card-ident {
+    min-width: 0;
+    flex: 1;
+}
+
+.carteira-detalhe-card-ident strong {
+    display: block;
+    font-size: 1rem;
+    font-weight: 800;
+    color: var(--dark-900);
+    letter-spacing: -0.2px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    margin-bottom: 3px;
+    transition: color var(--transition);
+}
+
+.carteira-detalhe-card:hover .carteira-detalhe-card-ident strong {
+    color: var(--primary);
+}
+
+.carteira-detalhe-card-ident small {
+    display: block;
+    font-size: 0.78rem;
+    color: var(--gray-500);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.carteira-detalhe-card-stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.6rem;
+    padding-top: 0.85rem;
+    border-top: 1px dashed rgba(0, 44, 97, 0.1);
+}
+
+.carteira-detalhe-stat {
+    text-align: center;
+    padding: 0.55rem 0.4rem;
+    border-radius: 10px;
+    background: rgba(240, 246, 255, 0.6);
+    transition: all var(--transition);
+    position: relative;
+    overflow: hidden;
+}
+
+.carteira-detalhe-card:hover .carteira-detalhe-stat {
+    background: rgba(240, 246, 255, 0.95);
+}
+
+.carteira-detalhe-stat::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    width: 0;
+    height: 2px;
+    background: currentColor;
+    transform: translateX(-50%);
+    transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    opacity: 0.5;
+}
+
+.carteira-detalhe-card:hover .carteira-detalhe-stat::after {
+    width: 40%;
+}
+
+.carteira-detalhe-stat strong {
+    display: block;
+    font-size: 1.1rem;
+    font-weight: 800;
+    letter-spacing: -0.4px;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    transition: all var(--transition);
+}
+
+.carteira-detalhe-stat small {
+    display: block;
+    font-size: 0.6rem;
+    color: var(--gray-500);
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    font-weight: 700;
+    margin-top: 5px;
+}
+
+.carteira-detalhe-stat.total strong    { color: var(--primary); }
+.carteira-detalhe-stat.qualif strong   { color: var(--success); }
+.carteira-detalhe-stat.fila strong     { color: var(--warning); }
+.carteira-detalhe-stat.descart strong  { color: #dc2626; }
+
+.carteira-detalhe-card:hover .carteira-detalhe-stat.total strong   { text-shadow: 0 0 12px rgba(0, 44, 97, 0.35); }
+.carteira-detalhe-card:hover .carteira-detalhe-stat.qualif strong  { text-shadow: 0 0 12px rgba(22, 163, 74, 0.35); }
+.carteira-detalhe-card:hover .carteira-detalhe-stat.fila strong    { text-shadow: 0 0 12px rgba(245, 158, 11, 0.35); }
+.carteira-detalhe-card:hover .carteira-detalhe-stat.descart strong { text-shadow: 0 0 12px rgba(220, 38, 38, 0.35); }
 
 /* =========================================================
    FORMULÁRIOS
@@ -2540,16 +2723,14 @@
    CORRETOR EM MODO TESTE
    ========================================================= */
 
-.corretor-item.is-teste,
-.corretor-carteira-item.is-teste {
+.corretor-item.is-teste {
     opacity: 0.55;
     filter: grayscale(60%);
     background: rgba(240, 244, 250, 0.7) !important;
     border-color: rgba(0, 44, 97, 0.06) !important;
 }
 
-.corretor-item.is-teste:hover,
-.corretor-carteira-item.is-teste:hover {
+.corretor-item.is-teste:hover {
     opacity: 0.8;
     filter: grayscale(30%);
 }
@@ -2574,15 +2755,6 @@
 }
 
 .badge-teste-inline i { font-size: 0.55rem; }
-
-.corretor-carteira-item.is-teste .corretor-stat strong {
-    color: var(--gray-500) !important;
-}
-
-.corretor-carteira-item.is-teste .corretor-avatar-status {
-    background: #94a3b8 !important;
-    box-shadow: none !important;
-}
 
 /* =========================================================
    BOTÃO — ALTERNAR TIPO (corretor ↔ teste)
@@ -3577,46 +3749,46 @@
     }
 
     .block-card .corretor-carteira-item {
-        display: grid;
-        grid-template-columns: 42px 1fr auto;
-        gap: 0.7rem;
-        padding: 0.75rem 0.8rem;
-        align-items: center;
+        padding: 0.75rem 0.85rem;
+        gap: 0.75rem;
+        align-items: flex-start;
     }
 
     .block-card .corretor-carteira-item .corretor-info {
         min-width: 0;
+        flex: 1;
         overflow: hidden;
     }
 
     .block-card .corretor-carteira-item .corretor-info strong {
-        font-size: 0.88rem;
-        white-space: nowrap;
+        font-size: 0.9rem;
+        display: block;
         overflow: hidden;
         text-overflow: ellipsis;
+        white-space: nowrap;
     }
 
     .block-card .corretor-carteira-item .corretor-info small {
-        font-size: 0.7rem;
-        white-space: nowrap;
+        font-size: 0.72rem;
+        display: block;
         overflow: hidden;
         text-overflow: ellipsis;
-        display: block;
+        white-space: nowrap;
     }
 
-    .block-card .corretor-status-text { display: none; }
-
-    .block-card .corretor-carteira-item .corretor-stats {
-        gap: 0.55rem;
-        flex-shrink: 0;
+    /* Status textual ocupa a linha toda em mobile */
+    .block-card .corretor-status-text {
+        display: inline-flex;
+        font-size: 0.7rem;
+        margin-top: 4px;
+        line-height: 1.3;
+        white-space: normal;
+        overflow-wrap: anywhere;
     }
 
-    .block-card .corretor-carteira-item .corretor-stat strong {
-        font-size: 0.95rem;
-    }
-
-    .block-card .corretor-carteira-item .corretor-stat small {
+    .block-card .corretor-status-text i {
         font-size: 0.55rem;
+        margin-top: 3px;
     }
 
     /* ---------- Bloco "Desempenho por carteira" ---------- */
@@ -3652,6 +3824,43 @@
     }
 
     .block-card .carteira-avatar-mini:first-child { margin-left: 0; }
+
+    /* ---------- Modal detalhe da carteira ---------- */
+
+    .carteira-detalhe-wrapper {
+        padding: 0.9rem 1rem 1.1rem;
+    }
+
+    .carteira-detalhe-card {
+        padding: 0.85rem 0.95rem 0.9rem;
+        gap: 0.75rem;
+    }
+
+    .carteira-detalhe-card-header {
+        gap: 0.7rem;
+    }
+
+    .carteira-detalhe-card-header .corretor-avatar {
+        width: 40px;
+        height: 40px;
+        font-size: 0.85rem;
+    }
+
+    .carteira-detalhe-card-ident strong { font-size: 0.92rem; }
+    .carteira-detalhe-card-ident small  { font-size: 0.72rem; }
+
+    .carteira-detalhe-card-stats {
+        gap: 0.4rem;
+        padding-top: 0.7rem;
+    }
+
+    .carteira-detalhe-stat {
+        padding: 0.45rem 0.25rem;
+        border-radius: 8px;
+    }
+
+    .carteira-detalhe-stat strong { font-size: 0.95rem; }
+    .carteira-detalhe-stat small  { font-size: 0.52rem; letter-spacing: 0.3px; }
 }
 
 /* =========================================================
@@ -3660,37 +3869,25 @@
 
 @media (max-width: 420px) {
     .kpi-grid { grid-template-columns: 1fr; }
-    .corretor-stats { gap: 0.55rem; }
-    .corretor-stat strong { font-size: 0.98rem; }
-    .corretor-stat small { font-size: 0.56rem; }
     .form-actions { flex-direction: column; }
     .modal-card { border-radius: 18px; }
     .modal-actions-row { grid-template-columns: 1fr; }
     .btn-modal-confirm { order: -1; }
 
     .block-card .corretor-carteira-item {
-        grid-template-columns: 38px 1fr auto;
-        gap: 0.55rem;
-        padding: 0.7rem 0.7rem;
+        padding: 0.7rem 0.75rem;
+        gap: 0.65rem;
     }
 
     .block-card .corretor-avatar {
-        width: 36px;
-        height: 36px;
-        font-size: 0.78rem;
+        width: 38px;
+        height: 38px;
+        font-size: 0.8rem;
     }
 
-    .block-card .corretor-carteira-item .corretor-stat strong {
-        font-size: 0.88rem;
-    }
-
-    .block-card .corretor-carteira-item .corretor-stat small {
-        font-size: 0.5rem;
-    }
-
-    .block-card .corretor-carteira-item .corretor-stats {
-        gap: 0.4rem;
-    }
+    .block-card .corretor-carteira-item .corretor-info strong { font-size: 0.85rem; }
+    .block-card .corretor-carteira-item .corretor-info small  { font-size: 0.68rem; }
+    .block-card .corretor-status-text                         { font-size: 0.66rem; }
 
     .block-card .carteira-avatar-mini,
     .block-card .carteira-avatar-mais {
@@ -3699,6 +3896,14 @@
         font-size: 0.58rem;
         margin-left: -6px;
     }
+
+    .carteira-detalhe-card-stats {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.5rem;
+    }
+
+    .carteira-detalhe-stat strong { font-size: 1rem; }
+    .carteira-detalhe-stat small  { font-size: 0.56rem; }
 }
 
 /* =========================================================
@@ -3713,4 +3918,251 @@
         animation-iteration-count: 1 !important;
         transition-duration: 0.01ms !important;
     }
+}
+
+/* =========================================================
+   FIX — CORRETORES ATIVOS EM MOBILE (status sem corte)
+   ========================================================= */
+
+@media (max-width: 720px) {
+
+    .block-card .corretor-carteira-item {
+        display: grid;
+        grid-template-columns: 40px 1fr;
+        gap: 0.65rem;
+        padding: 0.75rem 0.85rem;
+        align-items: flex-start;
+    }
+
+    .block-card .corretor-carteira-item .corretor-info {
+        min-width: 0;
+        overflow: visible;
+    }
+
+    .block-card .corretor-carteira-item .corretor-info strong {
+        display: block;
+        font-size: 0.9rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .block-card .corretor-carteira-item .corretor-info small {
+        display: block;
+        font-size: 0.72rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        margin-bottom: 2px;
+    }
+
+    /* 🔑 Força status a aparecer em 2 linhas se precisar */
+    .block-card .corretor-status-text {
+        display: block !important;
+        font-size: 0.7rem;
+        margin-top: 3px;
+        line-height: 1.35;
+        white-space: normal;
+        overflow: visible;
+        text-overflow: unset;
+    }
+
+    .block-card .corretor-status-text i {
+        font-size: 0.55rem;
+        margin-right: 4px;
+        vertical-align: middle;
+    }
+}
+
+@media (max-width: 420px) {
+    .block-card .corretor-carteira-item {
+        grid-template-columns: 36px 1fr;
+        gap: 0.55rem;
+        padding: 0.7rem 0.75rem;
+    }
+
+    .block-card .corretor-avatar {
+        width: 36px;
+        height: 36px;
+        font-size: 0.78rem;
+    }
+
+    .block-card .corretor-carteira-item .corretor-info strong { font-size: 0.85rem; }
+    .block-card .corretor-carteira-item .corretor-info small  { font-size: 0.68rem; }
+    .block-card .corretor-status-text                          { font-size: 0.66rem; }
+}
+
+/* =========================================================
+   FIX — NOME DA LISTA NO CARD (garante visibilidade)
+   ========================================================= */
+
+.block-card .carteira-card-nome {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    font-size: 1rem;
+    font-weight: 800;
+    color: var(--dark-900);
+    letter-spacing: -0.25px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    margin: 0.15rem 0;
+    min-height: 1.2em;
+}
+
+.block-card .carteira-card:hover .carteira-card-nome {
+    color: var(--primary);
+}
+
+/* =========================================================
+   FIX — CARD DA CARTEIRA NO BLOCK (respiro embaixo)
+   ========================================================= */
+
+.block-card .carteiras-grid {
+    padding: 0.7rem 0.75rem 1rem !important;
+    gap: 0.65rem !important;
+}
+
+.block-card .carteira-card {
+    padding: 0.85rem 0.95rem 1.1rem !important;
+    gap: 0.5rem !important;
+    overflow: visible !important;   /* 🔑 deixa os avatares respirarem */
+    min-height: auto !important;
+}
+
+.block-card .carteira-card-nome {
+    margin: 0.1rem 0 0.15rem !important;
+}
+
+.block-card .carteira-card-total {
+    margin: 0 0 0.15rem !important;
+}
+
+/* Avatares com respiro em cima e embaixo */
+.block-card .carteira-avatares {
+    display: flex !important;
+    align-items: center !important;
+    flex-wrap: wrap !important;
+    min-height: 36px !important;
+    overflow: visible !important;
+    padding: 6px 2px 12px !important;
+    gap: 0 !important;
+}
+
+.block-card .carteira-avatar-mini,
+.block-card .carteira-avatar-mais {
+    width: 30px !important;
+    height: 30px !important;
+    font-size: 0.66rem !important;
+    border-width: 2px !important;
+    margin-left: -8px !important;
+    flex-shrink: 0 !important;
+    line-height: 1 !important;
+    box-shadow: 0 2px 6px -2px rgba(0, 44, 97, 0.35) !important;
+}
+
+.block-card .carteira-avatar-mini:first-child {
+    margin-left: 0 !important;
+}
+
+/* =========================================================
+   FIX DEFINITIVO — CORRETORES ATIVOS EM MOBILE
+   (destrava o status pra aparecer em 2 linhas)
+   ========================================================= */
+
+@media (max-width: 720px) {
+
+    .block-card .corretores-carteira {
+        padding: 0.7rem 0.75rem 0.9rem !important;
+        gap: 0.55rem !important;
+    }
+
+    /* 🔑 Layout em flex column: avatar à esquerda, info à direita */
+    .block-card .corretor-carteira-item {
+        display: grid !important;
+        grid-template-columns: 40px 1fr !important;
+        gap: 0.7rem !important;
+        padding: 0.8rem 0.9rem !important;
+        align-items: center !important;
+        min-height: 64px !important;       /* garante 2 linhas + status */
+        height: auto !important;           /* destrava altura */
+        overflow: visible !important;      /* libera o status */
+    }
+
+    .block-card .corretor-carteira-item .corretor-info {
+        min-width: 0;
+        overflow: visible !important;
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 2px !important;
+    }
+
+    .block-card .corretor-carteira-item .corretor-info strong {
+        font-size: 0.9rem !important;
+        line-height: 1.2 !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+    }
+
+    .block-card .corretor-carteira-item .corretor-info small {
+        font-size: 0.72rem !important;
+        line-height: 1.2 !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+    }
+
+    /* 🔑 Status em linha própria, sem corte */
+    .block-card .corretor-status-text {
+        display: flex !important;
+        align-items: center !important;
+        gap: 5px !important;
+        font-size: 0.72rem !important;
+        line-height: 1.3 !important;
+        margin-top: 3px !important;
+        white-space: normal !important;
+        overflow: visible !important;
+        text-overflow: unset !important;
+        min-height: 1.1em !important;
+        flex-wrap: wrap !important;
+    }
+
+    .block-card .corretor-status-text i {
+        font-size: 0.55rem !important;
+        flex-shrink: 0 !important;
+    }
+
+    /* Avatar com tamanho consistente */
+    .block-card .corretor-avatar {
+        width: 40px !important;
+        height: 40px !important;
+        font-size: 0.82rem !important;
+        flex-shrink: 0 !important;
+    }
+
+    /* Remove qualquer gap/herança que estivesse travando */
+    .block-card .corretor-carteira-item > * {
+        min-height: 0 !important;
+    }
+}
+
+@media (max-width: 420px) {
+    .block-card .corretor-carteira-item {
+        grid-template-columns: 36px 1fr !important;
+        gap: 0.6rem !important;
+        padding: 0.7rem 0.8rem !important;
+        min-height: 60px !important;
+    }
+
+    .block-card .corretor-avatar {
+        width: 36px !important;
+        height: 36px !important;
+        font-size: 0.76rem !important;
+    }
+
+    .block-card .corretor-carteira-item .corretor-info strong { font-size: 0.86rem !important; }
+    .block-card .corretor-carteira-item .corretor-info small  { font-size: 0.68rem !important; }
+    .block-card .corretor-status-text                          { font-size: 0.66rem !important; }
 }
