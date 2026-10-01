@@ -264,231 +264,248 @@
 
         </section>
 
-        <!-- ================================================
-             ABA 2 — SUBIR LISTA
-             ================================================ -->
-        <section class="tab-panel" id="tab-upload">
+<!-- ================================================
+     ABA 2 — SUBIR LISTA
+     ================================================ -->
+<section class="tab-panel" id="tab-upload">
 
-            <div class="upload-grid">
+    <!-- ABAS INTERNAS: Nova vs Atualizar -->
+    <div class="upload-mode-tabs">
+        <button type="button" class="upload-mode-tab active" data-modo-upload="nova">
+            <i class="fas fa-file-circle-plus"></i>
+            <span>Nova lista</span>
+        </button>
+        <button type="button" class="upload-mode-tab" data-modo-upload="atualizar">
+            <i class="fas fa-sync-alt"></i>
+            <span>Atualizar lista existente</span>
+        </button>
+    </div>
 
-                <!-- Coluna esquerda: form -->
-                <section class="form-card">
-                    <header class="card-header">
-                        <h2>
-                            <i class="fas fa-cloud-upload-alt"></i>
-                            Subir nova lista
-                        </h2>
-                    </header>
+    <div class="upload-grid">
 
-                    <div class="form-body">
+        <!-- Coluna esquerda: form -->
+        <section class="form-card">
+            <header class="card-header">
+                <h2>
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <span id="uploadTitulo">Subir nova lista</span>
+                </h2>
+            </header>
 
-                        <div class="form-group">
-                            <label for="nomeLista">Nome da lista <span class="required">*</span></label>
-                            <input
-                                type="text"
-                                id="nomeLista"
-                                placeholder="Ex: Lista Outubro/2025"
-                                maxlength="60"
-                            >
-                            <span class="form-error" id="nomeListaError"></span>
-                        </div>
+            <div class="form-body">
 
-                        <!-- TOGGLE ARQUIVO / TEXTO -->
-                        <div class="form-group">
-                            <label>Como deseja enviar os contatos? <span class="required">*</span></label>
+                <!-- ============================== -->
+                <!-- SELETOR DE LISTA (só modo atualizar) -->
+                <!-- ============================== -->
+                <div class="form-group" id="grupoSelecionarLista" style="display: none;">
+    <label>Qual lista quer atualizar? <span class="required">*</span></label>
+    <p class="form-subtitle">Os contatos serão adicionados apenas à lista escolhida.</p>
 
-                            <div class="modo-toggle" role="tablist">
-                                <button
-                                    type="button"
-                                    class="modo-btn active"
-                                    id="modoArquivoBtn"
-                                    data-modo="arquivo"
-                                >
-                                    <i class="fas fa-file-csv"></i>
-                                    <span>Anexar arquivo CSV</span>
-                                </button>
-                                <button
-                                    type="button"
-                                    class="modo-btn"
-                                    id="modoTextoBtn"
-                                    data-modo="texto"
-                                >
-                                    <i class="fas fa-keyboard"></i>
-                                    <span>Colar texto</span>
-                                </button>
+    <div class="custom-select" id="customSelectLista">
+        <input type="hidden" id="selectListaAtualizar" value="">
+
+        <button type="button" class="custom-select-trigger" id="customSelectListaTrigger">
+            <i class="fas fa-layer-group custom-select-icon"></i>
+            <span class="custom-select-text" id="customSelectListaText">Selecione uma lista...</span>
+            <i class="fas fa-chevron-down custom-select-arrow"></i>
+        </button>
+
+        <div class="custom-select-menu" id="customSelectListaMenu">
+            <!-- populado via JS -->
+        </div>
+    </div>
+
+    <span class="form-error" id="selectListaAtualizarError"></span>
+</div>
+
+                <!-- ============================== -->
+                <!-- NOME DA LISTA -->
+                <!-- ============================== -->
+                <div class="form-group" id="grupoNomeLista">
+                    <label for="nomeLista">Nome da lista <span class="required">*</span></label>
+                    <input
+                        type="text"
+                        id="nomeLista"
+                        placeholder="Ex: Lista Outubro/2025"
+                        maxlength="60"
+                    >
+                    <span class="form-error" id="nomeListaError"></span>
+                </div>
+
+                <!-- ============================== -->
+                <!-- CONTATOS -->
+                <!-- ============================== -->
+                <div class="form-group">
+                    <label>Contatos <span class="required">*</span></label>
+
+                    <div class="modo-toggle" role="tablist">
+                        <button
+                            type="button"
+                            class="modo-btn active"
+                            id="modoArquivoBtn"
+                            data-modo="arquivo"
+                        >
+                            <i class="fas fa-file-csv"></i>
+                            <span>Anexar arquivo</span>
+                        </button>
+                        <button
+                            type="button"
+                            class="modo-btn"
+                            id="modoTextoBtn"
+                            data-modo="texto"
+                        >
+                            <i class="fas fa-keyboard"></i>
+                            <span>Colar texto</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- BLOCO ARQUIVO -->
+                <div class="form-group" id="blocoArquivo">
+                    <div class="file-drop" id="fileDrop">
+                        <input
+                            type="file"
+                            id="arquivoCsv"
+                            accept=".csv,.txt,text/csv,text/plain"
+                            hidden
+                        >
+                        <div class="file-drop-content" id="fileDropContent">
+                            <div class="file-drop-icon">
+                                <i class="fas fa-cloud-upload-alt"></i>
                             </div>
-                        </div>
-
-                        <!-- BLOCO ARQUIVO -->
-                        <div class="form-group" id="blocoArquivo">
-                            <label>Arquivo CSV <span class="required">*</span></label>
-
-                            <div class="file-drop" id="fileDrop">
-                                <input
-                                    type="file"
-                                    id="arquivoCsv"
-                                    accept=".csv,.txt,text/csv,text/plain"
-                                    hidden
-                                >
-                                <div class="file-drop-content" id="fileDropContent">
-                                    <div class="file-drop-icon">
-                                        <i class="fas fa-cloud-upload-alt"></i>
-                                    </div>
-                                    <strong>Clique ou arraste o arquivo aqui</strong>
-                                    <small>Formato aceito: <strong>.csv</strong> ou <strong>.txt</strong> · máx. 5MB</small>
-                                    <small class="file-drop-hint">
-                                        <i class="fas fa-info-circle"></i>
-                                        Colunas esperadas: <strong>nome e telefone</strong> (nesta ordem)
-                                    </small>
-                                </div>
-
-                                <div class="file-info" id="fileInfo" style="display: none;">
-                                    <div class="file-info-icon">
-                                        <i class="fas fa-file-csv"></i>
-                                    </div>
-                                    <div class="file-info-data">
-                                        <strong id="fileInfoNome">arquivo.csv</strong>
-                                        <small id="fileInfoTamanho">0 KB · 0 contatos detectados</small>
-                                    </div>
-                                    <button type="button" class="file-info-remove" id="btnRemoverArquivo" title="Remover arquivo">
-                                        <i class="fas fa-times"></i>
-                                    </button>
-                                </div>
-                            </div>
-
-                            <span class="form-error" id="arquivoCsvError"></span>
-                        </div>
-
-                        <!-- BLOCO TEXTO -->
-                        <div class="form-group" id="blocoTexto" style="display: none;">
-                            <label for="textoLista">Cole os contatos <span class="required">*</span></label>
-                            <textarea
-                                id="textoLista"
-                                rows="8"
-                                placeholder="Um contato por linha. Formatos aceitos:&#10;&#10;Nome, Telefone, Interesse&#10;Ingrid Alves, 16981006715, Apartamento 2 quartos"
-                            ></textarea>
-                            <span class="form-hint">
+                            <strong>Clique ou arraste o arquivo aqui</strong>
+                            <small>Formato aceito: <strong>.csv</strong> ou <strong>.txt</strong> · máx. 5MB</small>
+                            <small class="file-drop-hint">
                                 <i class="fas fa-info-circle"></i>
-                                Um contato por linha. Separe por vírgula: nome, telefone, interesse.
-                            </span>
-                            <span class="form-error" id="textoListaError"></span>
+                                Colunas: <strong>nome e telefone</strong>
+                            </small>
                         </div>
 
-                        <!-- PREVIEW CONTATOS -->
-                        <div class="form-preview" id="previewContatos" style="display: none;">
-                            <div class="preview-header">
-                                <i class="fas fa-eye"></i>
-                                <strong id="previewCount">0</strong> contatos detectados
+                        <div class="file-info" id="fileInfo" style="display: none;">
+                            <div class="file-info-icon">
+                                <i class="fas fa-file-csv"></i>
                             </div>
-                            <div class="preview-list" id="previewList"></div>
-                        </div>
-
-                        <!-- MENSAGEM DO WHATSAPP -->
-                        <div class="form-group">
-                            <label for="mensagemWhatsapp">
-                                Mensagem do WhatsApp
-                                <small style="font-weight: 400; color: var(--gray-500);">(opcional)</small>
-                            </label>
-                            <p class="form-subtitle">
-                                Se preenchida, essa mensagem será usada quando o corretor clicar em "WhatsApp" para leads desta lista.
-                            </p>
-
-                            <!-- Botões de variáveis -->
-                            <div class="variaveis-wrap">
-                                <span class="variaveis-label">Inserir variável:</span>
-                                <button type="button" class="variavel-btn" data-var="{nome}">
-                                    <i class="fas fa-plus"></i> {nome}
-                                </button>
-                                <button type="button" class="variavel-btn" data-var="{nome_completo}">
-                                    <i class="fas fa-plus"></i> {nome_completo}
-                                </button>
-                                <button type="button" class="variavel-btn" data-var="{corretor}">
-                                    <i class="fas fa-plus"></i> {corretor}
-                                </button>
-                                <button type="button" class="variavel-btn" data-var="{empresa}">
-                                    <i class="fas fa-plus"></i> {empresa}
-                                </button>
-                                <button type="button" class="variavel-btn" data-var="{interesse}">
-                                    <i class="fas fa-plus"></i> {interesse}
-                                </button>
+                            <div class="file-info-data">
+                                <strong id="fileInfoNome">arquivo.csv</strong>
+                                <small id="fileInfoTamanho">0 KB · 0 contatos</small>
                             </div>
-
-                            <textarea
-                                id="mensagemWhatsapp"
-                                rows="5"
-                                maxlength="800"
-                                placeholder="Olá {nome}, tudo bem? Sou {corretor} da {empresa}. Vi que você demonstrou interesse e gostaria de conversar. Podemos falar agora?"
-                            ></textarea>
-                            <span class="form-hint">
-                                <i class="fas fa-info-circle"></i>
-                                As variáveis são substituídas automaticamente pelo sistema antes do envio.
-                            </span>
+                            <button type="button" class="file-info-remove" id="btnRemoverArquivo" title="Remover">
+                                <i class="fas fa-times"></i>
+                            </button>
                         </div>
+                    </div>
 
-                        <!-- É ATUALIZAÇÃO DE LISTA? -->
-                        <div class="form-group">
-                            <label>É atualização de lista? <span class="required">*</span></label>
-                            <p class="form-subtitle">
-                                Selecione uma lista existente para adicionar <strong>apenas contatos novos</strong> aos corretores dela.
-                                Nome e mensagem do WhatsApp são herdados da lista escolhida.
-                            </p>
+                    <span class="form-error" id="arquivoCsvError"></span>
+                </div>
 
-                            <div class="custom-select" id="customAtualizacao">
-                                <input type="hidden" id="selectAtualizacaoLista" value="">
+                <!-- BLOCO TEXTO -->
+                <div class="form-group" id="blocoTexto" style="display: none;">
+                    <textarea
+                        id="textoLista"
+                        rows="8"
+                        placeholder="Um contato por linha:&#10;Nome, Telefone&#10;Ingrid Alves, 16981006715"
+                    ></textarea>
+                    <span class="form-hint">
+                        <i class="fas fa-info-circle"></i>
+                        Um contato por linha, separado por vírgula.
+                    </span>
+                    <span class="form-error" id="textoListaError"></span>
+                </div>
 
-                                <button type="button" class="custom-select-trigger" id="customAtualizacaoTrigger">
-                                    <i class="fas fa-layer-group custom-select-icon"></i>
-                                    <span class="custom-select-text" id="customAtualizacaoText">Não — criar lista nova</span>
-                                    <i class="fas fa-chevron-down custom-select-arrow"></i>
-                                </button>
+                <!-- PREVIEW CONTATOS -->
+                <div class="form-preview" id="previewContatos" style="display: none;">
+                    <div class="preview-header">
+                        <i class="fas fa-eye"></i>
+                        <strong id="previewCount">0</strong> contatos detectados
+                    </div>
+                    <div class="preview-list" id="previewList"></div>
+                </div>
 
-                                <div class="custom-select-menu" id="customAtualizacaoMenu">
-                                    <!-- populado via JS -->
-                                </div>
-                            </div>
+                <!-- ============================== -->
+                <!-- CONFIG AVANÇADA (colapsável) -->
+                <!-- ============================== -->
+                <div class="config-avancada" id="configAvancada">
+                    <button type="button" class="config-toggle" id="btnToggleConfig">
+                        <i class="fas fa-chevron-right config-chevron"></i>
+                        <i class="fab fa-whatsapp config-icon"></i>
+                        <span>Mensagem do WhatsApp</span>
+                        <small>(opcional)</small>
+                    </button>
 
-                            <span class="form-error" id="selectAtualizacaoListaError"></span>
-                        </div>
+                    <div class="config-content" id="configContent">
+                        <p class="form-subtitle">
+                            Se preenchida, essa mensagem será usada quando o corretor clicar em "WhatsApp".
+                        </p>
 
-                        <!-- SELETOR DE CORRETORES -->
-                        <div class="form-group">
-                            <label>Quem entra na roleta? <span class="required">*</span></label>
-                            <p class="form-subtitle">Os contatos serão distribuídos igualmente entre os corretores selecionados.</p>
-
-                            <div class="corretores-selector" id="corretoresSelector"></div>
-                            <span class="form-error" id="corretoresError"></span>
-                        </div>
-
-                        <div class="form-actions">
-                            <button class="btn btn-primary" id="btnSubirLista">
-                                <i class="fas fa-check"></i>
-                                Subir e distribuir
+                        <div class="variaveis-wrap">
+                            <span class="variaveis-label">Inserir:</span>
+                            <button type="button" class="variavel-btn" data-var="{nome}">
+                                <i class="fas fa-plus"></i> {nome}
+                            </button>
+                            <button type="button" class="variavel-btn" data-var="{nome_completo}">
+                                <i class="fas fa-plus"></i> {nome_completo}
+                            </button>
+                            <button type="button" class="variavel-btn" data-var="{corretor}">
+                                <i class="fas fa-plus"></i> {corretor}
+                            </button>
+                            <button type="button" class="variavel-btn" data-var="{empresa}">
+                                <i class="fas fa-plus"></i> {empresa}
+                            </button>
+                            <button type="button" class="variavel-btn" data-var="{interesse}">
+                                <i class="fas fa-plus"></i> {interesse}
                             </button>
                         </div>
 
+                        <textarea
+                            id="mensagemWhatsapp"
+                            rows="4"
+                            maxlength="800"
+                            placeholder="Olá {nome}, tudo bem? Sou {corretor} da {empresa}..."
+                        ></textarea>
                     </div>
-                </section>
+                </div>
 
-                <!-- Coluna direita: preview da roleta -->
-                <aside class="info-card">
-                    <header class="card-header">
-                        <h2>
-                            <i class="fas fa-shuffle"></i>
-                            Preview da roleta
-                        </h2>
-                    </header>
+                <!-- ============================== -->
+                <!-- ROLETA -->
+                <!-- ============================== -->
+                <div class="form-group">
+                    <label>Quem entra na roleta? <span class="required">*</span></label>
+                    <p class="form-subtitle">Os contatos serão distribuídos igualmente entre os corretores selecionados.</p>
 
-                    <div class="info-body" id="infoRoleta">
-                        <div class="info-empty">
-                            <i class="fas fa-chart-pie"></i>
-                            <p>Envie os contatos e selecione os corretores para ver como será a distribuição.</p>
-                        </div>
-                    </div>
-                </aside>
+                    <div class="corretores-selector" id="corretoresSelector"></div>
+                    <span class="form-error" id="corretoresError"></span>
+                </div>
+
+                <div class="form-actions">
+                    <button class="btn btn-primary" id="btnSubirLista">
+                        <i class="fas fa-check"></i>
+                        Subir e distribuir
+                    </button>
+                </div>
 
             </div>
-
         </section>
+
+        <!-- Coluna direita: preview da roleta -->
+        <aside class="info-card info-card-sticky">
+            <header class="card-header">
+                <h2>
+                    <i class="fas fa-shuffle"></i>
+                    Preview da roleta
+                </h2>
+            </header>
+
+            <div class="info-body" id="infoRoleta">
+                <div class="info-empty">
+                    <i class="fas fa-chart-pie"></i>
+                    <p>Envie os contatos e selecione os corretores para ver como será a distribuição.</p>
+                </div>
+            </div>
+        </aside>
+
+    </div>
+
+</section>
 
         <!-- ================================================
              ABA 3 — LISTAS

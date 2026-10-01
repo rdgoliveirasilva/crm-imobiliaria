@@ -80,13 +80,21 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnRemoverArquivo  = $('btnRemoverArquivo');
     const arquivoCsvError    = $('arquivoCsvError');
 
-    // Atualização de lista (custom select)
-    const selectAtualizacaoLista      = $('selectAtualizacaoLista');
-    const selectAtualizacaoListaError = $('selectAtualizacaoListaError');
-    const customAtualizacao           = $('customAtualizacao');
-    const customAtualizacaoTrigger    = $('customAtualizacaoTrigger');
-    const customAtualizacaoText       = $('customAtualizacaoText');
-    const customAtualizacaoMenu       = $('customAtualizacaoMenu');
+    // Upload — abas Nova/Atualizar
+const uploadModeTabs           = document.querySelectorAll('.upload-mode-tab');
+const uploadTitulo             = $('uploadTitulo');
+const grupoSelecionarLista     = $('grupoSelecionarLista');
+const grupoNomeLista           = $('grupoNomeLista');
+const selectListaAtualizar     = $('selectListaAtualizar');
+const selectListaAtualizarError = $('selectListaAtualizarError');
+const customSelectLista        = $('customSelectLista');
+const customSelectListaTrigger = $('customSelectListaTrigger');
+const customSelectListaText    = $('customSelectListaText');
+const customSelectListaMenu    = $('customSelectListaMenu');
+
+// Config avançada
+const configAvancada = $('configAvancada');
+const btnToggleConfig = $('btnToggleConfig');
 
     // Listas
     const listasGrid       = $('listasGrid');
@@ -167,6 +175,7 @@ const btnToggleTipoText = $('btnToggleTipoText');
     let listasDisponiveis = [];
     let listaAtualizacaoSelecionada = null;
     let statsListaAtual = {};
+    let modoUpload = 'nova';  // 'nova' | 'atualizar'
 
     // Gráficos
     let chartLinha   = null;
@@ -1282,226 +1291,221 @@ function renderizarCorretoresResumo(corretores) {
         atualizarPreviewRoleta();
     }
 
-    /* =========================================================
-       CUSTOM SELECT — ATUALIZAÇÃO DE LISTA
-       ========================================================= */
-    function atualizarTriggerCustomSelect(valor) {
-        if (!customAtualizacaoText) return;
+/* =========================================================
+   ATUALIZAÇÃO DE LISTA — SELECT NATIVO
+   ========================================================= */
 
-        if (!valor) {
-            customAtualizacaoText.textContent = 'Não — criar lista nova';
+async function carregarListasParaAtualizacao() {
+    if (!customSelectListaMenu || !selectListaAtualizar) return;
+
+    try {
+        const { listas } = await ApiClient.get('/api/admin/listas');
+        listasDisponiveis = listas || [];
+
+        const valorAtual = selectListaAtualizar.value;
+
+        // Se não tem lista nenhuma
+        if (!listasDisponiveis.length) {
+            customSelectListaMenu.innerHTML = `
+                <div class="custom-select-empty">
+                    Nenhuma lista criada ainda.
+                </div>
+            `;
+            atualizarTriggerCustomSelectLista('');
             return;
         }
 
-        const lista = listasDisponiveis.find(l => String(l.id) === String(valor));
-        customAtualizacaoText.textContent = lista
-            ? `${lista.nome} · ${lista.total} contatos`
-            : 'Não — criar lista nova';
-    }
+        // Monta as opções
+        customSelectListaMenu.innerHTML = listasDisponiveis.map(l => `
+            <button type="button"
+                    class="custom-select-option ${String(l.id) === String(valorAtual) ? 'selected' : ''}"
+                    data-value="${l.id}">
+                <i class="fas fa-folder-open opt-icon"></i>
+                <span class="opt-text">${escapeHtml(l.nome)}</span>
+                <span class="opt-count">${l.total}</span>
+            </button>
+        `).join('');
 
-    function fecharCustomSelect() {
-        if (customAtualizacaoMenu) customAtualizacaoMenu.classList.remove('open');
-        if (customAtualizacaoTrigger) customAtualizacaoTrigger.classList.remove('open');
-    }
+        atualizarTriggerCustomSelectLista(valorAtual);
 
-    async function carregarListasParaAtualizacao() {
-        if (!customAtualizacaoMenu || !selectAtualizacaoLista) return;
+        // Listeners das opções
+        customSelectListaMenu.querySelectorAll('.custom-select-option').forEach(opc => {
+            opc.addEventListener('click', () => {
+                const novoValor = opc.dataset.value || '';
+                selectListaAtualizar.value = novoValor;
 
-        try {
-            const { listas } = await ApiClient.get('/api/admin/listas');
-            listasDisponiveis = listas || [];
+                fecharCustomSelectLista();
 
-            const valorAtual = selectAtualizacaoLista.value;
+                customSelectListaMenu.querySelectorAll('.custom-select-option')
+                    .forEach(o => o.classList.toggle('selected', o === opc));
 
-            let html = `
-                <button type="button"
-                        class="custom-select-option ${!valorAtual ? 'selected' : ''}"
-                        data-value="">
-                    <i class="fas fa-plus-circle opt-icon"></i>
-                    <span class="opt-text">Não — criar lista nova</span>
-                </button>
-            `;
+                atualizarTriggerCustomSelectLista(novoValor);
 
-            if (listasDisponiveis.length) {
-                html += `<div class="custom-select-divider"></div>`;
-                html += listasDisponiveis.map(l => `
-                    <button type="button"
-                            class="custom-select-option ${String(l.id) === String(valorAtual) ? 'selected' : ''}"
-                            data-value="${l.id}">
-                        <i class="fas fa-folder-open opt-icon"></i>
-                        <span class="opt-text">${escapeHtml(l.nome)}</span>
-                        <span class="opt-count">${l.total}</span>
-                    </button>
-                `).join('');
-            } else {
-                html += `
-                    <div class="custom-select-empty">
-                        Nenhuma lista criada ainda.
-                    </div>
-                `;
-            }
-
-            customAtualizacaoMenu.innerHTML = html;
-
-            atualizarTriggerCustomSelect(valorAtual);
-
-            customAtualizacaoMenu.querySelectorAll('.custom-select-option').forEach(opc => {
-                opc.addEventListener('click', () => {
-                    const novoValor = opc.dataset.value || '';
-                    selectAtualizacaoLista.value = novoValor;
-
-                    fecharCustomSelect();
-
-                    customAtualizacaoMenu.querySelectorAll('.custom-select-option')
-                        .forEach(o => o.classList.toggle('selected', o === opc));
-                    atualizarTriggerCustomSelect(novoValor);
-
-                    handleMudancaAtualizacao();
-                });
+                handleMudancaAtualizacao();
             });
-
-        } catch (err) {
-            console.error('[atualizacao] erro ao carregar listas:', err);
-        }
-    }
-
-    async function buscarStatsDaLista(listaId) {
-        try {
-            const { corretores } = await ApiClient.get(`/api/admin/listas/${listaId}/corretores`);
-
-            const mapa = {};
-            corretores.forEach(c => {
-                mapa[c.id] = {
-                    total:  c.total_na_lista,
-                    qualif: c.qualificados_na_lista,
-                    fila:   c.pendentes_na_lista
-                };
-            });
-            statsListaAtual = mapa;
-
-        } catch (err) {
-            console.error('[atualizacao] erro ao buscar stats:', err);
-            statsListaAtual = {};
-        }
-    }
-
-    function renderizarStatsNosCorretores() {
-        if (!corretoresSelector) return;
-
-        corretoresSelector.querySelectorAll('.corretor-check').forEach(label => {
-            const antigo = label.querySelector('.corretor-check-stats');
-            if (antigo) antigo.remove();
-
-            const input = label.querySelector('input[type="checkbox"]');
-            if (!input) return;
-
-            const corretorId = Number(input.value);
-            const stats = statsListaAtual[corretorId];
-
-            if (!listaAtualizacaoSelecionada || !stats) return;
-
-            const statsEl = document.createElement('div');
-            statsEl.className = 'corretor-check-stats';
-            statsEl.innerHTML = `
-                <div class="corretor-check-stat total">
-                    <strong>${stats.total}</strong>
-                    <small>total</small>
-                </div>
-                <div class="corretor-check-stat qualif">
-                    <strong>${stats.qualif}</strong>
-                    <small>qualif</small>
-                </div>
-                <div class="corretor-check-stat fila">
-                    <strong>${stats.fila}</strong>
-                    <small>fila</small>
-                </div>
-            `;
-            label.appendChild(statsEl);
         });
+
+    } catch (err) {
+        console.error('[atualizacao] erro ao carregar listas:', err);
+    }
+}
+
+function atualizarTriggerCustomSelectLista(valor) {
+    if (!customSelectListaText) return;
+
+    if (!valor) {
+        customSelectListaText.textContent = 'Selecione uma lista...';
+        return;
     }
 
-    function limparContatosColados() {
-        contatosDoArquivo = [];
-        if (arquivoCsv) arquivoCsv.value = '';
-        if (textoListaInput) textoListaInput.value = '';
-        if (fileDrop) fileDrop.classList.remove('has-file');
-        if (fileDropContent) fileDropContent.style.display = 'flex';
-        if (fileInfo) fileInfo.style.display = 'none';
-        if (previewContatos) previewContatos.style.display = 'none';
+    const lista = listasDisponiveis.find(l => String(l.id) === String(valor));
+    customSelectListaText.textContent = lista
+        ? `${lista.nome} · ${lista.total} contatos`
+        : 'Selecione uma lista...';
+}
+
+function fecharCustomSelectLista() {
+    if (customSelectListaMenu) customSelectListaMenu.classList.remove('open');
+    if (customSelectListaTrigger) customSelectListaTrigger.classList.remove('open');
+}
+
+async function buscarStatsDaLista(listaId) {
+    try {
+        const { corretores } = await ApiClient.get(`/api/admin/listas/${listaId}/corretores`);
+
+        const mapa = {};
+        corretores.forEach(c => {
+            mapa[c.id] = {
+                total:  c.total_na_lista,
+                qualif: c.qualificados_na_lista,
+                fila:   c.pendentes_na_lista
+            };
+        });
+        statsListaAtual = mapa;
+
+    } catch (err) {
+        console.error('[atualizacao] erro ao buscar stats:', err);
+        statsListaAtual = {};
+    }
+}
+
+function renderizarStatsNosCorretores() {
+    if (!corretoresSelector) return;
+
+    corretoresSelector.querySelectorAll('.corretor-check').forEach(label => {
+        const antigo = label.querySelector('.corretor-check-stats');
+        if (antigo) antigo.remove();
+
+        const input = label.querySelector('input[type="checkbox"]');
+        if (!input) return;
+
+        const corretorId = Number(input.value);
+        const stats = statsListaAtual[corretorId];
+
+        if (!listaAtualizacaoSelecionada || !stats) return;
+
+        const statsEl = document.createElement('div');
+        statsEl.className = 'corretor-check-stats';
+        statsEl.innerHTML = `
+            <div class="corretor-check-stat total">
+                <strong>${stats.total}</strong>
+                <small>total</small>
+            </div>
+            <div class="corretor-check-stat qualif">
+                <strong>${stats.qualif}</strong>
+                <small>qualif</small>
+            </div>
+            <div class="corretor-check-stat fila">
+                <strong>${stats.fila}</strong>
+                <small>fila</small>
+            </div>
+        `;
+        label.appendChild(statsEl);
+    });
+}
+
+function limparContatosColados() {
+    contatosDoArquivo = [];
+    if (arquivoCsv) arquivoCsv.value = '';
+    if (textoListaInput) textoListaInput.value = '';
+    if (fileDrop) fileDrop.classList.remove('has-file');
+    if (fileDropContent) fileDropContent.style.display = 'flex';
+    if (fileInfo) fileInfo.style.display = 'none';
+    if (previewContatos) previewContatos.style.display = 'none';
+}
+
+function atualizarBotaoSubirLista() {
+    if (!btnSubirLista) return;
+    if (listaAtualizacaoSelecionada) {
+        btnSubirLista.innerHTML = '<i class="fas fa-plus-circle"></i> Atualizar lista';
+    } else {
+        btnSubirLista.innerHTML = '<i class="fas fa-check"></i> Subir e distribuir';
+    }
+}
+
+async function handleMudancaAtualizacao() {
+    if (!selectListaAtualizar) return;
+
+    const valor = selectListaAtualizar.value;
+
+    if (selectListaAtualizarError) {
+        selectListaAtualizarError.textContent = '';
+        selectListaAtualizarError.classList.remove('visible');
     }
 
-    function atualizarBotaoSubirLista() {
-        if (!btnSubirLista) return;
-        if (listaAtualizacaoSelecionada) {
-            btnSubirLista.innerHTML = '<i class="fas fa-plus-circle"></i> Atualizar lista';
-        } else {
-            btnSubirLista.innerHTML = '<i class="fas fa-check"></i> Subir e distribuir';
-        }
-    }
+    limparContatosColados();
 
-    async function handleMudancaAtualizacao() {
-        if (!selectAtualizacaoLista) return;
-
-        const valor = selectAtualizacaoLista.value;
-
-        if (selectAtualizacaoListaError) {
-            selectAtualizacaoListaError.textContent = '';
-            selectAtualizacaoListaError.classList.remove('visible');
-        }
-
-        limparContatosColados();
-
-        if (!valor) {
-            listaAtualizacaoSelecionada = null;
-            statsListaAtual = {};
-
-            if (nomeListaInput) {
-                nomeListaInput.disabled = false;
-                nomeListaInput.value = '';
-            }
-            if (mensagemWhatsappInput) {
-                mensagemWhatsappInput.disabled = false;
-                mensagemWhatsappInput.value = '';
-            }
-
-            corretoresSelector.querySelectorAll('input[type="checkbox"]').forEach(chk => {
-                chk.checked = false;
-            });
-
-            atualizarBotaoSubirLista();
-            renderizarStatsNosCorretores();
-            atualizarPreviewRoleta();
-            return;
-        }
-
-        const lista = listasDisponiveis.find(l => String(l.id) === String(valor));
-        if (!lista) return;
-
-        listaAtualizacaoSelecionada = {
-            id: lista.id,
-            nome: lista.nome,
-            mensagem_whatsapp: lista.mensagem_whatsapp || ''
-        };
+    if (!valor) {
+        listaAtualizacaoSelecionada = null;
+        statsListaAtual = {};
 
         if (nomeListaInput) {
-            nomeListaInput.value = lista.nome;
-            nomeListaInput.disabled = true;
+            nomeListaInput.disabled = false;
+            nomeListaInput.value = '';
         }
         if (mensagemWhatsappInput) {
-            mensagemWhatsappInput.value = lista.mensagem_whatsapp || '';
-            mensagemWhatsappInput.disabled = true;
+            mensagemWhatsappInput.disabled = false;
+            mensagemWhatsappInput.value = '';
         }
 
         corretoresSelector.querySelectorAll('input[type="checkbox"]').forEach(chk => {
             chk.checked = false;
         });
 
-        await buscarStatsDaLista(lista.id);
-
         atualizarBotaoSubirLista();
         renderizarStatsNosCorretores();
         atualizarPreviewRoleta();
+        return;
     }
+
+    const lista = listasDisponiveis.find(l => String(l.id) === String(valor));
+    if (!lista) return;
+
+    listaAtualizacaoSelecionada = {
+        id: lista.id,
+        nome: lista.nome,
+        mensagem_whatsapp: lista.mensagem_whatsapp || ''
+    };
+
+    if (nomeListaInput) {
+        nomeListaInput.value = lista.nome;
+        nomeListaInput.disabled = true;
+    }
+    if (mensagemWhatsappInput) {
+        mensagemWhatsappInput.value = lista.mensagem_whatsapp || '';
+        mensagemWhatsappInput.disabled = true;
+    }
+
+    corretoresSelector.querySelectorAll('input[type="checkbox"]').forEach(chk => {
+        chk.checked = false;
+    });
+
+    await buscarStatsDaLista(lista.id);
+
+    atualizarBotaoSubirLista();
+    renderizarStatsNosCorretores();
+    atualizarPreviewRoleta();
+}
 
     /* =========================================================
        SELETOR DE CORRETORES
@@ -1651,15 +1655,26 @@ function renderizarCorretoresResumo(corretores) {
         if (enviandoLista) return;
         enviandoLista = true;
 
-        [nomeListaError, textoListaError, corretoresError, arquivoCsvError, selectAtualizacaoListaError]
-            .forEach(e => { if (e) { e.textContent = ''; e.classList.remove('visible'); } });
+        [nomeListaError, textoListaError, corretoresError, arquivoCsvError, selectListaAtualizarError]
+    .forEach(e => { if (e) { e.textContent = ''; e.classList.remove('visible'); } });
 
         nomeListaInput.classList.remove('error');
         textoListaInput.classList.remove('error');
 
-        const emModoAtualizacao = !!listaAtualizacaoSelecionada;
+        const emModoAtualizacao = modoUpload === 'atualizar' && !!listaAtualizacaoSelecionada;
 
         let nome;
+
+        // Se está no modo atualizar mas não escolheu lista
+if (modoUpload === 'atualizar' && !listaAtualizacaoSelecionada) {
+    if (selectListaAtualizarError) {
+        selectListaAtualizarError.textContent = 'Escolha uma lista para atualizar.';
+        selectListaAtualizarError.classList.add('visible');
+    }
+    enviandoLista = false;
+    return;
+}
+
         if (emModoAtualizacao) {
             nome = listaAtualizacaoSelecionada.nome;
         } else {
@@ -1733,7 +1748,9 @@ function renderizarCorretoresResumo(corretores) {
             if (mensagemWhatsappInput) mensagemWhatsappInput.value = '';
             if (nomeListaInput) nomeListaInput.disabled = false;
             if (mensagemWhatsappInput) mensagemWhatsappInput.disabled = false;
-            if (selectAtualizacaoLista) selectAtualizacaoLista.value = '';
+            if (selectListaAtualizar) selectListaAtualizar.value = '';
+            atualizarTriggerCustomSelectLista('');
+fecharCustomSelectLista();
 
             listaAtualizacaoSelecionada = null;
             statsListaAtual = {};
@@ -1750,7 +1767,6 @@ function renderizarCorretoresResumo(corretores) {
             atualizarBotaoSubirLista();
 
             await carregarListasParaAtualizacao();
-            atualizarTriggerCustomSelect('');
 
             setTimeout(() => {
                 document.querySelector('.nav-tab[data-tab="listas"]').click();
@@ -2524,23 +2540,35 @@ if (btnToggleTipo) {
             });
         }
 
-        // Custom select "É atualização de lista?"
-        if (customAtualizacaoTrigger && customAtualizacaoMenu) {
-            customAtualizacaoTrigger.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const aberto = customAtualizacaoMenu.classList.contains('open');
-                customAtualizacaoMenu.classList.toggle('open', !aberto);
-                customAtualizacaoTrigger.classList.toggle('open', !aberto);
-            });
+        // Abas Nova / Atualizar
+        uploadModeTabs.forEach(tab => {
+            tab.addEventListener('click', () => trocarModoUpload(tab.dataset.modoUpload));
+        });
 
-            document.addEventListener('click', (e) => {
-                if (customAtualizacao && !customAtualizacao.contains(e.target)) {
-                    fecharCustomSelect();
-                }
-            });
+        // Select de lista (modo atualizar)
+        if (customSelectListaTrigger && customSelectListaMenu) {
+    customSelectListaTrigger.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const aberto = customSelectListaMenu.classList.contains('open');
+        customSelectListaMenu.classList.toggle('open', !aberto);
+        customSelectListaTrigger.classList.toggle('open', !aberto);
+    });
 
-            document.addEventListener('keydown', (e) => {
-                if (e.key === 'Escape') fecharCustomSelect();
+    document.addEventListener('click', (e) => {
+        if (customSelectLista && !customSelectLista.contains(e.target)) {
+            fecharCustomSelectLista();
+        }
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') fecharCustomSelectLista();
+    });
+}
+
+        // Config avançada (colapsável)
+        if (btnToggleConfig && configAvancada) {
+            btnToggleConfig.addEventListener('click', () => {
+                configAvancada.classList.toggle('aberta');
             });
         }
 
@@ -2580,6 +2608,72 @@ if (btnToggleTipo) {
         iniciarPolling();
 
         console.log('[admin] Sistema pronto.');
+    }
+
+    /* =========================================================
+       UPLOAD — TROCA DE ABA (Nova vs Atualizar)
+       ========================================================= */
+
+    function trocarModoUpload(novoModo) {
+        if (novoModo === modoUpload) return;
+
+        modoUpload = novoModo;
+
+        // Atualiza visual das abas
+        uploadModeTabs.forEach(tab => {
+            tab.classList.toggle('active', tab.dataset.modoUpload === novoModo);
+        });
+
+        // Ajusta título
+        if (uploadTitulo) {
+            uploadTitulo.textContent = novoModo === 'atualizar'
+                ? 'Atualizar lista existente'
+                : 'Subir nova lista';
+        }
+
+        // Mostra/esconde campos
+        if (novoModo === 'atualizar') {
+            grupoSelecionarLista.style.display = 'flex';
+            grupoNomeLista.style.display = 'none';
+        } else {
+            grupoSelecionarLista.style.display = 'none';
+            grupoNomeLista.style.display = 'flex';
+        }
+
+        // Reseta a seleção de lista e os campos relacionados
+        if (selectListaAtualizar) selectListaAtualizar.value = '';
+atualizarTriggerCustomSelectLista('');
+fecharCustomSelectLista();
+customSelectListaMenu?.querySelectorAll('.custom-select-option')
+    .forEach(o => o.classList.remove('selected'));
+listaAtualizacaoSelecionada = null;
+statsListaAtual = {};
+
+        // Reabilita nome e whatsapp
+        if (nomeListaInput) {
+            nomeListaInput.disabled = false;
+            nomeListaInput.value = '';
+        }
+        if (mensagemWhatsappInput) {
+            mensagemWhatsappInput.disabled = false;
+            mensagemWhatsappInput.value = '';
+        }
+
+        limparContatosColados();
+
+        // Desmarca todos os corretores
+        corretoresSelector.querySelectorAll('input[type="checkbox"]').forEach(chk => {
+            chk.checked = false;
+        });
+
+        atualizarBotaoSubirLista();
+        renderizarStatsNosCorretores();
+        atualizarPreviewRoleta();
+
+        // Atualiza o select de listas pro modo "atualizar"
+        if (novoModo === 'atualizar') {
+            carregarListasParaAtualizacao();
+        }
     }
 
     init();
