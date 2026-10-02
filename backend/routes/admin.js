@@ -97,9 +97,9 @@ async function inserirLeadsEmMassa(client, listaId, contatos, idsValidos) {
         let p = 1;
 
         for (const { contato, corretorId } of chunk) {
-            values.push(`($${p++}, $${p++}, $${p++}, $${p++}, 'novo', NOW())`);
-            params.push(listaId, contato.nome, contato.telefone, corretorId);
-        }
+    values.push(`($${p++}, $${p++}, $${p++}, $${p++}, 'novo', NOW() AT TIME ZONE 'America/Sao_Paulo')`);
+    params.push(listaId, contato.nome, contato.telefone, corretorId);
+}
 
         await client.query(`
             INSERT INTO leads (lista_id, nome, telefone, corretor_id, status, distribuido_em)

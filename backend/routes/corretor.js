@@ -11,6 +11,27 @@ const router = express.Router();
 router.use(autenticar, apenasCorretor);
 
 /* =========================================================
+   HELPERS
+   ========================================================= */
+
+/**
+ * Remove o timezone de uma string de data.
+ * A coluna `agendamento_data` é `timestamp without time zone`,
+ * então o Postgres converte o "-03:00" pra UTC ao salvar, o que
+ * desloca a hora em 3h. Removendo o timezone aqui, salvamos a
+ * hora "crua" que o corretor digitou.
+ *
+ * Aceita:
+ *   "2026-11-09 10:50:00-03:00"  → "2026-11-09 10:50:00"
+ *   "2026-11-09T10:50:00.000Z"   → "2026-11-09T10:50:00.000"
+ *   "2026-11-09 10:50:00"        → "2026-11-09 10:50:00" (sem alteração)
+ */
+function limparTimezone(data) {
+    if (!data) return null;
+    return String(data).replace(/[+-]\d{2}:?\d{2}$|Z$/, '').trim();
+}
+
+/* =========================================================
    CONSTANTES
    ========================================================= */
 
@@ -83,13 +104,13 @@ async function reprocessarSemResposta() {
             if (!elegiveis.length) {
                 // Ninguém mais pode tentar → descarta automaticamente
                 await pool.query(`
-                    UPDATE leads
-                    SET status = 'descartado',
-                        resultado = 'sem_sucesso',
-                        decidido_em = NOW(),
-                        data_reenvio = NULL
-                    WHERE id = $1
-                `, [lead.id]);
+    UPDATE leads
+    SET status = 'descartado',
+        resultado = 'sem_sucesso',
+        decidido_em = NOW() AT TIME ZONE 'America/Sao_Paulo',
+        data_reenvio = NULL
+    WHERE id = $1
+`, [lead.id]);
 
                 console.log(`[lazy-check] lead ${lead.id} → descartado (todos já tentaram)`);
                 continue;
@@ -107,15 +128,15 @@ async function reprocessarSemResposta() {
 
             // 6. Redistribui pro novo corretor
             await pool.query(`
-                UPDATE leads
-                SET status = 'novo',
-                    corretor_id = $1,
-                    resultado = NULL,
-                    decidido_em = NULL,
-                    data_reenvio = NULL,
-                    distribuido_em = NOW()
-                WHERE id = $2
-            `, [novoCorretor, lead.id]);
+    UPDATE leads
+    SET status = 'novo',
+        corretor_id = $1,
+        resultado = NULL,
+        decidido_em = NULL,
+        data_reenvio = NULL,
+        distribuido_em = NOW() AT TIME ZONE 'America/Sao_Paulo'
+    WHERE id = $2
+`, [novoCorretor, lead.id]);
 
             console.log(`[lazy-check] lead ${lead.id} → redistribuído do corretor ${lead.corretor_id} pro ${novoCorretor}`);
         }
@@ -213,6 +234,9 @@ router.post('/leads/:id/resultado', async (req, res) => {
             return res.status(400).json({ erro: 'Informe a data e hora do agendamento.' });
         }
 
+        // ✅ Remove o timezone pra não deslocar 3h (coluna é timestamp without time zone)
+        const agendamentoLimpo = limparTimezone(agendamento_data);
+
         // Verifica se o lead pertence ao corretor
         const leadCheck = await client.query(
             'SELECT id FROM leads WHERE id = $1 AND corretor_id = $2',
@@ -241,16 +265,16 @@ router.post('/leads/:id/resultado', async (req, res) => {
 
         // Atualiza o lead
         await client.query(`
-            UPDATE leads
-            SET status = $1,
-                resultado = $2,
-                observacao = $3,
-                agendamento_data = $4,
-                agendamento_local = $5,
-                data_reenvio = $6,
-                decidido_em = NOW()
-            WHERE id = $7
-        `, [statusFinal, resultado, observacao, agendamento_data, agendamento_local, dataReenvio, leadId]);
+    UPDATE leads
+    SET status = $1,
+        resultado = $2,
+        observacao = $3,
+        agendamento_data = $4,
+        agendamento_local = $5,
+        data_reenvio = $6,
+        decidido_em = NOW() AT TIME ZONE 'America/Sao_Paulo'
+    WHERE id = $7
+`, [statusFinal, resultado, observacao, agendamentoLimpo, agendamento_local, dataReenvio, leadId]);
 
         // Registra no histórico
         await client.query(`
@@ -305,6 +329,9 @@ router.patch('/leads/:id/qualificacao', async (req, res) => {
             return res.status(400).json({ erro: 'Informe a data e hora do agendamento.' });
         }
 
+        // ✅ Remove o timezone pra não deslocar 3h (coluna é timestamp without time zone)
+        const agendamentoLimpo = limparTimezone(agendamento_data);
+
         const leadCheck = await client.query(
             `SELECT id FROM leads WHERE id = $1 AND corretor_id = $2 AND status IN ('qualificado', 'descartado', 'sem_resposta')`,
             [leadId, corretorId]
@@ -337,7 +364,7 @@ router.patch('/leads/:id/qualificacao', async (req, res) => {
                 agendamento_local = $4,
                 data_reenvio = $5
             WHERE id = $6
-        `, [resultado, statusFinal, agendamento_data, agendamento_local, dataReenvio, leadId]);
+        `, [resultado, statusFinal, agendamentoLimpo, agendamento_local, dataReenvio, leadId]);
 
         await client.query(`
             INSERT INTO historico (lead_id, corretor_id, acao, observacao)

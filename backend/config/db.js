@@ -12,6 +12,26 @@ if (!process.env.DATABASE_URL) {
     process.exit(1);
 }
 
+/* =========================================================
+   CORREÇÃO DE TIMEZONE (pg)
+   =========================================================
+   Por padrão, o driver `pg` interpreta colunas
+   `timestamp without time zone` como UTC, o que desloca
+   3h na exibição (Brasil = GMT-3).
+
+   Aqui forçamos ele a devolver a string CRUA do Postgres,
+   sem conversão. O frontend é quem formata.
+   ========================================================= */
+
+const { types } = require('pg');
+
+// OID 1114 = TIMESTAMP WITHOUT TIME ZONE
+// OID 1184 = TIMESTAMP WITH TIME ZONE
+// Sobrescreve o parser pra devolver a string crua em vez de Date object
+
+types.setTypeParser(1114, (str) => str);   // timestamp without time zone
+types.setTypeParser(1184, (str) => str);   // timestamptz (também sem converter)
+
 // Neon exige SSL
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,

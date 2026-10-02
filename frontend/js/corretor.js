@@ -430,7 +430,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (agendamentoAtual) {
             try {
-                const dt = new Date(String(agendamentoAtual).replace(' ', 'T'));
+                // ✅ BUG 3 — usa parse robusto
+                const dt = parseDataAgendamento(agendamentoAtual);
                 const ano    = dt.getFullYear();
                 const mes    = String(dt.getMonth() + 1).padStart(2, '0');
                 const dia    = String(dt.getDate()).padStart(2, '0');
@@ -500,7 +501,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (temErro) return;
 
-        const agendamentoDataISO = `${data} ${hora}:00`;
+        // ✅ BUG 3 — envia com timezone de São Paulo explícito
+        const agendamentoDataISO = `${data} ${hora}:00-03:00`;
 
         if (btnSalvarAgendamento) btnSalvarAgendamento.disabled = true;
         if (btnSalvarAgendamentoTexto) btnSalvarAgendamentoTexto.textContent = 'Salvando...';
@@ -531,7 +533,53 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 mostrarToast('Agendamento atualizado', 'success');
                 fecharModalAgendamento();
-                await carregarCarteira();
+
+                // ✅ BUG 1 — atualiza só o item da carteira (sem recarregar tudo)
+                const lead = leadsDaCarteiraAtual.find(l => Number(l.id) === Number(leadId));
+                if (lead) {
+                    lead.agendamento_data = agendamentoDataISO;
+                    lead.agendamento_local = local;
+                    lead.resultado = tag;
+                }
+
+                const itemBtn = document.querySelector(`.historico-item .tag-editavel[data-lead-id="${leadId}"]`);
+                if (itemBtn) {
+                    const card = itemBtn.closest('.historico-item');
+
+                    // Atualiza a tag visual
+                    itemBtn.dataset.resultado = tag;
+                    itemBtn.className = `historico-item-tag ${tagCor(tag)} tag-editavel`;
+                    itemBtn.innerHTML = `${escapeHtml(tagParaTexto(tag))} <i class="fas fa-pen"></i>`;
+
+                    // Atualiza o status do card
+                    const ehDescartado = ['sem_interesse', 'telefone_invalido', 'sem_resposta'].includes(tag);
+                    card.classList.toggle('descartado', ehDescartado);
+
+                    // Remove a linha de agendamento antiga
+                    const linhaAntiga = card.querySelector('.historico-item-agendamento');
+                    if (linhaAntiga) linhaAntiga.remove();
+
+                    // Adiciona a nova
+                    const dtAg = parseDataAgendamento(agendamentoDataISO);
+                    const dtAgStr = dtAg.toLocaleString('pt-BR', {
+                        day: '2-digit', month: '2-digit', year: '2-digit',
+                        hour: '2-digit', minute: '2-digit'
+                    });
+
+                    const linhaNova = document.createElement('div');
+                    linhaNova.className = 'historico-item-agendamento';
+                    linhaNova.innerHTML = `
+                        <i class="fas fa-calendar-alt"></i>
+                        <span>${dtAgStr}${local ? ` · ${escapeHtml(local)}` : ''}</span>
+                    `;
+
+                    const obsAntiga = card.querySelector('.historico-item-obs');
+                    if (obsAntiga) {
+                        card.insertBefore(linhaNova, obsAntiga);
+                    } else {
+                        card.appendChild(linhaNova);
+                    }
+                }
             }
 
         } catch (err) {
@@ -625,17 +673,93 @@ document.addEventListener('DOMContentLoaded', () => {
         await carregarCarteira();
     }
 
-    async function carregarCarteira() {
+    // ✅ BUG 2 — renderização extraída em função separada
+    // pra poder atualizar só a lista sem recriar o input de busca
+    function renderizarListaLeads(leads) {
+        const leadsContainer = document.getElementById('carteiraLeadsLista');
+        if (!leadsContainer) return;
+
+        if (!leads.length) {
+            leadsContainer.innerHTML = `
+                <div class="historico-vazio" style="padding: 1.5rem;">
+                    <i class="fas fa-search"></i>
+                    <p>Nenhum cliente encontrado.</p>
+                </div>
+            `;
+            return;
+        }
+
+        leadsContainer.innerHTML = leads.map(item => {
+            const classeCor = tagCor(item.resultado);
+            const ehDescartado = item.status === 'descartado' || item.status === 'sem_resposta';
+            const data = new Date(item.decidido_em).toLocaleString('pt-BR', {
+                day: '2-digit', month: '2-digit', year: '2-digit',
+                hour: '2-digit', minute: '2-digit'
+            });
+
+            let linhaAgendamento = '';
+            if (item.agendamento_data) {
+                // ✅ BUG 3 — parse robusto
+                const dtAg = parseDataAgendamento(item.agendamento_data);
+                const dtAgStr = dtAg.toLocaleString('pt-BR', {
+                    day: '2-digit', month: '2-digit', year: '2-digit',
+                    hour: '2-digit', minute: '2-digit'
+                });
+                linhaAgendamento = `
+                    <div class="historico-item-agendamento">
+                        <i class="fas fa-calendar-alt"></i>
+                        <span>${dtAgStr}${item.agendamento_local ? ` · ${escapeHtml(item.agendamento_local)}` : ''}</span>
+                    </div>
+                `;
+            }
+
+            return `
+                <div class="historico-item ${ehDescartado ? 'descartado' : ''}">
+                    <div class="historico-item-top">
+                        <span class="historico-item-nome">${escapeHtml(item.nome)}</span>
+                        <button
+                            class="historico-item-tag ${classeCor} tag-editavel"
+                            data-lead-id="${item.id}"
+                            data-resultado="${item.resultado}"
+                            title="Clique para alterar"
+                        >
+                            ${escapeHtml(tagParaTexto(item.resultado))}
+                            <i class="fas fa-pen"></i>
+                        </button>
+                    </div>
+                    <div class="historico-item-info">
+                        <span><i class="fas fa-phone"></i> ${escapeHtml(Acoes.formatarTelefone(item.telefone))}</span>
+                        <span><i class="fas fa-clock"></i> ${data}</span>
+                    </div>
+                    ${linhaAgendamento}
+                    ${item.observacao
+                        ? `<div class="historico-item-obs">
+                               <i class="fas fa-comment-dots"></i>
+                               <span>${escapeHtml(item.observacao)}</span>
+                           </div>`
+                        : ''}
+                </div>
+            `;
+        }).join('');
+
+        leadsContainer.querySelectorAll('.tag-editavel').forEach(btn => {
+            btn.addEventListener('click', () => abrirSeletorTag(btn));
+        });
+    }
+
+    async function carregarCarteira(silencioso = false) {
         if (!carteiraAtual) return;
 
         const { listaId, busca } = carteiraAtual;
 
-        historicoLista.innerHTML = `
-            <div class="historico-loading">
-                <i class="fas fa-circle-notch fa-spin"></i>
-                <p>Carregando carteira...</p>
-            </div>
-        `;
+        if (!silencioso) {
+            historicoLista.innerHTML = `
+                <div class="historico-loading">
+                    <i class="fas fa-circle-notch fa-spin"></i>
+                    <p>Carregando carteira...</p>
+                </div>
+            `;
+        }
 
         try {
             const url = busca
@@ -685,83 +809,46 @@ document.addEventListener('DOMContentLoaded', () => {
                 const valor = e.target.value.trim();
                 timeoutBusca = setTimeout(() => {
                     carteiraAtual.busca = valor;
-                    carregarCarteira();
-                }, 300);
+                    // ✅ BUG 2 — atualiza só a lista de leads (input mantém o foco)
+                    atualizarListaLeadsCarteira();
+                }, 600);
             });
 
-            const leadsContainer = document.getElementById('carteiraLeadsLista');
-
-            if (!leads.length) {
-                leadsContainer.innerHTML = `
-                    <div class="historico-vazio" style="padding: 1.5rem;">
-                        <i class="fas fa-search"></i>
-                        <p>Nenhum cliente encontrado.</p>
-                    </div>
-                `;
-                return;
-            }
-
-            leadsContainer.innerHTML = leads.map(item => {
-                const classeCor = tagCor(item.resultado);
-                const ehDescartado = item.status === 'descartado' || item.status === 'sem_resposta';
-                const data = new Date(item.decidido_em).toLocaleString('pt-BR', {
-                    day: '2-digit', month: '2-digit', year: '2-digit',
-                    hour: '2-digit', minute: '2-digit'
-                });
-
-                let linhaAgendamento = '';
-                if (item.agendamento_data) {
-                    const dtAg = new Date(String(item.agendamento_data).replace(' ', 'T'));
-                    const dtAgStr = dtAg.toLocaleString('pt-BR', {
-                        day: '2-digit', month: '2-digit', year: '2-digit',
-                        hour: '2-digit', minute: '2-digit'
-                    });
-                    linhaAgendamento = `
-                        <div class="historico-item-agendamento">
-                            <i class="fas fa-calendar-alt"></i>
-                            <span>${dtAgStr}${item.agendamento_local ? ` · ${escapeHtml(item.agendamento_local)}` : ''}</span>
-                        </div>
-                    `;
-                }
-
-                return `
-                    <div class="historico-item ${ehDescartado ? 'descartado' : ''}">
-                        <div class="historico-item-top">
-                            <span class="historico-item-nome">${escapeHtml(item.nome)}</span>
-                            <button
-                                class="historico-item-tag ${classeCor} tag-editavel"
-                                data-lead-id="${item.id}"
-                                data-resultado="${item.resultado}"
-                                title="Clique para alterar"
-                            >
-                                ${escapeHtml(tagParaTexto(item.resultado))}
-                                <i class="fas fa-pen"></i>
-                            </button>
-                        </div>
-                        <div class="historico-item-info">
-                            <span><i class="fas fa-phone"></i> ${escapeHtml(Acoes.formatarTelefone(item.telefone))}</span>
-                            <span><i class="fas fa-clock"></i> ${data}</span>
-                        </div>
-                        ${linhaAgendamento}
-                        ${item.observacao
-                            ? `<div class="historico-item-obs">
-                                   <i class="fas fa-comment-dots"></i>
-                                   <span>${escapeHtml(item.observacao)}</span>
-                               </div>`
-                            : ''}
-                    </div>
-                `;
-            }).join('');
-
-            leadsContainer.querySelectorAll('.tag-editavel').forEach(btn => {
-                btn.addEventListener('click', () => abrirSeletorTag(btn));
-            });
+            // ✅ BUG 2 — renderiza a lista usando a função extraída
+            renderizarListaLeads(leads);
 
         } catch (err) {
             console.error('[historico-carteira] erro:', err);
             historicoLista.innerHTML = '';
             if (historicoVazio) historicoVazio.style.display = 'block';
             if (historicoResumo) historicoResumo.textContent = 'Erro ao carregar carteira.';
+        }
+    }
+
+    // ✅ BUG 2 — busca silenciosa (não recria o input, não perde foco)
+    async function atualizarListaLeadsCarteira() {
+        if (!carteiraAtual) return;
+
+        const { listaId, busca } = carteiraAtual;
+
+        try {
+            const url = busca
+                ? `/api/corretor/historico/carteiras/${listaId}?busca=${encodeURIComponent(busca)}`
+                : `/api/corretor/historico/carteiras/${listaId}`;
+
+            const { lista, leads } = await ApiClient.get(url);
+            leadsDaCarteiraAtual = leads;
+
+            if (historicoResumo) {
+                historicoResumo.textContent = `${lista.nome} · ${leads.length} ${
+                    leads.length === 1 ? 'cliente' : 'clientes'
+                }`;
+            }
+
+            renderizarListaLeads(leads);
+
+        } catch (err) {
+            console.error('[busca-carteira] erro:', err);
         }
     }
 
@@ -881,7 +968,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     mostrarToast(`Alterado para: ${tagParaTexto(novoResultado)}`, 'success');
                     editor.remove();
-                    await carregarCarteira();
+
+                    // ✅ BUG 1 — atualiza só o item clicado, sem recarregar a lista
+                    btn.dataset.resultado = novoResultado;
+                    btn.className = `historico-item-tag ${tagCor(novoResultado)} tag-editavel`;
+                    btn.innerHTML = `${escapeHtml(tagParaTexto(novoResultado))} <i class="fas fa-pen"></i>`;
+
+                    const lead = leadsDaCarteiraAtual.find(l => Number(l.id) === Number(leadId));
+                    if (lead) {
+                        lead.resultado = novoResultado;
+                        lead.status = ['sem_interesse', 'telefone_invalido', 'sem_resposta'].includes(novoResultado)
+                            ? 'descartado'
+                            : 'qualificado';
+                    }
+
+                    const card = btn.closest('.historico-item');
+                    if (card && lead) {
+                        const ehDescartado = lead.status === 'descartado';
+                        card.classList.toggle('descartado', ehDescartado);
+                    }
 
                 } catch (err) {
                     console.error('[editar-tag] erro:', err);
@@ -902,7 +1007,8 @@ document.addEventListener('DOMContentLoaded', () => {
             agendamentos.forEach(ag => {
                 if (!ag.agendamento_data) return;
 
-                const dataAgendada = new Date(String(ag.agendamento_data).replace(' ', 'T'));
+                // ✅ BUG 3 — parse robusto
+                const dataAgendada = parseDataAgendamento(ag.agendamento_data);
                 const diffMin = Math.round((dataAgendada - agora) / 60000);
 
                 const chave30 = `30min-${ag.id}`;
@@ -1025,7 +1131,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (!lead.agendamento_data) return;
 
-        const dt = new Date(String(lead.agendamento_data).replace(' ', 'T'));
+        // ✅ BUG 3 — parse robusto
+        const dt = parseDataAgendamento(lead.agendamento_data);
         const dataStr = dt.toLocaleString('pt-BR', {
             day: '2-digit', month: '2-digit', year: '2-digit',
             hour: '2-digit', minute: '2-digit'
@@ -1088,6 +1195,55 @@ document.addEventListener('DOMContentLoaded', () => {
         const [ano, mes, dia] = dataStr.split('-');
         return `${dia}/${mes} às ${horaStr}`;
     }
+
+    // ✅ BUG 3 — parse robusto de datas de agendamento
+    // Se vier com timezone (ex: "-03:00" ou "Z"), respeita
+    // Se vier sem (ex: "2026-11-09 07:50:00"), interpreta como horário local do Brasil
+    function parseDataAgendamento(valor) {
+    if (!valor) return null;
+
+    const s = String(valor);
+
+    // Caso 1: formato "2026-11-09T10:50:00.000Z" (ISO com Z)
+    // → Postgres sem timezone + Node serializando. A hora "crua" está em UTC no
+    //   offset do Brasil, então basta reconstruir com os componentes da string.
+    const matchISO = s.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?(?:\.\d+)?Z$/);
+    if (matchISO) {
+        const [, ano, mes, dia, hora, min, seg] = matchISO;
+        // Reconstrói como horário local, ignorando o Z
+        return new Date(
+            Number(ano),
+            Number(mes) - 1,
+            Number(dia),
+            Number(hora),
+            Number(min),
+            Number(seg || 0)
+        );
+    }
+
+    // Caso 2: formato "2026-11-09 10:50:00" ou "2026-11-09T10:50:00" sem timezone
+    const matchLocal = s.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?$/);
+    if (matchLocal) {
+        const [, ano, mes, dia, hora, min, seg] = matchLocal;
+        return new Date(
+            Number(ano),
+            Number(mes) - 1,
+            Number(dia),
+            Number(hora),
+            Number(min),
+            Number(seg || 0)
+        );
+    }
+
+    // Caso 3: formato com timezone explícito ("-03:00", "+00:00")
+    // → deixa o Date resolver normalmente
+    if (/[+-]\d{2}:?\d{2}$/.test(s)) {
+        return new Date(s);
+    }
+
+    // Fallback
+    return new Date(s);
+}
 
     function escapeHtml(str) {
         return String(str || '')
