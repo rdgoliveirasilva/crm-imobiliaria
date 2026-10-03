@@ -97,7 +97,7 @@ async function inserirLeadsEmMassa(client, listaId, contatos, idsValidos) {
         let p = 1;
 
         for (const { contato, corretorId } of chunk) {
-    values.push(`($${p++}, $${p++}, $${p++}, $${p++}, 'novo', NOW() AT TIME ZONE 'America/Sao_Paulo')`);
+    values.push(`($${p++}, $${p++}, $${p++}, $${p++}, 'novo', NOW())`);
     params.push(listaId, contato.nome, contato.telefone, corretorId);
 }
 

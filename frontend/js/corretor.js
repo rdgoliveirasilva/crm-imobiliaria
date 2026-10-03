@@ -430,7 +430,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (agendamentoAtual) {
             try {
-                // ✅ BUG 3 — usa parse robusto
                 const dt = parseDataAgendamento(agendamentoAtual);
                 const ano    = dt.getFullYear();
                 const mes    = String(dt.getMonth() + 1).padStart(2, '0');
@@ -501,7 +500,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (temErro) return;
 
-        // ✅ BUG 3 — envia com timezone de São Paulo explícito
         const agendamentoDataISO = `${data} ${hora}:00-03:00`;
 
         if (btnSalvarAgendamento) btnSalvarAgendamento.disabled = true;
@@ -534,7 +532,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 mostrarToast('Agendamento atualizado', 'success');
                 fecharModalAgendamento();
 
-                // ✅ BUG 1 — atualiza só o item da carteira (sem recarregar tudo)
                 const lead = leadsDaCarteiraAtual.find(l => Number(l.id) === Number(leadId));
                 if (lead) {
                     lead.agendamento_data = agendamentoDataISO;
@@ -546,20 +543,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (itemBtn) {
                     const card = itemBtn.closest('.historico-item');
 
-                    // Atualiza a tag visual
                     itemBtn.dataset.resultado = tag;
                     itemBtn.className = `historico-item-tag ${tagCor(tag)} tag-editavel`;
                     itemBtn.innerHTML = `${escapeHtml(tagParaTexto(tag))} <i class="fas fa-pen"></i>`;
 
-                    // Atualiza o status do card
                     const ehDescartado = ['sem_interesse', 'telefone_invalido', 'sem_resposta'].includes(tag);
                     card.classList.toggle('descartado', ehDescartado);
 
-                    // Remove a linha de agendamento antiga
                     const linhaAntiga = card.querySelector('.historico-item-agendamento');
                     if (linhaAntiga) linhaAntiga.remove();
 
-                    // Adiciona a nova
                     const dtAg = parseDataAgendamento(agendamentoDataISO);
                     const dtAgStr = dtAg.toLocaleString('pt-BR', {
                         day: '2-digit', month: '2-digit', year: '2-digit',
@@ -673,8 +666,6 @@ document.addEventListener('DOMContentLoaded', () => {
         await carregarCarteira();
     }
 
-    // ✅ BUG 2 — renderização extraída em função separada
-    // pra poder atualizar só a lista sem recriar o input de busca
     function renderizarListaLeads(leads) {
         const leadsContainer = document.getElementById('carteiraLeadsLista');
         if (!leadsContainer) return;
@@ -692,14 +683,14 @@ document.addEventListener('DOMContentLoaded', () => {
         leadsContainer.innerHTML = leads.map(item => {
             const classeCor = tagCor(item.resultado);
             const ehDescartado = item.status === 'descartado' || item.status === 'sem_resposta';
-            const data = new Date(item.decidido_em).toLocaleString('pt-BR', {
+            const data = parseDataSegura(item.decidido_em)?.toLocaleString('pt-BR', {
+                timeZone: 'America/Sao_Paulo',
                 day: '2-digit', month: '2-digit', year: '2-digit',
                 hour: '2-digit', minute: '2-digit'
-            });
+            }) || '—';
 
             let linhaAgendamento = '';
             if (item.agendamento_data) {
-                // ✅ BUG 3 — parse robusto
                 const dtAg = parseDataAgendamento(item.agendamento_data);
                 const dtAgStr = dtAg.toLocaleString('pt-BR', {
                     day: '2-digit', month: '2-digit', year: '2-digit',
@@ -809,12 +800,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 const valor = e.target.value.trim();
                 timeoutBusca = setTimeout(() => {
                     carteiraAtual.busca = valor;
-                    // ✅ BUG 2 — atualiza só a lista de leads (input mantém o foco)
                     atualizarListaLeadsCarteira();
                 }, 600);
             });
 
-            // ✅ BUG 2 — renderiza a lista usando a função extraída
             renderizarListaLeads(leads);
 
         } catch (err) {
@@ -825,7 +814,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // ✅ BUG 2 — busca silenciosa (não recria o input, não perde foco)
     async function atualizarListaLeadsCarteira() {
         if (!carteiraAtual) return;
 
@@ -969,7 +957,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     mostrarToast(`Alterado para: ${tagParaTexto(novoResultado)}`, 'success');
                     editor.remove();
 
-                    // ✅ BUG 1 — atualiza só o item clicado, sem recarregar a lista
                     btn.dataset.resultado = novoResultado;
                     btn.className = `historico-item-tag ${tagCor(novoResultado)} tag-editavel`;
                     btn.innerHTML = `${escapeHtml(tagParaTexto(novoResultado))} <i class="fas fa-pen"></i>`;
@@ -1007,7 +994,6 @@ document.addEventListener('DOMContentLoaded', () => {
             agendamentos.forEach(ag => {
                 if (!ag.agendamento_data) return;
 
-                // ✅ BUG 3 — parse robusto
                 const dataAgendada = parseDataAgendamento(ag.agendamento_data);
                 const diffMin = Math.round((dataAgendada - agora) / 60000);
 
@@ -1020,7 +1006,11 @@ document.addEventListener('DOMContentLoaded', () => {
                         tipo: 'warning',
                         titulo: `Faltam 30min — ${ag.nome}`,
                         msg: `${ag.resultado === 'agendado' ? 'Agendamento' : 'Retorno'} às ${
-                            dataAgendada.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+                            dataAgendada.toLocaleTimeString('pt-BR', {
+                                timeZone: 'America/Sao_Paulo',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                            })
                         }${ag.agendamento_local ? ` · ${ag.agendamento_local}` : ''}`,
                         leadId: ag.id
                     });
@@ -1131,7 +1121,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (!lead.agendamento_data) return;
 
-        // ✅ BUG 3 — parse robusto
         const dt = parseDataAgendamento(lead.agendamento_data);
         const dataStr = dt.toLocaleString('pt-BR', {
             day: '2-digit', month: '2-digit', year: '2-digit',
@@ -1164,6 +1153,39 @@ document.addEventListener('DOMContentLoaded', () => {
     /* =========================================================
        UTILS
        ========================================================= */
+
+    /* =========================================================
+       HELPER DE DATA — normaliza timezone
+       Aceita:
+         - "2026-10-02 22:59:37.289+00"  → UTC explícito
+         - "2026-10-02 22:59:37"          → SEM timezone (colunas migradas: UTC)
+         - "2026-10-02T22:59:37Z"         → já ISO com Z
+         - Date                            → retorna direto
+       ========================================================= */
+    function parseDataSegura(iso) {
+        if (!iso) return null;
+
+        if (iso instanceof Date) return iso;
+
+        let str = String(iso).trim();
+        if (!str || str === 'null' || str === 'undefined') return null;
+
+        str = str.replace(' ', 'T');
+
+        if (str.endsWith('Z')) return new Date(str);
+
+        const match = str.match(/([+-])(\d{2})(:?(\d{2}))?$/);
+        if (match) {
+            const sinal = match[1];
+            const hh = match[2];
+            const mm = match[4] || '00';
+            str = str.replace(/([+-]\d{2})(:?\d{2})?$/, sinal + hh + ':' + mm);
+            return new Date(str);
+        }
+
+        return new Date(str + 'Z');
+    }
+
     function tagParaTexto(tag) {
         const mapa = {
             agendado:          'Agendado',
@@ -1187,8 +1209,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function dataCurta(iso) {
         if (!iso) return '—';
-        const d = new Date(iso);
-        return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+        const d = parseDataSegura(iso);
+        if (!d || isNaN(d.getTime())) return '—';
+        return d.toLocaleDateString('pt-BR', {
+            timeZone: 'America/Sao_Paulo',
+            day: '2-digit',
+            month: '2-digit'
+        });
     }
 
     function formatarDataHora(dataStr, horaStr) {
@@ -1196,54 +1223,43 @@ document.addEventListener('DOMContentLoaded', () => {
         return `${dia}/${mes} às ${horaStr}`;
     }
 
-    // ✅ BUG 3 — parse robusto de datas de agendamento
-    // Se vier com timezone (ex: "-03:00" ou "Z"), respeita
-    // Se vier sem (ex: "2026-11-09 07:50:00"), interpreta como horário local do Brasil
     function parseDataAgendamento(valor) {
-    if (!valor) return null;
+        if (!valor) return null;
 
-    const s = String(valor);
+        const s = String(valor);
 
-    // Caso 1: formato "2026-11-09T10:50:00.000Z" (ISO com Z)
-    // → Postgres sem timezone + Node serializando. A hora "crua" está em UTC no
-    //   offset do Brasil, então basta reconstruir com os componentes da string.
-    const matchISO = s.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?(?:\.\d+)?Z$/);
-    if (matchISO) {
-        const [, ano, mes, dia, hora, min, seg] = matchISO;
-        // Reconstrói como horário local, ignorando o Z
-        return new Date(
-            Number(ano),
-            Number(mes) - 1,
-            Number(dia),
-            Number(hora),
-            Number(min),
-            Number(seg || 0)
-        );
-    }
+        const matchISO = s.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?(?:\.\d+)?Z$/);
+        if (matchISO) {
+            const [, ano, mes, dia, hora, min, seg] = matchISO;
+            return new Date(
+                Number(ano),
+                Number(mes) - 1,
+                Number(dia),
+                Number(hora),
+                Number(min),
+                Number(seg || 0)
+            );
+        }
 
-    // Caso 2: formato "2026-11-09 10:50:00" ou "2026-11-09T10:50:00" sem timezone
-    const matchLocal = s.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?$/);
-    if (matchLocal) {
-        const [, ano, mes, dia, hora, min, seg] = matchLocal;
-        return new Date(
-            Number(ano),
-            Number(mes) - 1,
-            Number(dia),
-            Number(hora),
-            Number(min),
-            Number(seg || 0)
-        );
-    }
+        const matchLocal = s.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?$/);
+        if (matchLocal) {
+            const [, ano, mes, dia, hora, min, seg] = matchLocal;
+            return new Date(
+                Number(ano),
+                Number(mes) - 1,
+                Number(dia),
+                Number(hora),
+                Number(min),
+                Number(seg || 0)
+            );
+        }
 
-    // Caso 3: formato com timezone explícito ("-03:00", "+00:00")
-    // → deixa o Date resolver normalmente
-    if (/[+-]\d{2}:?\d{2}$/.test(s)) {
+        if (/[+-]\d{2}:?\d{2}$/.test(s)) {
+            return new Date(s);
+        }
+
         return new Date(s);
     }
-
-    // Fallback
-    return new Date(s);
-}
 
     function escapeHtml(str) {
         return String(str || '')

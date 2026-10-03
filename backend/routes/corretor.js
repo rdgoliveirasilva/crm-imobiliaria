@@ -107,7 +107,7 @@ async function reprocessarSemResposta() {
     UPDATE leads
     SET status = 'descartado',
         resultado = 'sem_sucesso',
-        decidido_em = NOW() AT TIME ZONE 'America/Sao_Paulo',
+        decidido_em = NOW(),
         data_reenvio = NULL
     WHERE id = $1
 `, [lead.id]);
@@ -134,7 +134,7 @@ async function reprocessarSemResposta() {
         resultado = NULL,
         decidido_em = NULL,
         data_reenvio = NULL,
-        distribuido_em = NOW() AT TIME ZONE 'America/Sao_Paulo'
+        distribuido_em = NOW()
     WHERE id = $2
 `, [novoCorretor, lead.id]);
 
@@ -272,7 +272,7 @@ router.post('/leads/:id/resultado', async (req, res) => {
         agendamento_data = $4,
         agendamento_local = $5,
         data_reenvio = $6,
-        decidido_em = NOW() AT TIME ZONE 'America/Sao_Paulo'
+        decidido_em = NOW()
     WHERE id = $7
 `, [statusFinal, resultado, observacao, agendamentoLimpo, agendamento_local, dataReenvio, leadId]);
 

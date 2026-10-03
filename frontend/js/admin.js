@@ -199,6 +199,7 @@ const btnToggleTipoText = $('btnToggleTipoText');
     /* =========================================================
        UTILS
        ========================================================= */
+
     function escapeHtml(str) {
         return String(str || '')
             .replace(/&/g, '&amp;')
@@ -220,46 +221,90 @@ const btnToggleTipoText = $('btnToggleTipoText');
 
     function formatarTelefone(tel) {
         const n = String(tel).replace(/\D/g, '');
-        if (n.length === 13) return `+${n.slice(0,2)} (${n.slice(2,4)}) ${n.slice(4,9)}-${n.slice(9)}`;
-        if (n.length === 11) return `(${n.slice(0,2)}) ${n.slice(2,7)}-${n.slice(7)}`;
-        if (n.length === 10) return `(${n.slice(0,2)}) ${n.slice(2,6)}-${n.slice(6)}`;
+        if (n.length === 13) return '+' + n.slice(0,2) + ' (' + n.slice(2,4) + ') ' + n.slice(4,9) + '-' + n.slice(9);
+        if (n.length === 11) return '(' + n.slice(0,2) + ') ' + n.slice(2,7) + '-' + n.slice(7);
+        if (n.length === 10) return '(' + n.slice(0,2) + ') ' + n.slice(2,6) + '-' + n.slice(6);
         return tel;
+    }
+
+    /**
+     * Normaliza qualquer timestamp vindo do backend pra formato ISO completo.
+     * Aceita: "2026-10-02 22:59:37.289+00", "2026-10-02 22:59:37", "2026-10-02T22:59:37Z"
+     */
+    function normalizarDataISO(iso) {
+        if (!iso) return null;
+
+        let str = String(iso).trim();
+        if (!str || str === 'null' || str === 'undefined') return null;
+
+        // Converte Date pra string ISO
+        if (typeof iso === 'object' && iso instanceof Date) {
+            return iso.toISOString();
+        }
+
+        // Troca espaço por T
+        str = str.replace(' ', 'T');
+
+        // Se já tem Z no final, ok
+        if (str.endsWith('Z')) return str;
+
+        // Detecta timezone no final: +HH, +HHMM, +HH:MM, -HH, etc
+        const match = str.match(/([+-])(\d{2})(:?(\d{2}))?$/);
+        if (match) {
+            const sinal = match[1];
+            const hh = match[2];
+            const mm = match[4] || '00';
+            // Remove o timezone atual e recoloca normalizado
+            str = str.replace(/([+-]\d{2})(:?\d{2})?$/, sinal + hh + ':' + mm);
+            return str;
+        }
+
+        // Sem timezone: assume UTC
+        return str + 'Z';
     }
 
     function dataCurta(iso) {
         if (!iso) return '—';
-        const d = new Date(iso);
+        const normalizado = normalizarDataISO(iso);
+        if (!normalizado) return '—';
+        const d = new Date(normalizado);
+        if (isNaN(d.getTime())) return '—';
+
         return d.toLocaleString('pt-BR', {
-            day: '2-digit', month: '2-digit', year: '2-digit'
+            timeZone: 'America/Sao_Paulo',
+            day: '2-digit',
+            month: '2-digit',
+            year: '2-digit'
         });
     }
 
     function formatarUltimoAcesso(iso) {
         if (!iso) return 'Nunca acessou';
 
-        const d = new Date(iso);
-        const agora = new Date();
+        const normalizado = normalizarDataISO(iso);
+        if (!normalizado) return 'Nunca acessou';
 
-        const inicioHoje = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate());
-        const inicioOntem = new Date(inicioHoje);
-        inicioOntem.setDate(inicioOntem.getDate() - 1);
+        const d = new Date(normalizado);
+        if (isNaN(d.getTime())) return 'Nunca acessou';
 
-        const hora = d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        const OPCOES_DATA = { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', year: '2-digit' };
+        const OPCOES_HORA = { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit' };
 
-        if (d >= inicioHoje) {
-            return `hoje às ${hora}`;
-        } else if (d >= inicioOntem) {
-            return `ontem às ${hora}`;
-        } else {
-            const data = d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
-            return `${data} às ${hora}`;
-        }
+        const agora   = new Date();
+        const hojeSP  = agora.toLocaleDateString('pt-BR', OPCOES_DATA);
+        const ontemSP = new Date(agora.getTime() - 86400000).toLocaleDateString('pt-BR', OPCOES_DATA);
+        const dataSP  = d.toLocaleDateString('pt-BR', OPCOES_DATA);
+        const hora    = d.toLocaleTimeString('pt-BR', OPCOES_HORA);
+
+        if (dataSP === hojeSP) return 'hoje às ' + hora;
+        if (dataSP === ontemSP) return 'ontem às ' + hora;
+        return dataSP + ' às ' + hora;
     }
 
     function formatarTamanho(bytes) {
-        if (bytes < 1024) return `${bytes} B`;
-        if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-        return `${(bytes / 1024 / 1024).toFixed(2)} MB`;
+        if (bytes < 1024) return bytes + ' B';
+        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+        return (bytes / 1024 / 1024).toFixed(2) + ' MB';
     }
 
     function tagParaTexto(tag) {
