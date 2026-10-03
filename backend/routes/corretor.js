@@ -154,18 +154,35 @@ async function reprocessarSemResposta() {
 router.get('/proximo-lead', async (req, res) => {
     try {
         const corretorId = req.usuario.id;
+        const listaId = req.query.lista_id ? Number(req.query.lista_id) : null;
 
-        // 🔄 Lazy check em background (não bloqueia a resposta)
         reprocessarSemResposta();
 
-        const result = await pool.query(`
-            SELECT l.*, li.nome AS lista_nome, li.mensagem_whatsapp AS lista_mensagem
-            FROM leads l
-            LEFT JOIN listas li ON li.id = l.lista_id
-            WHERE l.corretor_id = $1 AND l.status = 'novo'
-            ORDER BY l.id ASC
-            LIMIT 1
-        `, [corretorId]);
+        let query, params;
+
+        if (listaId) {
+            query = `
+                SELECT l.*, li.nome AS lista_nome, li.mensagem_whatsapp AS lista_mensagem
+                FROM leads l
+                LEFT JOIN listas li ON li.id = l.lista_id
+                WHERE l.corretor_id = $1 AND l.status = 'novo' AND l.lista_id = $2
+                ORDER BY l.id ASC
+                LIMIT 1
+            `;
+            params = [corretorId, listaId];
+        } else {
+            query = `
+                SELECT l.*, li.nome AS lista_nome, li.mensagem_whatsapp AS lista_mensagem
+                FROM leads l
+                LEFT JOIN listas li ON li.id = l.lista_id
+                WHERE l.corretor_id = $1 AND l.status = 'novo'
+                ORDER BY l.id ASC
+                LIMIT 1
+            `;
+            params = [corretorId];
+        }
+
+        const result = await pool.query(query, params);
 
         res.json({ lead: result.rows[0] || null });
 
@@ -174,6 +191,7 @@ router.get('/proximo-lead', async (req, res) => {
         res.status(500).json({ erro: 'Erro ao buscar lead.' });
     }
 });
+
 
 /* =========================================================
    BUSCAR UM LEAD ESPECÍFICO
@@ -389,6 +407,51 @@ router.patch('/leads/:id/qualificacao', async (req, res) => {
         res.status(500).json({ erro: 'Erro ao alterar qualificação.' });
     } finally {
         client.release();
+    }
+});
+
+/* =========================================================
+   MINHAS CARTEIRAS — lista as carteiras do corretor
+   ========================================================= */
+router.get('/minhas-carteiras', async (req, res) => {
+    try {
+        const corretorId = req.usuario.id;
+
+        const result = await pool.query(`
+            SELECT
+                li.id,
+                li.nome,
+                li.criado_em,
+                COUNT(l.id) AS total,
+                COUNT(l.id) FILTER (WHERE l.status != 'novo') AS trabalhados,
+                COUNT(l.id) FILTER (WHERE l.status = 'novo')  AS restantes
+            FROM listas li
+            INNER JOIN leads l ON l.lista_id = li.id AND l.corretor_id = $1
+            GROUP BY li.id, li.nome, li.criado_em
+            ORDER BY li.criado_em ASC
+        `, [corretorId]);
+
+        const carteiras = result.rows.map(c => {
+            const total = Number(c.total);
+            const trabalhados = Number(c.trabalhados);
+            const restantes = Number(c.restantes);
+
+            return {
+                id: c.id,
+                nome: c.nome,
+                criado_em: c.criado_em,
+                total,
+                trabalhados,
+                restantes,
+                concluida: restantes === 0
+            };
+        });
+
+        res.json({ carteiras });
+
+    } catch (err) {
+        console.error('[corretor/minhas-carteiras] erro:', err);
+        res.status(500).json({ erro: 'Erro ao carregar carteiras.' });
     }
 });
 

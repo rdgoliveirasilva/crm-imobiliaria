@@ -18,6 +18,9 @@ document.addEventListener('DOMContentLoaded', () => {
     let agendamentoPendente = null;
     let agendamentosNotificados = {};
     let leadEmModoAgendamento = false;
+    let minhasCarteiras = [];
+    let carteiraAtiva = null;
+    
 
     /* =========================================================
        ELEMENTOS
@@ -71,6 +74,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnCancelarAgendamento    = $('btnCancelarAgendamento');
     const btnSalvarAgendamento      = $('btnSalvarAgendamento');
     const btnSalvarAgendamentoTexto = $('btnSalvarAgendamentoTexto');
+
+// Seletor de carteira
+const carteiraSelect         = $('carteiraSelect');
+const carteiraTrigger        = $('carteiraTrigger');
+const carteiraMenu           = $('carteiraMenu');
+const carteiraNome           = $('carteiraNome');
+const carteiraBadge          = $('carteiraBadge');
+const carteiraAtivaId        = $('carteiraAtivaId');
 
     // Notificações
     const notifContainer = $('notifContainer');
@@ -138,6 +149,67 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
+// Seletor de carteira — listeners
+        if (carteiraTrigger && carteiraMenu) {
+            carteiraTrigger.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const aberto = carteiraMenu.classList.contains('open');
+                if (aberto) {
+                    fecharMenuCarteiras();
+                } else {
+                    carregarMinhasCarteiras().then(() => {
+                        renderizarMenuCarteiras();
+                        abrirMenuCarteiras();
+                    });
+                }
+            });
+
+            document.addEventListener('click', (e) => {
+                if (carteiraSelect && !carteiraSelect.contains(e.target)) {
+                    fecharMenuCarteiras();
+                }
+            });
+
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') fecharMenuCarteiras();
+            });
+        }
+
+// Seletor de carteira — listeners
+        if (carteiraTrigger && carteiraMenu) {
+            carteiraTrigger.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const aberto = carteiraMenu.classList.contains('open');
+                if (aberto) {
+                    fecharMenuCarteiras();
+                } else {
+                    carregarMinhasCarteiras().then(() => {
+                        renderizarMenuCarteiras();
+                        abrirMenuCarteiras();
+                    });
+                }
+            });
+
+            document.addEventListener('click', (e) => {
+                if (carteiraSelect && !carteiraSelect.contains(e.target)) {
+                    fecharMenuCarteiras();
+                }
+            });
+
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') fecharMenuCarteiras();
+            });
+        }
+        
+        // Carrega carteiras primeiro
+        await carregarMinhasCarteiras();
+        carteiraAtiva = escolherCarteiraAtiva();
+        if (carteiraAtiva) {
+            salvarCarteiraAtivaLocalStorage(carteiraAtiva.id);
+        }
+        atualizarBotaoCarteira();
+        renderizarMenuCarteiras();
+
         await carregarCena();
 
         // Polling de agendamentos a cada 60s
@@ -164,46 +236,239 @@ document.addEventListener('DOMContentLoaded', () => {
         if (leadState)    leadState.style.display = 'block';
     }
 
+/* =========================================================
+   SELETOR DE CARTEIRA
+   ========================================================= */
+
+const LS_CARTEIRA_ATIVA = 'sr_carteira_ativa';
+
+function salvarCarteiraAtivaLocalStorage(listaId) {
+    if (listaId) {
+        localStorage.setItem(LS_CARTEIRA_ATIVA, String(listaId));
+    } else {
+        localStorage.removeItem(LS_CARTEIRA_ATIVA);
+    }
+}
+
+function lerCarteiraAtivaLocalStorage() {
+    const raw = localStorage.getItem(LS_CARTEIRA_ATIVA);
+    if (!raw) return null;
+    const n = Number(raw);
+    return isNaN(n) ? null : n;
+}
+
+async function carregarMinhasCarteiras() {
+    try {
+        const { carteiras } = await ApiClient.get('/api/corretor/minhas-carteiras');
+        minhasCarteiras = carteiras || [];
+        return minhasCarteiras;
+    } catch (err) {
+        console.error('[carteiras] erro:', err);
+        minhasCarteiras = [];
+        return [];
+    }
+}
+
+function escolherCarteiraAtiva() {
+    if (!minhasCarteiras.length) return null;
+
+    // 1. Tenta a que tá no localStorage (se ainda tem fila)
+    const localId = lerCarteiraAtivaLocalStorage();
+    if (localId) {
+        const daStorage = minhasCarteiras.find(c => c.id === localId && c.restantes > 0);
+        if (daStorage) return daStorage;
+    }
+
+    // 2. Fallback: mais antiga com fila
+    const comFila = minhasCarteiras.filter(c => c.restantes > 0);
+    if (comFila.length) return comFila[0];
+
+    // 3. Nenhuma com fila → retorna null
+    return null;
+}
+
+function atualizarBotaoCarteira() {
+    if (!carteiraNome || !carteiraBadge) return;
+
+    if (!carteiraAtiva) {
+        carteiraNome.textContent = 'Sem carteira ativa';
+        carteiraBadge.textContent = '0';
+        return;
+    }
+
+    carteiraNome.textContent = carteiraAtiva.nome;
+    carteiraBadge.textContent = carteiraAtiva.restantes;
+}
+
+function renderizarMenuCarteiras() {
+    if (!carteiraMenu) return;
+
+    if (!minhasCarteiras.length) {
+        carteiraMenu.innerHTML = `
+            <div class="custom-select-empty" style="padding: 1rem; text-align: center; color: #7a8ba8; font-size: 0.85rem;">
+                Você ainda não tem carteiras.
+            </div>
+        `;
+        return;
+    }
+
+    carteiraMenu.innerHTML = minhasCarteiras.map(c => {
+        const atual = carteiraAtiva && c.id === carteiraAtiva.id;
+        const concluida = c.restantes === 0;
+
+        const classes = [
+            'carteira-opcao',
+            atual ? 'atual' : '',
+            concluida ? 'concluida' : ''
+        ].filter(Boolean).join(' ');
+
+        const status = concluida
+            ? '✓ Concluída'
+            : (c.restantes + ' na fila');
+
+        return `
+            <button type="button"
+                    class="${classes}"
+                    data-lista-id="${c.id}"
+                    ${concluida ? 'disabled' : ''}>
+                <i class="fas fa-folder-open opt-icon"></i>
+                <span class="opt-nome">${escapeHtml(c.nome)}</span>
+                <span class="opt-status">${status}</span>
+            </button>
+        `;
+    }).join('');
+
+    carteiraMenu.querySelectorAll('.carteira-opcao:not(.concluida)').forEach(opc => {
+        opc.addEventListener('click', async () => {
+            const listaId = Number(opc.dataset.listaId);
+            await trocarCarteira(listaId);
+        });
+    });
+}
+
+async function trocarCarteira(listaId) {
+    const nova = minhasCarteiras.find(c => c.id === listaId);
+    if (!nova) return;
+
+    carteiraAtiva = nova;
+    salvarCarteiraAtivaLocalStorage(listaId);
+    atualizarBotaoCarteira();
+    renderizarMenuCarteiras();
+    fecharMenuCarteiras();
+
+    mostrarToast('Trocando para: ' + nova.nome, 'info');
+
+    await carregarProximoLead();
+    await atualizarEstatisticas();
+}
+
+function abrirMenuCarteiras() {
+    if (!carteiraMenu || !carteiraTrigger) return;
+    carteiraMenu.classList.add('open');
+    carteiraTrigger.classList.add('open');
+}
+
+function fecharMenuCarteiras() {
+    if (!carteiraMenu || !carteiraTrigger) return;
+    carteiraMenu.classList.remove('open');
+    carteiraTrigger.classList.remove('open');
+}
+
     /* =========================================================
        PRÓXIMO LEAD
        ========================================================= */
     async function carregarProximoLead() {
-        try {
-            leadEmModoAgendamento = false;
-            removerBadgeAgendamento();
+    try {
+        leadEmModoAgendamento = false;
+        removerBadgeAgendamento();
 
-            const { lead } = await ApiClient.get('/api/corretor/proximo-lead');
-
-            if (!lead) {
-                leadAtual = null;
-                await mostrarTelaEsperaInteligente();
-                return;
+        // Se não tem carteira ativa, tenta escolher uma
+        if (!carteiraAtiva) {
+            await carregarMinhasCarteiras();
+            carteiraAtiva = escolherCarteiraAtiva();
+            if (carteiraAtiva) {
+                salvarCarteiraAtivaLocalStorage(carteiraAtiva.id);
+                atualizarBotaoCarteira();
+                renderizarMenuCarteiras();
             }
-
-            leadAtual = lead;
-            processando = false;
-
-            if (leadNome)     leadNome.textContent = lead.nome;
-            if (leadTelefone) leadTelefone.textContent = Acoes.formatarTelefone(lead.telefone) || lead.telefone;
-            if (leadOrigem)   leadOrigem.textContent = lead.lista_nome || 'SR Lançamentos';
-
-            if (resultList) {
-                resultList.querySelectorAll('.result-tag').forEach(btn => {
-                    btn.classList.remove('processing');
-                });
-            }
-
-            if (observacao) observacao.value = '';
-            if (callNotice) callNotice.style.display = 'none';
-
-            mostrarTelaLead();
-            await atualizarEstatisticas();
-
-        } catch (err) {
-            console.error('[corretor] erro ao carregar lead:', err);
-            mostrarToast(err.message || 'Erro ao carregar.', 'error');
         }
+
+        // Monta URL com lista_id se tiver carteira ativa
+        let url = '/api/corretor/proximo-lead';
+        if (carteiraAtiva && carteiraAtiva.id) {
+            url += '?lista_id=' + carteiraAtiva.id;
+        }
+
+        const { lead } = await ApiClient.get(url);
+
+        // Se não achou lead na carteira ativa
+        if (!lead) {
+            console.warn('[corretor] sem lead na carteira ativa:', carteiraAtiva?.nome);
+
+            // Recarrega as carteiras do backend
+            await carregarMinhasCarteiras();
+
+            // Filtra só as com fila
+            const comFila = minhasCarteiras.filter(c => c.restantes > 0);
+
+            // Se tem outra carteira com fila, troca e tenta de novo
+            if (comFila.length) {
+                const proxima = comFila[0];
+
+                // Só troca se for diferente da atual
+                if (!carteiraAtiva || proxima.id !== carteiraAtiva.id) {
+    console.log('[corretor] trocando pra:', proxima.nome);
+
+    // 🎉 Notifica que a lista anterior acabou e a próxima começou
+    if (carteiraAtiva) {
+        mostrarToast('Você concluiu sua lista! Sua próxima lista começou imediatamente!', 'success');
     }
+
+    carteiraAtiva = proxima;
+    salvarCarteiraAtivaLocalStorage(proxima.id);
+    atualizarBotaoCarteira();
+    renderizarMenuCarteiras();
+
+    // Tenta de novo (recursivo)
+    return carregarProximoLead();
+}
+            }
+
+            // Se não tem nenhuma carteira com fila → tela de espera
+            leadAtual = null;
+            if (carteiraAtiva) {
+    mostrarToast('Você concluiu TODAS as suas carteiras! 🎉', 'success');
+}
+
+await mostrarTelaEsperaInteligente();
+return;
+        }
+
+        // Achou lead — exibe
+        leadAtual = lead;
+        processando = false;
+
+        if (leadNome)     leadNome.textContent = lead.nome;
+        if (leadTelefone) leadTelefone.textContent = Acoes.formatarTelefone(lead.telefone) || lead.telefone;
+        if (leadOrigem)   leadOrigem.textContent = lead.lista_nome || 'SR Lançamentos';
+
+        if (resultList) {
+            resultList.querySelectorAll('.result-tag').forEach(btn => {
+                btn.classList.remove('processing');
+            });
+        }
+
+        if (observacao) observacao.value = '';
+        if (callNotice) callNotice.style.display = 'none';
+
+        mostrarTelaLead();
+        await atualizarEstatisticas();
+
+    } catch (err) {
+        console.error('[corretor] erro ao carregar lead:', err);
+        mostrarToast(err.message || 'Erro ao carregar.', 'error');
+    }
+}
 
     /* =========================================================
        TELA DE ESPERA INTELIGENTE
@@ -252,35 +517,36 @@ document.addEventListener('DOMContentLoaded', () => {
        ESTATÍSTICAS
        ========================================================= */
     async function atualizarEstatisticas() {
-        try {
-            const listaId = leadAtual ? leadAtual.lista_id : null;
-            const url = listaId
-                ? `/api/corretor/estatisticas?lista_id=${listaId}`
-                : '/api/corretor/estatisticas';
+    try {
+        // 🔑 Usa a carteiraAtiva em vez do leadAtual
+        const listaId = carteiraAtiva ? carteiraAtiva.id : null;
+        const url = listaId
+            ? `/api/corretor/estatisticas?lista_id=${listaId}`
+            : '/api/corretor/estatisticas';
 
-            const stats = await ApiClient.get(url);
+        const stats = await ApiClient.get(url);
 
-            if (progressCount) progressCount.textContent = `${stats.trabalhados} de ${stats.total} trabalhados`;
-            const pct = stats.total > 0 ? (stats.trabalhados / stats.total) * 100 : 0;
-            if (progressFill) progressFill.style.width = `${pct}%`;
+        if (progressCount) progressCount.textContent = `${stats.trabalhados} de ${stats.total} trabalhados`;
+        const pct = stats.total > 0 ? (stats.trabalhados / stats.total) * 100 : 0;
+        if (progressFill) progressFill.style.width = `${pct}%`;
 
-            if (statQualificadosTop) statQualificadosTop.textContent = stats.trabalhados;
-            if (statRestantesTop)    statRestantesTop.textContent    = stats.restantes;
-            if (historicoCount)       historicoCount.textContent       = stats.trabalhados;
-            if (historicoCountEspera) historicoCountEspera.textContent = stats.trabalhados;
+        if (statQualificadosTop) statQualificadosTop.textContent = stats.trabalhados;
+        if (statRestantesTop)    statRestantesTop.textContent    = stats.restantes;
+        if (historicoCount)       historicoCount.textContent       = stats.trabalhados;
+        if (historicoCountEspera) historicoCountEspera.textContent = stats.trabalhados;
 
-            if (resultList) {
-                resultList.querySelectorAll('.result-tag').forEach(btn => {
-                    const tag = btn.dataset.tag;
-                    const count = (stats.porTag && stats.porTag[tag]) || 0;
-                    const el = btn.querySelector('.tag-count');
-                    if (el) el.textContent = `+${count}`;
-                });
-            }
-        } catch (err) {
-            console.error('[corretor] erro nas estatísticas:', err);
+        if (resultList) {
+            resultList.querySelectorAll('.result-tag').forEach(btn => {
+                const tag = btn.dataset.tag;
+                const count = (stats.porTag && stats.porTag[tag]) || 0;
+                const el = btn.querySelector('.tag-count');
+                if (el) el.textContent = `+${count}`;
+            });
         }
+    } catch (err) {
+        console.error('[corretor] erro nas estatísticas:', err);
     }
+}
 
     /* =========================================================
        LIGAR
@@ -386,7 +652,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 agendamento_local: agendamentoLocal
             });
 
-            mostrarToast(`Registrado: ${tagParaTexto(tag)}`, 'success');
+// mostrarToast(`Registrado: ${tagParaTexto(tag)}`, 'success'); Por enquanto não vou usar
+
 
             await atualizarEstatisticas();
             await new Promise(r => setTimeout(r, 400));

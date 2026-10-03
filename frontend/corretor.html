@@ -96,6 +96,26 @@
     </div>
 
     <!-- =====================================================
+     SELETOR DE CARTEIRA
+     ===================================================== -->
+<div class="carteira-selector-wrap" id="carteiraSelectorWrap">
+    <div class="custom-select carteira-select" id="carteiraSelect">
+        <input type="hidden" id="carteiraAtivaId" value="">
+
+        <button type="button" class="custom-select-trigger carteira-trigger" id="carteiraTrigger">
+            <i class="fas fa-folder-open carteira-icon"></i>
+            <span class="carteira-nome" id="carteiraNome">Carregando...</span>
+            <span class="carteira-badge" id="carteiraBadge">0</span>
+            <i class="fas fa-chevron-down custom-select-arrow"></i>
+        </button>
+
+        <div class="custom-select-menu carteira-menu" id="carteiraMenu">
+            <!-- populado via JS -->
+        </div>
+    </div>
+</div>
+
+    <!-- =====================================================
          MAIN
          ===================================================== -->
     <main class="app-main">
