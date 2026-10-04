@@ -384,29 +384,22 @@ const btnToggleTipoText = $('btnToggleTipoText');
     /* =========================================================
        DASHBOARD
        ========================================================= */
-    async function atualizarDashboard() {
+        async function atualizarDashboard() {
         try {
             const stats = await ApiClient.get('/api/admin/dashboard');
 
-            kpiListas.textContent       = stats.totalListas;
-            kpiTotal.textContent        = stats.totalContatos;
-            kpiQualificados.textContent = stats.qualificados;
-            kpiAguardando.textContent   = stats.aguardando;
+            const elListas = document.getElementById('kpiListas');
+            const elTotal = document.getElementById('kpiTotal');
+            const elQualif = document.getElementById('kpiQualificados');
+            const elAguard = document.getElementById('kpiAguardando');
 
-            const { corretoresResumo, carteiras } = await ApiClient.get('/api/admin/dashboard/carteiras');
-
-            renderizarCorretoresResumo(corretoresResumo);
-            renderizarCarteiras(carteiras);
-
-            if (badgeTotalCorretores) badgeTotalCorretores.textContent = corretoresResumo.length;
-            if (badgeTotalCarteiras)  badgeTotalCarteiras.textContent  = carteiras.length;
-
-            adicionarSparklines();
-            await carregarGraficos();
+            if (elListas) elListas.textContent = stats.totalListas;
+            if (elTotal)  elTotal.textContent  = stats.totalContatos;
+            if (elQualif) elQualif.textContent = stats.qualificados;
+            if (elAguard) elAguard.textContent = stats.aguardando;
 
         } catch (err) {
             console.error('[dashboard] erro:', err);
-            mostrarToast('Erro ao carregar dashboard.', 'error');
         }
     }
 
@@ -2555,11 +2548,13 @@ if (btnToggleTipo) {
         blocoArquivo.style.display = 'flex';
         blocoTexto.style.display = 'none';
 
-        await atualizarDashboard();
         await renderizarSeletorCorretores();
         await renderizarListas();
         await renderizarCorretores();
         await carregarListasParaAtualizacao();
+        await atualizarDashboard();      // só KPIs antigos (que não existem mais, mas é seguro)
+    await initDashboardV2();          // carrega o dashboard v2 UMA VEZ
+
 
         // Botão gerenciar
         if (btnGerenciarCorretores) btnGerenciarCorretores.addEventListener('click', abrirGerenciarCorretores);
@@ -2720,6 +2715,842 @@ statsListaAtual = {};
             carregarListasParaAtualizacao();
         }
     }
+
+    /* =========================================================
+       DASHBOARD v2 — Renderização com dados reais
+       ========================================================= */
+
+    let chartLinhaDash = null;
+    let chartDonutDash = null;
+
+    let corretoresResumoDash = [];
+    let carteirasDash = [];
+    let filtroStatusCorretores = 'todos';
+
+    /* =========================================================
+       KPIs + Progresso da base
+       ========================================================= */
+    function renderizarKpisDash(kpis) {
+        const trabalhados = (kpis.qualificados || 0) + (kpis.descartados || 0);
+        const total = kpis.totalContatos || 0;
+        const pct = total > 0 ? Math.round((trabalhados / total) * 100) : 0;
+
+        const elTrab = document.getElementById('dashTrabalhados');
+        const elBase = document.getElementById('dashBaseTotal');
+        const elPct  = document.getElementById('dashPct');
+        const elFill = document.getElementById('dashProgressFill');
+        const elRest = document.getElementById('dashProgressRest');
+
+        if (elTrab) elTrab.textContent = trabalhados.toLocaleString('pt-BR');
+        if (elBase) elBase.textContent = total.toLocaleString('pt-BR');
+        if (elPct)  elPct.textContent  = pct + '%';
+        if (elFill) elFill.style.width = pct + '%';
+        if (elRest) elRest.textContent = (total - trabalhados).toLocaleString('pt-BR') + ' restantes';
+    }
+
+    /* =========================================================
+       Trend chart (linha)
+       ========================================================= */
+    function renderizarTrendDash(dados) {
+        const canvas = document.getElementById('graficoLinha');
+        if (!canvas || typeof Chart === 'undefined') return;
+        if (chartLinhaDash) chartLinhaDash.destroy();
+
+        const ctx = canvas.getContext('2d');
+
+        const gradGreen = ctx.createLinearGradient(0, 0, 0, 220);
+        gradGreen.addColorStop(0, 'rgba(34, 197, 94, 0.28)');
+        gradGreen.addColorStop(1, 'rgba(34, 197, 94, 0)');
+
+        const gradRed = ctx.createLinearGradient(0, 0, 0, 220);
+        gradRed.addColorStop(0, 'rgba(239, 68, 68, 0.22)');
+        gradRed.addColorStop(1, 'rgba(239, 68, 68, 0)');
+
+        chartLinhaDash = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: dados.labels,
+                datasets: [
+                    {
+                        label: 'Qualificados',
+                        data: dados.qualificados,
+                        borderColor: '#22c55e',
+                        backgroundColor: gradGreen,
+                        fill: true,
+                        tension: 0.4,
+                        borderWidth: 2.5,
+                        pointRadius: 0,
+                        pointHoverRadius: 6,
+                        pointHoverBackgroundColor: '#22c55e',
+                        pointHoverBorderColor: '#fff',
+                        pointHoverBorderWidth: 2
+                    },
+                    {
+                        label: 'Descartados',
+                        data: dados.descartados,
+                        borderColor: '#ef4444',
+                        backgroundColor: gradRed,
+                        fill: true,
+                        tension: 0.4,
+                        borderWidth: 2.5,
+                        pointRadius: 0,
+                        pointHoverRadius: 6,
+                        pointHoverBackgroundColor: '#ef4444',
+                        pointHoverBorderColor: '#fff',
+                        pointHoverBorderWidth: 2
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: '#0a1628',
+                        padding: 10,
+                        cornerRadius: 8,
+                        titleFont: { family: 'Inter', size: 12, weight: '700' },
+                        bodyFont: { family: 'Inter', size: 12 },
+                        displayColors: true,
+                        boxWidth: 8,
+                        boxHeight: 8,
+                        usePointStyle: true
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: { display: false },
+                        ticks: {
+                            color: '#94a3b8',
+                            font: { size: 10, family: 'Inter' },
+                            maxRotation: 0,
+                            autoSkip: true,
+                            maxTicksLimit: 8
+                        },
+                        border: { display: false }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        grid: { color: 'rgba(0, 44, 97, 0.05)' },
+                        ticks: {
+                            color: '#94a3b8',
+                            font: { size: 10, family: 'Inter' },
+                            precision: 0
+                        },
+                        border: { display: false }
+                    }
+                }
+            }
+        });
+    }
+
+    /* =========================================================
+       Donut de tags + legenda clicável
+       ========================================================= */
+    const CORES_TAGS = {
+        mensagem_enviada:  '#f59e0b',
+        follow_up:         '#64748b',
+        em_atendimento:    '#22c55e',
+        retornar_depois:   '#8b5cf6',
+        sem_interesse:     '#dc2626',
+        telefone_invalido: '#1e293b',
+        agendado:          '#0ea5e9',
+        vendido:           '#16a34a',
+        sem_resposta:      '#94a3b8'
+    };
+
+    const LABELS_TAGS = {
+        mensagem_enviada:  'Mensagem Enviada',
+        follow_up:         'Follow Up',
+        em_atendimento:    'Em Atendimento',
+        retornar_depois:   'Retornar Depois',
+        sem_interesse:     'Sem Interesse',
+        telefone_invalido: 'Telefone Inválido',
+        agendado:          'Agendado',
+        vendido:           'Vendido',
+        sem_resposta:      'Sem Resposta'
+    };
+
+    function corParaTag(chave, indexFallback) {
+        if (CORES_TAGS[chave]) return CORES_TAGS[chave];
+        const fallback = ['#002c61', '#0a4a91', '#3b82f6', '#60a5fa', '#dc2626', '#64748b'];
+        return fallback[indexFallback % fallback.length];
+    }
+
+    function labelParaTag(chave) {
+        return LABELS_TAGS[chave] || chave;
+    }
+
+    function renderizarDonutDash(dados) {
+        const canvas = document.getElementById('graficoDonut');
+        if (!canvas || typeof Chart === 'undefined') return;
+        if (chartDonutDash) chartDonutDash.destroy();
+
+        if (!dados.labels || !dados.labels.length) {
+            const legend = document.getElementById('dashTagLegend');
+            if (legend) legend.innerHTML = '<p style="color: rgba(148,163,184,.7); font-size: .85rem;">Sem dados ainda.</p>';
+            return;
+        }
+
+        const ctx = canvas.getContext('2d');
+        const cores = dados.chaves.map((chave, i) => corParaTag(chave, i));
+        const total = dados.valores.reduce((a, b) => a + b, 0);
+
+        chartDonutDash = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: dados.labels,
+                datasets: [{
+                    data: dados.valores,
+                    backgroundColor: cores,
+                    borderColor: 'rgba(255, 255, 255, 0.15)',
+                    borderWidth: 3,
+                    hoverOffset: 10,
+                    hoverBorderColor: '#fff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '68%',
+                onClick: (evt, elements) => {
+                    if (!elements.length) return;
+                    const idx = elements[0].index;
+                    const chave = dados.chaves[idx];
+                    abrirModalTagDash(chave, dados.labels[idx]);
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: '#0a1628',
+                        padding: 10,
+                        cornerRadius: 8,
+                        titleFont: { family: 'Inter', size: 12, weight: '700' },
+                        bodyFont: { family: 'Inter', size: 12 },
+                        callbacks: {
+                            label: (ctx) => {
+                                const val = ctx.parsed;
+                                const pct = total ? ((val / total) * 100).toFixed(1) : 0;
+                                return ` ${ctx.label}: ${val} (${pct}%)`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        const legend = document.getElementById('dashTagLegend');
+        if (!legend) return;
+
+        legend.innerHTML = dados.labels.map((label, i) => {
+            const val = dados.valores[i];
+            const pct = total ? Math.round((val / total) * 100) : 0;
+            const cor = cores[i];
+            return `
+                <div class="dash-tag-legend-item" data-tag="${dados.chaves[i]}" data-label="${escapeHtml(label)}">
+                    <span class="dash-tag-legend-dot" style="background:${cor}; color:${cor};"></span>
+                    <span class="label">${escapeHtml(label)}</span>
+                    <span class="count">${val.toLocaleString('pt-BR')}</span>
+                    <span class="pct">${pct}%</span>
+                </div>
+            `;
+        }).join('');
+
+        legend.querySelectorAll('.dash-tag-legend-item').forEach(el => {
+            el.addEventListener('click', () => {
+                abrirModalTagDash(el.dataset.tag, el.dataset.label);
+            });
+        });
+    }
+
+    /* =========================================================
+       Corretores ativos (com filtro de status)
+       ========================================================= */
+    function renderizarCorretoresDash(corretores, filtro = 'todos') {
+        const list = document.getElementById('dashActiveList');
+        if (!list) return;
+
+        const online = corretores.filter(c => c.status === 'online').length;
+        const offline = corretores.length - online;
+
+        const elOnline = document.getElementById('dashOnlineCount');
+        const elOffline = document.getElementById('dashOfflineCount');
+        if (elOnline)  elOnline.textContent = online;
+        if (elOffline) elOffline.textContent = offline;
+
+        const items = corretores.filter(c => filtro === 'todos' || c.status === filtro);
+
+        if (!items.length) {
+            list.innerHTML = `
+                <div class="empty-state small" style="padding: 1rem;">
+                    <p style="font-size: 0.85rem;">Nenhum corretor ${filtro}.</p>
+                </div>
+            `;
+            return;
+        }
+
+        list.innerHTML = items.map(c => {
+            const total = c.total_carteira || 0;
+            const qualif = c.total_qualificados || 0;
+            const pct = total > 0 ? Math.round((qualif / total) * 100) : 0;
+            const pctClass = pct >= 70 ? '' : pct >= 40 ? 'amber' : 'red';
+            const ultimo = c.status === 'online'
+                ? 'Online agora'
+                : (c.ultimo_acesso ? 'Último: ' + formatarUltimoAcesso(c.ultimo_acesso) : 'Nunca acessou');
+
+            return `
+                <div class="dash-active-item" data-status="${c.status}">
+                    <div class="dash-active-avatar-wrap">
+                        <div class="corretor-avatar">${iniciais(c.nome)}</div>
+                        <span class="dash-active-status ${c.status}"></span>
+                    </div>
+                    <div class="dash-active-info">
+                        <strong>${escapeHtml(c.nome)}</strong>
+                        <small>${escapeHtml(ultimo)}</small>
+                    </div>
+                    <div class="dash-active-progress">
+                        <div class="dash-active-pct ${pctClass}">${qualif}/${total}</div>
+                        <div class="dash-active-mini-bar"><span style="width:${pct}%"></span></div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    /* =========================================================
+       Carteiras — só as ativas (não concluídas)
+       ========================================================= */
+    function renderizarCarteirasDash(carteiras) {
+        const grid = document.getElementById('dashCarteirasGrid');
+        const vazio = document.getElementById('dashCarteirasVazio');
+        const count = document.getElementById('dashCarteirasCount');
+        if (!grid) return;
+
+        // 🔑 Filtra só as carteiras que ainda têm fila (não concluídas)
+        const ativas = carteiras.filter(c => {
+            const fila = (c.corretores || []).reduce((a, x) => a + (x.fila || 0), 0);
+            return fila > 0;
+        });
+
+        if (count) count.textContent = ativas.length;
+
+        if (!ativas.length) {
+            grid.innerHTML = '';
+            if (vazio) vazio.style.display = 'block';
+            return;
+        }
+
+        if (vazio) vazio.style.display = 'none';
+
+        grid.innerHTML = ativas.map(c => {
+            const trabalhados = (c.corretores || []).reduce((a, x) => a + (x.qualificou || 0), 0);
+            const total = c.total || 0;
+            const pct = total > 0 ? Math.round((trabalhados / total) * 100) : 0;
+
+            const avatares = (c.corretores || []).slice(0, 5).map(cor => `
+                <div class="corretor-avatar" title="${escapeHtml(cor.nome)}">${iniciais(cor.nome)}</div>
+            `).join('');
+
+            const mais = (c.corretores || []).length > 5
+                ? `<div class="dash-carteira-mais">+${c.corretores.length - 5}</div>`
+                : '';
+
+            return `
+                <article class="dash-carteira-card" data-lista-id="${c.lista_id}">
+                    <div class="dash-carteira-head">
+                        <div class="dash-carteira-head-left">
+                            <div class="dash-carteira-icon">
+                                <i class="fas fa-folder-open"></i>
+                            </div>
+                            <div style="min-width: 0;">
+                                <div class="dash-carteira-name">${escapeHtml(c.nome)}</div>
+                                <div class="dash-carteira-meta">
+                                    <i class="fas fa-users"></i>
+                                    ${total.toLocaleString('pt-BR')} contatos
+                                </div>
+                            </div>
+                        </div>
+                        <span class="dash-carteira-badge ativa">Ativa</span>
+                    </div>
+
+                    <div class="dash-carteira-stats">
+                        <div class="dash-carteira-stat">
+                            <div class="num">${total.toLocaleString('pt-BR')}</div>
+                            <div class="lbl">Total</div>
+                        </div>
+                        <div class="dash-carteira-stat">
+                            <div class="num">${trabalhados.toLocaleString('pt-BR')}</div>
+                            <div class="lbl">Trabalhados</div>
+                        </div>
+                        <div class="dash-carteira-stat text-end">
+                            <div class="num" style="color:${pct === 100 ? '#16a34a' : pct >= 50 ? '#3b82f6' : '#f59e0b'};">${pct}%</div>
+                            <div class="lbl">Progresso</div>
+                        </div>
+                    </div>
+
+                    <div class="dash-carteira-progress">
+                        <span style="width:${pct}%"></span>
+                    </div>
+
+                    <div class="dash-carteira-corretores">
+                        <div class="dash-carteira-avatares">
+                            ${avatares}
+                            ${mais}
+                        </div>
+                        <span class="dash-carteira-total-corretores">${(c.corretores || []).length} corretores</span>
+                    </div>
+                </article>
+            `;
+        }).join('');
+
+        // Clique no card → abre o modal de detalhe da carteira
+        grid.querySelectorAll('.dash-carteira-card').forEach(card => {
+            card.addEventListener('click', () => {
+                const listaId = Number(card.dataset.listaId);
+                if (typeof abrirDetalheCarteira === 'function') {
+                    abrirDetalheCarteira(listaId, carteiras);
+                }
+            });
+        });
+    }
+
+    /* =========================================================
+       Modal de TAG (drill-down do donut)
+       ========================================================= */
+    async function abrirModalTagDash(chave, label) {
+        const modalTag = document.getElementById('modalTag');
+        const modalTagTitulo = document.getElementById('modalTagTitulo');
+        const modalTagInfo = document.getElementById('modalTagInfo');
+        const modalTagTbody = document.getElementById('modalTagTbody');
+        const modalTagVazio = document.getElementById('modalTagVazio');
+        const modalTagBusca = document.getElementById('modalTagBusca');
+        const modalTagDe = document.getElementById('modalTagDe');
+        const modalTagAte = document.getElementById('modalTagAte');
+
+        if (!modalTag) {
+            console.warn('[modal-tag] modal não encontrado');
+            return;
+        }
+
+        filtroTagAtual = { chave, label, busca: '', de: '', ate: '' };
+        window.leadsTagAtuais = [];
+
+        if (modalTagTitulo) modalTagTitulo.textContent = label;
+        if (modalTagInfo) modalTagInfo.textContent = 'Carregando...';
+        if (modalTagTbody) modalTagTbody.innerHTML = '';
+        if (modalTagVazio) modalTagVazio.style.display = 'none';
+        if (modalTagBusca) modalTagBusca.value = '';
+        if (modalTagDe) modalTagDe.value = '';
+        if (modalTagAte) modalTagAte.value = '';
+
+        modalTag.style.display = 'flex';
+
+        await carregarLeadsDaTagDash();
+    }
+
+    async function carregarLeadsDaTagDash() {
+        if (!filtroTagAtual || !filtroTagAtual.chave) return;
+
+        const modalTagInfo = document.getElementById('modalTagInfo');
+        const modalTagTbody = document.getElementById('modalTagTbody');
+        const modalTagVazio = document.getElementById('modalTagVazio');
+
+        if (modalTagInfo) modalTagInfo.textContent = 'Carregando...';
+
+        try {
+            const params = new URLSearchParams();
+            if (filtroTagAtual.de)  params.set('de', filtroTagAtual.de);
+            if (filtroTagAtual.ate) params.set('ate', filtroTagAtual.ate);
+
+            const selCorretor = document.getElementById('filtroCorretorDonut');
+            const selCarteira = document.getElementById('filtroCarteiraDonut');
+            if (selCorretor && selCorretor.value) params.set('corretor_id', selCorretor.value);
+            if (selCarteira && selCarteira.value) params.set('lista_id', selCarteira.value);
+
+            const qs = params.toString();
+            const url = '/api/admin/dashboard/tag/' + encodeURIComponent(filtroTagAtual.chave) + (qs ? '?' + qs : '');
+
+            const { leads } = await ApiClient.get(url);
+            window.leadsTagAtuais = leads || [];
+
+            renderizarLeadsTagDash();
+
+        } catch (err) {
+            console.error('[modal-tag] erro:', err);
+            if (modalTagInfo) modalTagInfo.textContent = 'Erro ao carregar.';
+            if (modalTagTbody) modalTagTbody.innerHTML = '';
+            if (modalTagVazio) modalTagVazio.style.display = 'block';
+        }
+    }
+
+    function renderizarLeadsTagDash() {
+        const modalTagInfo = document.getElementById('modalTagInfo');
+        const modalTagTbody = document.getElementById('modalTagTbody');
+        const modalTagVazio = document.getElementById('modalTagVazio');
+
+        const busca = (filtroTagAtual?.busca || '').trim().toLowerCase();
+        let lista = window.leadsTagAtuais || [];
+
+        if (busca) {
+            lista = lista.filter(l => {
+                const nome = (l.nome || '').toLowerCase();
+                const tel = String(l.telefone || '');
+                const cor = (l.corretor_nome || '').toLowerCase();
+                return nome.includes(busca) || tel.includes(busca) || cor.includes(busca);
+            });
+        }
+
+        if (modalTagInfo) {
+            modalTagInfo.textContent = lista.length + ' ' + (lista.length === 1 ? 'cliente' : 'clientes');
+        }
+
+        if (!lista.length) {
+            if (modalTagTbody) modalTagTbody.innerHTML = '';
+            if (modalTagVazio) modalTagVazio.style.display = 'block';
+            return;
+        }
+
+        if (modalTagVazio) modalTagVazio.style.display = 'none';
+
+        if (modalTagTbody) {
+            modalTagTbody.innerHTML = lista.map(l => {
+                let dataStr = '—';
+                if (l.decidido_em) {
+                    const parsed = typeof parseDataSegura === 'function' ? parseDataSegura(l.decidido_em) : new Date(l.decidido_em);
+                    if (parsed && !isNaN(parsed.getTime())) {
+                        dataStr = parsed.toLocaleString('pt-BR', {
+                            timeZone: 'America/Sao_Paulo',
+                            day: '2-digit', month: '2-digit', year: '2-digit',
+                            hour: '2-digit', minute: '2-digit'
+                        });
+                    }
+                }
+
+                return `
+                    <tr>
+                        <td class="col-name">${escapeHtml(l.nome)}</td>
+                        <td class="col-phone">${escapeHtml(formatarTelefone(l.telefone))}</td>
+                        <td>${escapeHtml(l.corretor_nome || '—')}</td>
+                        <td class="col-phone">${dataStr}</td>
+                        <td></td>
+                    </tr>
+                `;
+            }).join('');
+        }
+    }
+
+    /* =========================================================
+       Filtros do donut — Custom Select
+       ========================================================= */
+    function popularFiltrosDonut() {
+        const inputCorretor = document.getElementById('filtroCorretorDonut');
+        const inputCarteira = document.getElementById('filtroCarteiraDonut');
+        const menuCorretor  = document.getElementById('menuCorretorDonut');
+        const menuCarteira  = document.getElementById('menuCarteiraDonut');
+        const textCorretor  = document.getElementById('textCorretorDonut');
+        const textCarteira  = document.getElementById('textCarteiraDonut');
+
+        if (!menuCorretor || !menuCarteira) return;
+
+        const valorCorretor = inputCorretor ? inputCorretor.value : '';
+        const valorCarteira = inputCarteira ? inputCarteira.value : '';
+
+        // Menu de corretores
+        let htmlCorretor = `
+            <button type="button"
+                    class="dash-custom-option ${!valorCorretor ? 'selected' : ''}"
+                    data-value="">
+                <span class="opt-text">Todos os corretores</span>
+                <i class="fas fa-check opt-check"></i>
+            </button>
+        `;
+
+        if (corretoresResumoDash.length) {
+            htmlCorretor += '<div class="dash-custom-divider"></div>';
+            htmlCorretor += corretoresResumoDash.map(c => `
+                <button type="button"
+                        class="dash-custom-option ${String(c.id) === String(valorCorretor) ? 'selected' : ''}"
+                        data-value="${c.id}">
+                    <span class="opt-text">${escapeHtml(c.nome)}</span>
+                    <i class="fas fa-check opt-check"></i>
+                </button>
+            `).join('');
+        }
+
+        menuCorretor.innerHTML = '<div class="dash-custom-scroll">' + htmlCorretor + '</div>';
+
+
+        // Menu de carteiras
+        let htmlCarteira = `
+            <button type="button"
+                    class="dash-custom-option ${!valorCarteira ? 'selected' : ''}"
+                    data-value="">
+                <span class="opt-text">Todas as carteiras</span>
+                <i class="fas fa-check opt-check"></i>
+            </button>
+        `;
+
+        if (carteirasDash.length) {
+            htmlCarteira += '<div class="dash-custom-divider"></div>';
+            htmlCarteira += carteirasDash.map(c => `
+                <button type="button"
+                        class="dash-custom-option ${String(c.lista_id) === String(valorCarteira) ? 'selected' : ''}"
+                        data-value="${c.lista_id}">
+                    <span class="opt-text">${escapeHtml(c.nome)}</span>
+                    <i class="fas fa-check opt-check"></i>
+                </button>
+            `).join('');
+        }
+
+        menuCarteira.innerHTML = '<div class="dash-custom-scroll">' + htmlCarteira + '</div>';
+
+
+        // Textos do trigger
+        if (textCorretor) {
+            const cor = corretoresResumoDash.find(c => String(c.id) === String(valorCorretor));
+            textCorretor.textContent = cor ? cor.nome : 'Todos os corretores';
+        }
+
+        if (textCarteira) {
+            const cart = carteirasDash.find(c => String(c.lista_id) === String(valorCarteira));
+            textCarteira.textContent = cart ? cart.nome : 'Todas as carteiras';
+        }
+
+        // Listeners das opções de corretor
+        menuCorretor.querySelectorAll('.dash-custom-option').forEach(opc => {
+            opc.addEventListener('click', () => {
+                if (inputCorretor) inputCorretor.value = opc.dataset.value || '';
+                fecharCustomSelectsDonut();
+                popularFiltrosDonut();
+                recarregarDonutComFiltros();
+            });
+        });
+
+        // Listeners das opções de carteira
+        menuCarteira.querySelectorAll('.dash-custom-option').forEach(opc => {
+            opc.addEventListener('click', () => {
+                if (inputCarteira) inputCarteira.value = opc.dataset.value || '';
+                fecharCustomSelectsDonut();
+                popularFiltrosDonut();
+                recarregarDonutComFiltros();
+            });
+        });
+    }
+
+    function abrirCustomSelectDonut(triggerId, menuId) {
+        const trigger = document.getElementById(triggerId);
+        const menu = document.getElementById(menuId);
+        if (!trigger || !menu) return;
+
+        // Fecha outros
+        document.querySelectorAll('.dash-custom-menu.open').forEach(m => {
+            if (m !== menu) m.classList.remove('open');
+        });
+        document.querySelectorAll('.dash-custom-trigger.open').forEach(t => {
+            if (t !== trigger) t.classList.remove('open');
+        });
+
+        menu.classList.add('open');
+        trigger.classList.add('open');
+    }
+
+    function fecharCustomSelectsDonut() {
+        document.querySelectorAll('.dash-custom-menu.open').forEach(m => m.classList.remove('open'));
+        document.querySelectorAll('.dash-custom-trigger.open').forEach(t => t.classList.remove('open'));
+    }
+
+    async function recarregarDonutComFiltros() {
+        const inputCorretor = document.getElementById('filtroCorretorDonut');
+        const inputCarteira = document.getElementById('filtroCarteiraDonut');
+        const btnLimpar     = document.getElementById('btnLimparFiltrosDonut');
+
+        const corretorId = inputCorretor ? inputCorretor.value : '';
+        const listaId    = inputCarteira ? inputCarteira.value : '';
+
+        if (btnLimpar) {
+            btnLimpar.style.display = (corretorId || listaId) ? 'inline-flex' : 'none';
+        }
+
+        try {
+            const params = new URLSearchParams();
+            if (corretorId) params.set('corretor_id', corretorId);
+            if (listaId)    params.set('lista_id', listaId);
+
+            const qs = params.toString();
+            const url = '/api/admin/dashboard/graficos' + (qs ? '?' + qs : '');
+
+            const dados = await ApiClient.get(url);
+            renderizarDonutDash(dados.donut);
+
+        } catch (err) {
+            console.error('[donut-filtros] erro:', err);
+        }
+    }
+
+    /* =========================================================
+       Init — puxa dados reais
+       ========================================================= */
+    async function initDashboardV2() {
+        try {
+            // 1. KPIs + progresso
+            const kpis = await ApiClient.get('/api/admin/dashboard');
+            renderizarKpisDash(kpis);
+
+            // 2. Gráficos (linha + donut)
+            const graficos = await ApiClient.get('/api/admin/dashboard/graficos');
+            renderizarTrendDash(graficos.linha);
+            renderizarDonutDash(graficos.donut);
+
+            // 3. Corretores + carteiras
+            const { corretoresResumo, carteiras } = await ApiClient.get('/api/admin/dashboard/carteiras');
+            corretoresResumoDash = corretoresResumo || [];
+            carteirasDash = carteiras || [];
+
+            renderizarCorretoresDash(corretoresResumoDash, filtroStatusCorretores);
+            renderizarCarteirasDash(carteirasDash);
+
+            popularFiltrosDonut();
+
+
+        } catch (err) {
+            console.error('[dashboard v2] erro ao carregar:', err);
+            if (typeof mostrarToast === 'function') {
+                mostrarToast('Erro ao carregar dashboard.', 'error');
+            }
+        }
+    }
+
+    // Listeners dos chips de status (corretores)
+    document.querySelectorAll('.dash-chip[data-status]').forEach(chip => {
+        chip.addEventListener('click', () => {
+            document.querySelectorAll('.dash-chip[data-status]').forEach(c => c.classList.remove('active'));
+            chip.classList.add('active');
+            filtroStatusCorretores = chip.dataset.status;
+            renderizarCorretoresDash(corretoresResumoDash, filtroStatusCorretores);
+        });
+    });
+
+    // Listeners do modal de tag (busca + filtros de data)
+    (function setupModalTagDash() {
+        const modalTag = document.getElementById('modalTag');
+        const btnFechar = document.getElementById('btnFecharModalTag');
+        const btnLimpar = document.getElementById('btnLimparFiltroTag');
+        const modalTagBusca = document.getElementById('modalTagBusca');
+        const modalTagDe = document.getElementById('modalTagDe');
+        const modalTagAte = document.getElementById('modalTagAte');
+
+        if (btnFechar) {
+            btnFechar.addEventListener('click', () => {
+                if (modalTag) modalTag.style.display = 'none';
+                filtroTagAtual = null;
+            });
+        }
+
+        if (modalTag) {
+            modalTag.addEventListener('click', (e) => {
+                if (e.target === modalTag) {
+                    modalTag.style.display = 'none';
+                    filtroTagAtual = null;
+                }
+            });
+        }
+
+        if (modalTagBusca) {
+            modalTagBusca.addEventListener('input', () => {
+                if (filtroTagAtual) filtroTagAtual.busca = modalTagBusca.value;
+                renderizarLeadsTagDash();
+            });
+        }
+
+        if (modalTagDe) {
+            modalTagDe.addEventListener('change', async () => {
+                if (filtroTagAtual) filtroTagAtual.de = modalTagDe.value;
+                await carregarLeadsDaTagDash();
+            });
+        }
+
+        if (modalTagAte) {
+            modalTagAte.addEventListener('change', async () => {
+                if (filtroTagAtual) filtroTagAtual.ate = modalTagAte.value;
+                await carregarLeadsDaTagDash();
+            });
+        }
+
+        if (btnLimpar) {
+            btnLimpar.addEventListener('click', async () => {
+                if (filtroTagAtual) {
+                    filtroTagAtual.busca = '';
+                    filtroTagAtual.de = '';
+                    filtroTagAtual.ate = '';
+                }
+                if (modalTagBusca) modalTagBusca.value = '';
+                if (modalTagDe) modalTagDe.value = '';
+                if (modalTagAte) modalTagAte.value = '';
+                await carregarLeadsDaTagDash();
+            });
+        }
+    })();
+
+(function setupFiltrosDonut() {
+        const triggerCorretor = document.getElementById('triggerCorretorDonut');
+        const triggerCarteira = document.getElementById('triggerCarteiraDonut');
+        const btnLimpar       = document.getElementById('btnLimparFiltrosDonut');
+
+        // Abrir/fechar menu do corretor
+        if (triggerCorretor) {
+            triggerCorretor.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const menu = document.getElementById('menuCorretorDonut');
+                const aberto = menu && menu.classList.contains('open');
+                if (aberto) {
+                    fecharCustomSelectsDonut();
+                } else {
+                    abrirCustomSelectDonut('triggerCorretorDonut', 'menuCorretorDonut');
+                }
+            });
+        }
+
+        // Abrir/fechar menu da carteira
+        if (triggerCarteira) {
+            triggerCarteira.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const menu = document.getElementById('menuCarteiraDonut');
+                const aberto = menu && menu.classList.contains('open');
+                if (aberto) {
+                    fecharCustomSelectsDonut();
+                } else {
+                    abrirCustomSelectDonut('triggerCarteiraDonut', 'menuCarteiraDonut');
+                }
+            });
+        }
+
+        // Fecha ao clicar fora
+        document.addEventListener('click', (e) => {
+            const dentro =
+                e.target.closest('#customCorretorDonut') ||
+                e.target.closest('#customCarteiraDonut');
+            if (!dentro) fecharCustomSelectsDonut();
+        });
+
+        // Fecha com ESC
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') fecharCustomSelectsDonut();
+        });
+
+        // Limpar
+        if (btnLimpar) {
+            btnLimpar.addEventListener('click', () => {
+                const inputCorretor = document.getElementById('filtroCorretorDonut');
+                const inputCarteira = document.getElementById('filtroCarteiraDonut');
+                if (inputCorretor) inputCorretor.value = '';
+                if (inputCarteira) inputCarteira.value = '';
+                popularFiltrosDonut();
+                recarregarDonutComFiltros();
+            });
+        }
+    })();
 
     init();
 

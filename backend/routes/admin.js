@@ -647,6 +647,13 @@ router.get('/dashboard', async (req, res) => {
 
 router.get('/dashboard/graficos', async (req, res) => {
     try {
+        // Filtros opcionais (só afetam o donut por enquanto)
+        const filtroCorretorId = req.query.corretor_id ? Number(req.query.corretor_id) : null;
+        const filtroListaId    = req.query.lista_id ? Number(req.query.lista_id) : null;
+
+        /* =====================
+           1. LINHA (30 dias) — global
+           ===================== */
         const linhaResult = await pool.query(`
             WITH dias AS (
                 SELECT generate_series(
@@ -683,13 +690,29 @@ router.get('/dashboard/graficos', async (req, res) => {
         const linhaQualificados = linhaResult.rows.map(r => Number(r.qualificados));
         const linhaDescartados  = linhaResult.rows.map(r => Number(r.descartados));
 
+        /* =====================
+           2. DONUT — com filtros opcionais
+           ===================== */
+        const donutParams = [];
+        let donutWhere = 'WHERE l.resultado IS NOT NULL ' + naoTeste('l');
+
+        if (filtroCorretorId) {
+            donutParams.push(filtroCorretorId);
+            donutWhere += ' AND l.corretor_id = $' + donutParams.length;
+        }
+
+        if (filtroListaId) {
+            donutParams.push(filtroListaId);
+            donutWhere += ' AND l.lista_id = $' + donutParams.length;
+        }
+
         const donutResult = await pool.query(`
             SELECT l.resultado, COUNT(*) AS count
             FROM leads l
-            WHERE l.resultado IS NOT NULL ${naoTeste('l')}
+            ${donutWhere}
             GROUP BY l.resultado
             ORDER BY count DESC
-        `);
+        `, donutParams);
 
         const mapaTags = {
             agendado:          'Agendado',
@@ -707,6 +730,9 @@ router.get('/dashboard/graficos', async (req, res) => {
         const donutValores = donutResult.rows.map(r => Number(r.count));
         const donutChaves  = donutResult.rows.map(r => r.resultado);
 
+        /* =====================
+           3. COLUNAS (por corretor) — global
+           ===================== */
         const colunasResult = await pool.query(`
             SELECT
                 u.id,
@@ -759,6 +785,9 @@ router.get('/dashboard/graficos', async (req, res) => {
         const colunasFila     = colunasFinal.map(c => c.fila);
         const colunasPerdidos = colunasFinal.map(c => c.perdidos);
 
+        /* =====================
+           4. VELOCÍMETRO — global
+           ===================== */
         const velResult = await pool.query(`
             SELECT
                 COUNT(*) FILTER (WHERE l.status IN ('qualificado', 'descartado')) AS trabalhados,
@@ -811,7 +840,7 @@ router.get('/dashboard/graficos', async (req, res) => {
 router.get('/dashboard/tag/:tag', async (req, res) => {
     try {
         const tag = String(req.params.tag || '').trim();
-        const { de, ate } = req.query;
+        const { de, ate, corretor_id, lista_id } = req.query;
 
         if (!tag) {
             return res.status(400).json({ erro: 'Tag não informada.' });
@@ -846,6 +875,16 @@ router.get('/dashboard/tag/:tag', async (req, res) => {
         if (ate) {
             params.push(ate);
             sql += ` AND l.decidido_em < ($${params.length}::date + INTERVAL '1 day')`;
+        }
+
+        if (corretor_id) {
+            params.push(Number(corretor_id));
+            sql += ` AND l.corretor_id = $${params.length}`;
+        }
+
+        if (lista_id) {
+            params.push(Number(lista_id));
+            sql += ` AND l.lista_id = $${params.length}`;
         }
 
         sql += ` ORDER BY l.decidido_em DESC NULLS LAST`;

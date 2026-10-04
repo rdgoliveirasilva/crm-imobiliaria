@@ -102,167 +102,169 @@
          ===================================================== -->
     <main class="admin-main">
 
-        <!-- ================================================
-             ABA 1 — DASHBOARD
-             ================================================ -->
         <section class="tab-panel active" id="tab-dashboard">
 
-            <!-- KPIs -->
-            <div class="kpi-grid">
-                <div class="kpi-card">
-                    <div class="kpi-icon blue">
-                        <i class="fas fa-layer-group"></i>
+    <!-- =====================================================
+         SEÇÃO 1 — KPIs + Progresso + Trend + Corretores
+         ===================================================== -->
+    <div class="dash-hero">
+
+        <!-- Card grande: trabalhados + trend + requalify -->
+        <div class="dash-main-row">
+
+            <article class="dash-card dash-card-large">
+                <header class="dash-card-head">
+                    <div>
+                        <span class="dash-eyebrow">PROGRESSO DA BASE</span>
+                        <h3 class="dash-big-number">
+                            <span id="dashTrabalhados">0</span>
+                            <span class="dash-big-sep">/</span>
+                            <span class="dash-big-total" id="dashBaseTotal">0</span>
+                        </h3>
+                        <small class="dash-sub">clientes trabalhados na base</small>
                     </div>
-                    <div class="kpi-info">
-                        <span class="kpi-label">Listas subidas</span>
-                        <strong class="kpi-value" id="kpiListas">0</strong>
+                    <div class="dash-pct-wrap">
+                        <strong class="dash-pct" id="dashPct">0%</strong>
+                        <small class="dash-sub">concluído</small>
+                    </div>
+                </header>
+
+                <div class="dash-progress">
+                    <div class="dash-progress-fill" id="dashProgressFill" style="width: 0%;">
+                        <span class="dash-progress-shine"></span>
+                    </div>
+                </div>
+                <div class="dash-progress-labels">
+                    <span>Progresso da base</span>
+                    <span class="dash-progress-rest" id="dashProgressRest">0 restantes</span>
+                </div>
+
+                <div class="dash-divider"></div>
+
+                <!-- Trend chart (linha) -->
+                <div class="dash-trend-head">
+                    <div>
+                        <h4 class="dash-h4">Qualificados × Descartados</h4>
+                        <small class="dash-sub">últimos 30 dias</small>
+                    </div>
+                    <div class="dash-legend">
+                        <span><i class="dash-dot green"></i> Qualificados</span>
+                        <span><i class="dash-dot red"></i> Descartados</span>
                     </div>
                 </div>
 
-                <div class="kpi-card">
-                    <div class="kpi-icon purple">
-                        <i class="fas fa-address-book"></i>
+                <div class="dash-chart-wrap">
+                    <canvas id="graficoLinha"></canvas>
+                </div>
+            </article>
+
+            <!-- Corretores ativos -->
+            <aside class="dash-card dash-card-side">
+                <header class="dash-card-head">
+                    <div>
+                        <h3 class="dash-h3">Corretores Ativos</h3>
+                        <small class="dash-sub">
+                            <span id="dashOnlineCount">0</span> online ·
+                            <span id="dashOfflineCount">0</span> offline
+                        </small>
                     </div>
-                    <div class="kpi-info">
-                        <span class="kpi-label">Contatos no total</span>
-                        <strong class="kpi-value" id="kpiTotal">0</strong>
-                    </div>
+                    <span class="dash-live-badge">
+                        <i class="fas fa-circle"></i> TEMPO REAL
+                    </span>
+                </header>
+
+                <div class="dash-filter">
+                    <button class="dash-chip active" data-status="todos" type="button">Todos</button>
+                    <button class="dash-chip" data-status="online" type="button">Online</button>
+                    <button class="dash-chip" data-status="offline" type="button">Offline</button>
                 </div>
 
-                <div class="kpi-card">
-                    <div class="kpi-icon green">
-                        <i class="fas fa-check-circle"></i>
-                    </div>
-                    <div class="kpi-info">
-                        <span class="kpi-label">Qualificados</span>
-                        <strong class="kpi-value" id="kpiQualificados">0</strong>
-                    </div>
+                <div class="dash-active-list" id="dashActiveList"></div>
+            </aside>
+
+        </div>
+    </div>
+
+    <!-- =====================================================
+         SEÇÃO 2 — Distribuição por Tag (Donut)
+         ===================================================== -->
+    <section class="dash-tag-section">
+                <header class="dash-tag-head">
+            <div class="dash-tag-head-flex">
+                <div>
+                    <h3 class="dash-h3-light">
+                        <i class="fas fa-chart-pie"></i>
+                        Distribuição por Tag
+                    </h3>
+                    <small class="dash-sub-light">Filtre por corretor ou carteira pra refinar</small>
                 </div>
 
-                <div class="kpi-card">
-                    <div class="kpi-icon orange">
-                        <i class="fas fa-hourglass-half"></i>
+                <div class="dash-tag-filters">
+
+                    <!-- Filtro de Corretor -->
+                    <div class="dash-custom-select" id="customCorretorDonut">
+                        <input type="hidden" id="filtroCorretorDonut" value="">
+
+                        <button type="button" class="dash-custom-trigger" id="triggerCorretorDonut">
+                            <i class="fas fa-users dash-custom-icon"></i>
+                            <span class="dash-custom-text" id="textCorretorDonut">Todos os corretores</span>
+                            <i class="fas fa-chevron-down dash-custom-arrow"></i>
+                        </button>
+
+                        <div class="dash-custom-menu" id="menuCorretorDonut"></div>
                     </div>
-                    <div class="kpi-info">
-                        <span class="kpi-label">Aguardando chamada</span>
-                        <strong class="kpi-value" id="kpiAguardando">0</strong>
+
+                    <!-- Filtro de Carteira -->
+                    <div class="dash-custom-select" id="customCarteiraDonut">
+                        <input type="hidden" id="filtroCarteiraDonut" value="">
+
+                        <button type="button" class="dash-custom-trigger" id="triggerCarteiraDonut">
+                            <i class="fas fa-folder-open dash-custom-icon"></i>
+                            <span class="dash-custom-text" id="textCarteiraDonut">Todas as carteiras</span>
+                            <i class="fas fa-chevron-down dash-custom-arrow"></i>
+                        </button>
+
+                        <div class="dash-custom-menu" id="menuCarteiraDonut"></div>
                     </div>
+
+                    <button class="dash-limpar-filtro" id="btnLimparFiltrosDonut" type="button" style="display:none;">
+                        <i class="fas fa-times"></i>
+                        Limpar
+                    </button>
                 </div>
             </div>
+        </header>
 
-            <!-- GRÁFICOS (2x2) -->
-            <div class="graficos-grid">
-
-                <section class="dashboard-card grafico-card">
-                    <header class="card-header">
-                        <h2><i class="fas fa-chart-line"></i> Trabalhados por dia</h2>
-                        <span class="card-badge card-badge-soft">últimos 30 dias</span>
-                    </header>
-                    <div class="grafico-body">
-                        <canvas id="graficoLinha"></canvas>
-                    </div>
-                </section>
-
-                <section class="dashboard-card grafico-card">
-                    <header class="card-header">
-                        <h2><i class="fas fa-chart-pie"></i> Distribuição por tag</h2>
-                    </header>
-                    <div class="grafico-body">
-                        <canvas id="graficoDonut"></canvas>
-                    </div>
-                </section>
-
-                <section class="dashboard-card grafico-card">
-                    <header class="card-header">
-                        <h2><i class="fas fa-chart-bar"></i> Desempenho por corretor</h2>
-                    </header>
-                    <div class="grafico-body">
-                        <canvas id="graficoColunas"></canvas>
-                    </div>
-                </section>
-
-                <section class="dashboard-card grafico-card">
-                    <header class="card-header">
-                        <h2><i class="fas fa-tachometer-alt"></i> Taxa de conversão</h2>
-                    </header>
-                    <div class="grafico-body grafico-body-gauge">
-                        <div class="gauge-wrap" id="gaugeWrap">
-                            <svg viewBox="0 0 220 130" class="gauge-svg">
-                                <defs>
-                                    <linearGradient id="gaugeGradRuim" x1="0" x2="1">
-                                        <stop offset="0%"   stop-color="#dc2626"/>
-                                        <stop offset="100%" stop-color="#ef4444"/>
-                                    </linearGradient>
-                                    <linearGradient id="gaugeGradOk" x1="0" x2="1">
-                                        <stop offset="0%"   stop-color="#f59e0b"/>
-                                        <stop offset="100%" stop-color="#fbbf24"/>
-                                    </linearGradient>
-                                    <linearGradient id="gaugeGradOtimo" x1="0" x2="1">
-                                        <stop offset="0%"   stop-color="#16a34a"/>
-                                        <stop offset="100%" stop-color="#22c55e"/>
-                                    </linearGradient>
-                                </defs>
-
-                                <path class="gauge-track"
-                                      d="M 20 110 A 90 90 0 0 1 200 110"
-                                      fill="none"
-                                      stroke="#e6eef8"
-                                      stroke-width="16"
-                                      stroke-linecap="round"/>
-
-                                <path class="gauge-fill"
-                                      id="gaugeFill"
-                                      d="M 20 110 A 90 90 0 0 1 200 110"
-                                      fill="none"
-                                      stroke="url(#gaugeGradOtimo)"
-                                      stroke-width="16"
-                                      stroke-linecap="round"
-                                      pathLength="100"
-                                      stroke-dasharray="0 100"/>
-                            </svg>
-
-                            <div class="gauge-center">
-                                <strong id="gaugeValor">0%</strong>
-                                <small id="gaugeLabel">conversão</small>
-                            </div>
-                        </div>
-
-                        <div class="gauge-legenda">
-                            <span><i class="dot red"></i> 0–5%</span>
-                            <span><i class="dot yellow"></i> 5–15%</span>
-                            <span><i class="dot green"></i> 15%+</span>
-                        </div>
-                    </div>
-                </section>
-
+        <div class="dash-tag-body">
+            <div class="dash-donut-wrap">
+                <canvas id="graficoDonut"></canvas>
             </div>
+            <div class="dash-tag-legend" id="dashTagLegend"></div>
+        </div>
+    </section>
 
-            <!-- BLOCOS DE BAIXO (2 colunas) -->
-            <div class="dashboard-blocks">
-
-                <section class="dashboard-card block-card">
-                    <header class="card-header">
-                        <h2><i class="fas fa-users"></i> Corretores ativos</h2>
-                        <span class="card-badge" id="badgeTotalCorretores">0</span>
-                    </header>
-                    <div class="corretores-carteira" id="corretoresCarteira"></div>
-                </section>
-
-                <section class="dashboard-card block-card">
-                    <header class="card-header">
-                        <h2><i class="fas fa-folder-open"></i> Desempenho por carteira</h2>
-                        <span class="card-badge" id="badgeTotalCarteiras">0</span>
-                    </header>
-                    <div class="carteiras-grid" id="carteirasGrid"></div>
-                    <div class="empty-state small" id="carteirasVazio" style="display: none;">
-                        <i class="fas fa-inbox"></i>
-                        <p>Nenhuma carteira subida ainda.</p>
-                    </div>
-                </section>
-
+    <!-- =====================================================
+         SEÇÃO 3 — Carteiras
+         ===================================================== -->
+    <section class="dash-section-block">
+        <header class="dash-section-head">
+            <div>
+                <h2 class="dash-h2">Todas as Carteiras</h2>
+                <p class="dash-sub">
+                    <span id="dashCarteirasCount">0</span> listas cadastradas
+                </p>
             </div>
+        </header>
 
-        </section>
+        <div class="dash-carteiras-grid" id="dashCarteirasGrid"></div>
+
+        <div class="empty-state small" id="dashCarteirasVazio" style="display: none;">
+            <i class="fas fa-inbox"></i>
+            <p>Nenhuma carteira cadastrada ainda.</p>
+        </div>
+    </section>
+
+</section>
 
 <!-- ================================================
      ABA 2 — SUBIR LISTA
