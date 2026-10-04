@@ -5741,3 +5741,430 @@
 #modalTag {
     z-index: 8500 !important;
 }
+
+/* =========================================================
+   DASHBOARD v2 — RESPONSIVO
+   ========================================================= */
+
+/* ---------- TABLET (até 1024px) ---------- */
+@media (max-width: 1024px) {
+    .dash-main-row {
+        grid-template-columns: 1fr;
+    }
+
+    .dash-tag-body {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+    }
+
+    .dash-donut-wrap {
+        max-width: 200px;
+    }
+
+    .dash-kpis {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* ---------- MOBILE (até 720px) ---------- */
+@media (max-width: 720px) {
+
+    /* Card grande + lateral empilhados */
+    .dash-main-row {
+        grid-template-columns: 1fr;
+        gap: 0.85rem;
+    }
+
+    .dash-card {
+        padding: 1.15rem;
+        border-radius: 16px;
+    }
+
+    /* Números grandes menores */
+    .dash-big-number {
+        font-size: 1.7rem;
+    }
+
+    .dash-big-total {
+        font-size: 1.05rem;
+    }
+
+    .dash-pct {
+        font-size: 1rem;
+    }
+
+    /* Trend chart mais baixo */
+    .dash-chart-wrap {
+        height: 160px;
+    }
+
+    /* Divisor menor */
+    .dash-divider {
+        margin: 1.1rem 0;
+    }
+
+    /* ---------- Filtros do donut ---------- */
+    .dash-tag-head-flex {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.75rem;
+    }
+
+    .dash-tag-filters {
+        width: 100%;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.5rem;
+    }
+
+    .dash-custom-select {
+        min-width: 0;
+        width: 100%;
+    }
+
+    .dash-custom-trigger {
+        width: 100%;
+        padding: 0.65rem 1rem;
+        font-size: 0.82rem;
+    }
+
+    .dash-custom-menu {
+        min-width: 0;
+        width: 100%;
+    }
+
+    .dash-limpar-filtro {
+        width: 100%;
+        justify-content: center;
+        padding: 0.65rem 1rem;
+    }
+
+    /* ---------- Seção do donut ---------- */
+    .dash-tag-section {
+        padding: 1.25rem;
+        border-radius: 16px;
+    }
+
+    .dash-tag-head {
+        margin-bottom: 1rem;
+    }
+
+    .dash-h3-light {
+        font-size: 0.98rem;
+    }
+
+    .dash-sub-light {
+        font-size: 0.72rem;
+    }
+
+    .dash-tag-body {
+        grid-template-columns: 1fr;
+        gap: 1.25rem;
+    }
+
+    .dash-donut-wrap {
+        max-width: 180px;
+    }
+
+    /* Legenda mais compacta */
+    .dash-tag-legend-item {
+        padding: 0.55rem 0.75rem;
+        gap: 0.55rem;
+    }
+
+    .dash-tag-legend-item .label {
+        font-size: 0.78rem;
+    }
+
+    .dash-tag-legend-item .count {
+        font-size: 0.85rem;
+    }
+
+    .dash-tag-legend-item .pct {
+        font-size: 0.62rem;
+        min-width: 30px;
+    }
+
+    /* ---------- Corretores ativos ---------- */
+    .dash-active-item {
+        padding: 0.55rem 0.4rem;
+        gap: 0.6rem;
+    }
+
+    .dash-active-item .corretor-avatar {
+        width: 36px;
+        height: 36px;
+        font-size: 0.72rem;
+    }
+
+    .dash-active-info strong {
+        font-size: 0.82rem;
+    }
+
+    .dash-active-info small {
+        font-size: 0.65rem;
+    }
+
+    .dash-active-pct {
+        font-size: 0.7rem;
+    }
+
+    .dash-active-mini-bar {
+        width: 42px;
+    }
+
+    /* ---------- Grid de carteiras ---------- */
+    .dash-carteiras-grid {
+        grid-template-columns: 1fr;
+        gap: 0.75rem;
+    }
+
+    .dash-carteira-card {
+        padding: 1rem;
+        border-radius: 14px;
+    }
+
+    .dash-carteira-name {
+        font-size: 0.9rem;
+    }
+
+    .dash-carteira-stat .num {
+        font-size: 0.92rem;
+    }
+
+    .dash-carteira-stat .lbl {
+        font-size: 0.55rem;
+    }
+}
+
+/* ---------- MOBILE PEQUENO (até 420px) ---------- */
+@media (max-width: 420px) {
+
+    .dash-card {
+        padding: 1rem;
+    }
+
+    .dash-big-number {
+        font-size: 1.5rem;
+    }
+
+    .dash-big-total {
+        font-size: 0.95rem;
+    }
+
+    .dash-eyebrow {
+        font-size: 0.62rem;
+    }
+
+    .dash-sub {
+        font-size: 0.7rem;
+    }
+
+    /* Donut ainda menor */
+    .dash-donut-wrap {
+        max-width: 150px;
+    }
+
+    /* Corretores: avatar + info + pct mais compactos */
+    .dash-active-item .corretor-avatar {
+        width: 34px;
+        height: 34px;
+        font-size: 0.68rem;
+    }
+
+    .dash-active-pct {
+        font-size: 0.65rem;
+    }
+
+    .dash-active-mini-bar {
+        width: 38px;
+    }
+
+    /* Cards de carteira ainda menores */
+    .dash-carteira-head-left {
+        gap: 0.5rem;
+    }
+
+    .dash-carteira-icon {
+        width: 36px;
+        height: 36px;
+        font-size: 0.92rem;
+    }
+
+    .dash-carteira-stats {
+        gap: 0.55rem;
+    }
+
+    .dash-carteira-stat .num {
+        font-size: 0.85rem;
+    }
+
+    .dash-carteira-total-corretores {
+        display: none; /* esconde em telas muito pequenas */
+    }
+}
+
+/* =========================================================
+   FIX MOBILE — Card grande + Corretores Ativos
+   ========================================================= */
+
+@media (max-width: 720px) {
+
+    /* ---------- Card grande (progresso + trend) ---------- */
+
+    /* O card grande NÃO pode esticar */
+    .dash-card-large {
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+    }
+
+    /* Container do chart com altura fixa */
+    .dash-chart-wrap {
+        position: relative;
+        width: 100%;
+        height: 180px !important;
+        min-height: 180px !important;
+        max-height: 180px !important;
+        overflow: hidden;
+    }
+
+    /* Canvas se adapta ao container */
+    .dash-chart-wrap canvas {
+        position: absolute !important;
+        top: 0;
+        left: 0;
+        width: 100% !important;
+        height: 100% !important;
+        max-height: 100% !important;
+    }
+
+    /* Números do topo mais compactos */
+    .dash-big-number {
+        font-size: 1.7rem !important;
+        line-height: 1.1;
+    }
+
+    .dash-pct-wrap {
+        text-align: left;
+        margin-top: 0.4rem;
+    }
+
+    /* Progress bar não estoura */
+    .dash-progress {
+        height: 16px;
+    }
+
+    .dash-progress-labels {
+        font-size: 0.68rem;
+    }
+
+    /* ---------- Corretores Ativos ---------- */
+
+    /* Card lateral com altura fixa e scroll interno */
+    .dash-card-side {
+        max-height: 480px;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+
+    /* Lista de corretores com scroll */
+    .dash-active-list {
+        flex: 1;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        max-height: 380px;
+        padding-right: 0.35rem;
+    }
+
+    /* Scrollbar fina */
+    .dash-active-list::-webkit-scrollbar {
+        width: 5px;
+    }
+    .dash-active-list::-webkit-scrollbar-thumb {
+        background: rgba(0, 44, 97, 0.25);
+        border-radius: 999px;
+    }
+    .dash-active-list::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    /* Cada item mais compacto em mobile */
+    .dash-active-item {
+        padding: 0.6rem 0.5rem;
+        gap: 0.6rem;
+    }
+
+    .dash-active-item .corretor-avatar {
+        width: 38px;
+        height: 38px;
+        font-size: 0.75rem;
+    }
+
+    .dash-active-info strong {
+        font-size: 0.85rem;
+    }
+
+    .dash-active-info small {
+        font-size: 0.68rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .dash-active-progress {
+        min-width: 50px;
+    }
+
+    .dash-active-pct {
+        font-size: 0.72rem;
+    }
+
+    .dash-active-mini-bar {
+        width: 44px;
+    }
+}
+
+/* =========================================================
+   FIX MOBILE PEQUENO — ajustes finos
+   ========================================================= */
+
+@media (max-width: 420px) {
+
+    .dash-chart-wrap {
+        height: 150px !important;
+        min-height: 150px !important;
+        max-height: 150px !important;
+    }
+
+    .dash-card-side {
+        max-height: 420px;
+    }
+
+    .dash-active-list {
+        max-height: 320px;
+    }
+
+    .dash-active-item .corretor-avatar {
+        width: 34px;
+        height: 34px;
+        font-size: 0.68rem;
+    }
+
+    .dash-active-info strong {
+        font-size: 0.8rem;
+    }
+
+    .dash-active-info small {
+        font-size: 0.62rem;
+    }
+
+    .dash-active-pct {
+        font-size: 0.66rem;
+    }
+
+    .dash-active-mini-bar {
+        width: 38px;
+    }
+}
