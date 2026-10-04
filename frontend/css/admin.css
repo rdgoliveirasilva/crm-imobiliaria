@@ -5722,3 +5722,22 @@
     position: relative;
     z-index: 2;
 }
+
+/* =========================================================
+   FIX — Z-INDEX DE MODAIS ACIMA DE HEADER/NAV
+   ========================================================= */
+
+/* Modais ficam ACIMA do header (5000) e nav (4000) */
+.modal-overlay {
+    z-index: 8000 !important;
+}
+
+/* Modal de confirmação sempre o mais alto (senão não fecha) */
+#modalConfirm {
+    z-index: 9000 !important;
+}
+
+/* Modal de tag (drill-down) abaixo do confirm, mas acima dos outros */
+#modalTag {
+    z-index: 8500 !important;
+}
