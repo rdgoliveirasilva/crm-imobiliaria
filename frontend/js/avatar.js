@@ -1,5 +1,5 @@
 /* =========================================================
-   AVATAR.JS — Avatar com iniciais + dropdown
+   AVATAR.JS — Blindado contra duplicação
    ========================================================= */
 
 (function() {
@@ -29,11 +29,13 @@
 
         if (!btn || !headerUser) return;
 
+        /* 🛡️ Remove QUALQUER dropdown antigo (evita duplicação) */
+        document.querySelectorAll('.dropdown-menu').forEach(el => el.remove());
+
         const nome  = localStorage.getItem('sr_usuario') || '—';
         const login = localStorage.getItem('sr_usuario_login') || '—';
 
         btn.textContent = iniciais(nome);
-
 
         const dropdown = document.createElement('div');
         dropdown.className = 'dropdown-menu';

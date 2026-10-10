@@ -1,95 +1,45 @@
 /* =========================================================
-   CORRETOR.JS — Painel do corretor
-   Depende de: api-client.js, acoes.js
+   CORRETOR.JS — Dashboard "Minha Carteira"
+   A prospecção ativa fica em prospeccao.html
    ========================================================= */
 
 document.addEventListener('DOMContentLoaded', () => {
 
     const $ = (id) => document.getElementById(id);
 
-    /* =========================================================
-       ESTADO
-       ========================================================= */
-    let leadAtual = null;
-    let processando = false;
-    let toastTimer = null;
-    let carteiraAtual = null;
-    let leadsDaCarteiraAtual = [];
-    let agendamentoPendente = null;
-    let agendamentosNotificados = {};
-    let leadEmModoAgendamento = false;
-    let minhasCarteiras = [];
+    /* ---------- ESTADO ---------- */
+    let carteiras = [];
     let carteiraAtiva = null;
-    
+    let stats = {};
+    let toastTimer = null;
+    let kpiStatusAtual = null;
 
-    /* =========================================================
-       ELEMENTOS
-       ========================================================= */
-    const headerUserName       = $('headerUserName');
-    const progressCount        = $('progressCount');
-    const progressFill         = $('progressFill');
-    const statQualificadosTop  = $('statQualificadosTop');
-    const statRestantesTop     = $('statRestantesTop');
-    const waitingState         = $('waitingState');
-    const leadState            = $('leadState');
-    const btnVerificar         = $('btnVerificar');
-    const leadNome             = $('leadNome');
-    const leadTelefone         = $('leadTelefone');
-    const leadOrigem           = $('leadOrigem');
-    const btnLigar             = $('btnLigar');
-    const btnWhatsApp          = $('btnWhatsApp');
-    const callNotice           = $('callNotice');
-    const callNoticeText       = $('callNoticeText');
-    const resultList           = $('resultList');
-    const observacao           = $('observacao');
-    const toast                = $('toast');
-    const btnHistorico         = $('btnHistorico');
-    const historicoCount       = $('historicoCount');
-    const btnHistoricoEspera   = $('btnHistoricoEspera');
-    const historicoCountEspera = $('historicoCountEspera');
-    const modalHistorico       = $('modalHistorico');
-    const btnFecharHistorico   = $('btnFecharHistorico');
-    const historicoLista       = $('historicoLista');
-    const historicoVazio       = $('historicoVazio');
-    const historicoResumo      = $('historicoResumo');
-    const modalLigar           = $('modalLigar');
-    const modalLigarNome       = $('modalLigarNome');
-    const modalLigarNumero     = $('modalLigarNumero');
-    const btnFecharLigar       = $('btnFecharLigar');
-    const btnCopiarNumero      = $('btnCopiarNumero');
-    const btnModalWhatsApp     = $('btnModalWhatsApp');
+    /* ---------- ELEMENTOS ---------- */
+    const toast              = $('toast');
+    const headerUserName     = $('headerUserName');
 
-    // Agendamento
-    const modalAgendamento          = $('modalAgendamento');
-    const agendamentoTitulo         = $('agendamentoTitulo');
-    const agendamentoSubtitulo      = $('agendamentoSubtitulo');
-    const agendamentoLeadNome       = $('agendamentoLeadNome');
-    const agendamentoLeadTelefone   = $('agendamentoLeadTelefone');
-    const agendamentoData           = $('agendamentoData');
-    const agendamentoHora           = $('agendamentoHora');
-    const agendamentoLocal          = $('agendamentoLocal');
-    const agendamentoDataError      = $('agendamentoDataError');
-    const agendamentoHoraError      = $('agendamentoHoraError');
-    const btnFecharAgendamento      = $('btnFecharAgendamento');
-    const btnCancelarAgendamento    = $('btnCancelarAgendamento');
-    const btnSalvarAgendamento      = $('btnSalvarAgendamento');
-    const btnSalvarAgendamentoTexto = $('btnSalvarAgendamentoTexto');
+    const kpiTrabalhados     = $('kpiTrabalhados');
+    const kpiEmAtendimento   = $('kpiEmAtendimento');
+    const kpiFollowUp        = $('kpiFollowUp');
+    const kpiNaFila          = $('kpiNaFila');
+    const kpiMensagens       = $('kpiMensagens');
+    const progressMensagens  = $('progressMensagens');
+    const kpiTempoMedio      = $('kpiTempoMedio');
 
-// Seletor de carteira
-const carteiraSelect         = $('carteiraSelect');
-const carteiraTrigger        = $('carteiraTrigger');
-const carteiraMenu           = $('carteiraMenu');
-const carteiraNome           = $('carteiraNome');
-const carteiraBadge          = $('carteiraBadge');
-const carteiraAtivaId        = $('carteiraAtivaId');
+    const listaRetornar      = $('listaRetornar');
+    const listaAgendamentos  = $('listaAgendamentos');
 
-    // Notificações
-    const notifContainer = $('notifContainer');
+    const carteiraNomeTop    = $('carteiraNomeTop');
+    const btnCarteiras       = $('btnCarteiras');
+    const carteirasMenu      = $('carteirasMenu');
+    const dashSelectWrap     = $('dashSelectWrap');
+    const btnIniciar         = $('btnIniciarProspeccao');
 
     /* =========================================================
        TOAST
        ========================================================= */
     function mostrarToast(msg, tipo = 'info') {
+        if (!toast) return;
         toast.textContent = msg;
         toast.className = `toast show ${tipo}`;
         clearTimeout(toastTimer);
@@ -97,1026 +47,472 @@ const carteiraAtivaId        = $('carteiraAtivaId');
     }
 
     /* =========================================================
-       INIT
+       HELPERS
        ========================================================= */
-    async function init() {
-        const nome = localStorage.getItem('sr_usuario') || 'Corretor';
-        headerUserName.textContent = nome.split(' ')[0];
+    function iniciais(nome) {
+        return String(nome || '?')
+            .trim().split(/\s+/).filter(Boolean).slice(0, 2)
+            .map(p => p[0].toUpperCase()).join('');
+    }
 
-        if (btnVerificar) btnVerificar.addEventListener('click', () => carregarCena());
-        if (btnLigar)     btnLigar.addEventListener('click', handleLigar);
-        if (btnWhatsApp)  btnWhatsApp.addEventListener('click', handleWhatsApp);
+    function corDoNome(nome) {
+        const cores = ['#002c61', '#0a4a91', '#3b82f6', '#16a34a', '#f59e0b', '#dc2626', '#8b5cf6', '#0ea5e9'];
+        let hash = 0;
+        for (let i = 0; i < (nome || '').length; i++) hash = nome.charCodeAt(i) + ((hash << 5) - hash);
+        return cores[Math.abs(hash) % cores.length];
+    }
 
-        if (resultList) {
-            resultList.querySelectorAll('.result-tag').forEach(btn => {
-                btn.addEventListener('click', () => handleTagClick(btn));
-            });
-        }
+    function formatarTempo(horas) {
+        if (!horas || horas < 0.01) return '—';
+        if (horas < 1) return `${Math.round(horas * 60)} min`;
+        if (horas < 24) return `${horas.toFixed(1)} h`;
+        return `${(horas / 24).toFixed(1)} d`;
+    }
 
-        if (btnHistorico)       btnHistorico.addEventListener('click', abrirHistorico);
-        if (btnHistoricoEspera) btnHistoricoEspera.addEventListener('click', abrirHistorico);
-        if (btnFecharHistorico) btnFecharHistorico.addEventListener('click', fecharHistorico);
-        if (modalHistorico) {
-            modalHistorico.addEventListener('click', (e) => {
-                if (e.target === modalHistorico) fecharHistorico();
-            });
-        }
+    function formatarDataCurta(iso) {
+        if (!iso) return '';
+        const d = new Date(iso);
+        const dia = String(d.getDate()).padStart(2, '0');
+        const mes = String(d.getMonth() + 1).padStart(2, '0');
+        const hora = String(d.getHours()).padStart(2, '0');
+        const min = String(d.getMinutes()).padStart(2, '0');
+        return `${dia}/${mes} ${hora}:${min}`;
+    }
 
-        if (btnFecharLigar) btnFecharLigar.addEventListener('click', () => modalLigar.style.display = 'none');
-        if (modalLigar) {
-            modalLigar.addEventListener('click', (e) => {
-                if (e.target === modalLigar) modalLigar.style.display = 'none';
-            });
-        }
-        if (btnCopiarNumero) btnCopiarNumero.addEventListener('click', copiarNumero);
+    function classeTagPorResultado(resultado) {
+        if (['agendado', 'em_atendimento', 'vendido'].includes(resultado)) return 'success';
+        if (['mensagem_enviada', 'retornar_depois', 'follow_up'].includes(resultado)) return 'warning';
+        return 'danger';
+    }
 
-        if (btnFecharAgendamento)   btnFecharAgendamento.addEventListener('click', fecharModalAgendamento);
-        if (btnCancelarAgendamento) btnCancelarAgendamento.addEventListener('click', fecharModalAgendamento);
-        if (btnSalvarAgendamento)   btnSalvarAgendamento.addEventListener('click', salvarAgendamento);
-        if (modalAgendamento) {
-            modalAgendamento.addEventListener('click', (e) => {
-                if (e.target === modalAgendamento) fecharModalAgendamento();
-            });
-        }
+function labelTag(tag) {
+    const mapa = {
+        agendado:          'Agendado',
+        em_atendimento:    'Em atendimento',
+        vendido:           'Vendido',
+        mensagem_enviada:  'Mensagem enviada',
+        retornar_depois:   'Retornar depois',
+        follow_up:         'Follow up',
+        sem_interesse:     'Cliente sem interesse',
+        telefone_invalido: 'Telefone inexistente',
+        sem_resposta:      'Sem resposta',
+        sem_sucesso:       'Sem sucesso',
+        novo:              'Novo'
+    };
+    return mapa[tag] || tag || '—';
+}
 
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') {
-                if (modalHistorico)   modalHistorico.style.display = 'none';
-                if (modalLigar)       modalLigar.style.display = 'none';
-                if (modalAgendamento) modalAgendamento.style.display = 'none';
-                const editor = document.querySelector('.tag-editor');
-                if (editor) editor.remove();
-            }
-        });
-
-// Seletor de carteira — listeners
-        if (carteiraTrigger && carteiraMenu) {
-            carteiraTrigger.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const aberto = carteiraMenu.classList.contains('open');
-                if (aberto) {
-                    fecharMenuCarteiras();
-                } else {
-                    carregarMinhasCarteiras().then(() => {
-                        renderizarMenuCarteiras();
-                        abrirMenuCarteiras();
-                    });
-                }
-            });
-
-            document.addEventListener('click', (e) => {
-                if (carteiraSelect && !carteiraSelect.contains(e.target)) {
-                    fecharMenuCarteiras();
-                }
-            });
-
-            document.addEventListener('keydown', (e) => {
-                if (e.key === 'Escape') fecharMenuCarteiras();
-            });
-        }
-
-// Seletor de carteira — listeners
-        if (carteiraTrigger && carteiraMenu) {
-            carteiraTrigger.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const aberto = carteiraMenu.classList.contains('open');
-                if (aberto) {
-                    fecharMenuCarteiras();
-                } else {
-                    carregarMinhasCarteiras().then(() => {
-                        renderizarMenuCarteiras();
-                        abrirMenuCarteiras();
-                    });
-                }
-            });
-
-            document.addEventListener('click', (e) => {
-                if (carteiraSelect && !carteiraSelect.contains(e.target)) {
-                    fecharMenuCarteiras();
-                }
-            });
-
-            document.addEventListener('keydown', (e) => {
-                if (e.key === 'Escape') fecharMenuCarteiras();
-            });
-        }
-        
-        // Carrega carteiras primeiro
-        await carregarMinhasCarteiras();
-        carteiraAtiva = escolherCarteiraAtiva();
-        if (carteiraAtiva) {
-            salvarCarteiraAtivaLocalStorage(carteiraAtiva.id);
-        }
-        atualizarBotaoCarteira();
-        renderizarMenuCarteiras();
-
-        await carregarCena();
-
-        // Polling de agendamentos a cada 60s
-        setTimeout(() => verificarAgendamentos(), 5000);
-        setInterval(verificarAgendamentos, 60000);
+    function escapeHtml(str) {
+        return String(str || '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
     }
 
     /* =========================================================
-       CARREGAR CENA
+       USUÁRIO
        ========================================================= */
-    async function carregarCena() {
-        await atualizarEstatisticas();
-        await carregarProximoLead();
-    }
-
-    function mostrarTelaEspera() {
-        if (waitingState) waitingState.style.display = 'block';
-        if (leadState)    leadState.style.display = 'none';
-        removerBadgeAgendamento();
-    }
-
-    function mostrarTelaLead() {
-        if (waitingState) waitingState.style.display = 'none';
-        if (leadState)    leadState.style.display = 'block';
-    }
-
-/* =========================================================
-   SELETOR DE CARTEIRA
-   ========================================================= */
-
-const LS_CARTEIRA_ATIVA = 'sr_carteira_ativa';
-
-function salvarCarteiraAtivaLocalStorage(listaId) {
-    if (listaId) {
-        localStorage.setItem(LS_CARTEIRA_ATIVA, String(listaId));
-    } else {
-        localStorage.removeItem(LS_CARTEIRA_ATIVA);
-    }
-}
-
-function lerCarteiraAtivaLocalStorage() {
-    const raw = localStorage.getItem(LS_CARTEIRA_ATIVA);
-    if (!raw) return null;
-    const n = Number(raw);
-    return isNaN(n) ? null : n;
-}
-
-async function carregarMinhasCarteiras() {
-    try {
-        const { carteiras } = await ApiClient.get('/api/corretor/minhas-carteiras');
-        minhasCarteiras = carteiras || [];
-        return minhasCarteiras;
-    } catch (err) {
-        console.error('[carteiras] erro:', err);
-        minhasCarteiras = [];
-        return [];
-    }
-}
-
-function escolherCarteiraAtiva() {
-    if (!minhasCarteiras.length) return null;
-
-    // 1. Tenta a que tá no localStorage (se ainda tem fila)
-    const localId = lerCarteiraAtivaLocalStorage();
-    if (localId) {
-        const daStorage = minhasCarteiras.find(c => c.id === localId && c.restantes > 0);
-        if (daStorage) return daStorage;
-    }
-
-    // 2. Fallback: mais antiga com fila
-    const comFila = minhasCarteiras.filter(c => c.restantes > 0);
-    if (comFila.length) return comFila[0];
-
-    // 3. Nenhuma com fila → retorna null
-    return null;
-}
-
-function atualizarBotaoCarteira() {
-    if (!carteiraNome || !carteiraBadge) return;
-
-    if (!carteiraAtiva) {
-        carteiraNome.textContent = 'Sem carteira ativa';
-        carteiraBadge.textContent = '0';
-        return;
-    }
-
-    carteiraNome.textContent = carteiraAtiva.nome;
-    carteiraBadge.textContent = carteiraAtiva.restantes;
-}
-
-function renderizarMenuCarteiras() {
-    if (!carteiraMenu) return;
-
-    if (!minhasCarteiras.length) {
-        carteiraMenu.innerHTML = `
-            <div class="custom-select-empty" style="padding: 1rem; text-align: center; color: #7a8ba8; font-size: 0.85rem;">
-                Você ainda não tem carteiras.
-            </div>
-        `;
-        return;
-    }
-
-    carteiraMenu.innerHTML = minhasCarteiras.map(c => {
-        const atual = carteiraAtiva && c.id === carteiraAtiva.id;
-        const concluida = c.restantes === 0;
-
-        const classes = [
-            'carteira-opcao',
-            atual ? 'atual' : '',
-            concluida ? 'concluida' : ''
-        ].filter(Boolean).join(' ');
-
-        const status = concluida
-            ? '✓ Concluída'
-            : (c.restantes + ' na fila');
-
-        return `
-            <button type="button"
-                    class="${classes}"
-                    data-lista-id="${c.id}"
-                    ${concluida ? 'disabled' : ''}>
-                <i class="fas fa-folder-open opt-icon"></i>
-                <span class="opt-nome">${escapeHtml(c.nome)}</span>
-                <span class="opt-status">${status}</span>
-            </button>
-        `;
-    }).join('');
-
-    carteiraMenu.querySelectorAll('.carteira-opcao:not(.concluida)').forEach(opc => {
-        opc.addEventListener('click', async () => {
-            const listaId = Number(opc.dataset.listaId);
-            await trocarCarteira(listaId);
-        });
-    });
-}
-
-async function trocarCarteira(listaId) {
-    const nova = minhasCarteiras.find(c => c.id === listaId);
-    if (!nova) return;
-
-    carteiraAtiva = nova;
-    salvarCarteiraAtivaLocalStorage(listaId);
-    atualizarBotaoCarteira();
-    renderizarMenuCarteiras();
-    fecharMenuCarteiras();
-
-    mostrarToast('Trocando para: ' + nova.nome, 'info');
-
-    await carregarProximoLead();
-    await atualizarEstatisticas();
-}
-
-function abrirMenuCarteiras() {
-    if (!carteiraMenu || !carteiraTrigger) return;
-    carteiraMenu.classList.add('open');
-    carteiraTrigger.classList.add('open');
-}
-
-function fecharMenuCarteiras() {
-    if (!carteiraMenu || !carteiraTrigger) return;
-    carteiraMenu.classList.remove('open');
-    carteiraTrigger.classList.remove('open');
-}
-
-    /* =========================================================
-       PRÓXIMO LEAD
-       ========================================================= */
-    async function carregarProximoLead() {
-    try {
-        leadEmModoAgendamento = false;
-        removerBadgeAgendamento();
-
-        // Se não tem carteira ativa, tenta escolher uma
-        if (!carteiraAtiva) {
-            await carregarMinhasCarteiras();
-            carteiraAtiva = escolherCarteiraAtiva();
-            if (carteiraAtiva) {
-                salvarCarteiraAtivaLocalStorage(carteiraAtiva.id);
-                atualizarBotaoCarteira();
-                renderizarMenuCarteiras();
-            }
-        }
-
-        // Monta URL com lista_id se tiver carteira ativa
-        let url = '/api/corretor/proximo-lead';
-        if (carteiraAtiva && carteiraAtiva.id) {
-            url += '?lista_id=' + carteiraAtiva.id;
-        }
-
-        const { lead } = await ApiClient.get(url);
-
-        // Se não achou lead na carteira ativa
-        if (!lead) {
-            console.warn('[corretor] sem lead na carteira ativa:', carteiraAtiva?.nome);
-
-            // Recarrega as carteiras do backend
-            await carregarMinhasCarteiras();
-
-            // Filtra só as com fila
-            const comFila = minhasCarteiras.filter(c => c.restantes > 0);
-
-            // Se tem outra carteira com fila, troca e tenta de novo
-            if (comFila.length) {
-                const proxima = comFila[0];
-
-                // Só troca se for diferente da atual
-                if (!carteiraAtiva || proxima.id !== carteiraAtiva.id) {
-    console.log('[corretor] trocando pra:', proxima.nome);
-
-    // 🎉 Notifica que a lista anterior acabou e a próxima começou
-    if (carteiraAtiva) {
-        mostrarToast('Você concluiu sua lista! Sua próxima lista começou imediatamente!', 'success');
-    }
-
-    carteiraAtiva = proxima;
-    salvarCarteiraAtivaLocalStorage(proxima.id);
-    atualizarBotaoCarteira();
-    renderizarMenuCarteiras();
-
-    // Tenta de novo (recursivo)
-    return carregarProximoLead();
-}
-            }
-
-            // Se não tem nenhuma carteira com fila → tela de espera
-            leadAtual = null;
-            if (carteiraAtiva) {
-    mostrarToast('Você concluiu TODAS as suas carteiras! 🎉', 'success');
-}
-
-await mostrarTelaEsperaInteligente();
-return;
-        }
-
-        // Achou lead — exibe
-        leadAtual = lead;
-        processando = false;
-
-        if (leadNome)     leadNome.textContent = lead.nome;
-        if (leadTelefone) leadTelefone.textContent = Acoes.formatarTelefone(lead.telefone) || lead.telefone;
-        if (leadOrigem)   leadOrigem.textContent = lead.lista_nome || 'SR Lançamentos';
-
-        if (resultList) {
-            resultList.querySelectorAll('.result-tag').forEach(btn => {
-                btn.classList.remove('processing');
-            });
-        }
-
-        if (observacao) observacao.value = '';
-        if (callNotice) callNotice.style.display = 'none';
-
-        mostrarTelaLead();
-        await atualizarEstatisticas();
-
-    } catch (err) {
-        console.error('[corretor] erro ao carregar lead:', err);
-        mostrarToast(err.message || 'Erro ao carregar.', 'error');
-    }
-}
-
-    /* =========================================================
-       TELA DE ESPERA INTELIGENTE
-       ========================================================= */
-    async function mostrarTelaEsperaInteligente() {
-        if (waitingState) waitingState.style.display = 'block';
-        if (leadState)    leadState.style.display = 'none';
-
+    async function carregarUsuario() {
         try {
-            const stats = await ApiClient.get('/api/corretor/estatisticas');
-            const temHistorico = stats.trabalhados > 0;
-
-            const waitingIcon  = document.getElementById('waitingIcon');
-            const waitingTitle = document.getElementById('waitingTitle');
-            const waitingText  = document.getElementById('waitingText');
-            const waitingPulse = document.getElementById('waitingPulse');
-            const waitingHist  = document.getElementById('waitingHistorico');
-            const histCountEsp = document.getElementById('historicoCountEspera');
-
-            if (temHistorico) {
-                waitingState.classList.add('all-done');
-                if (waitingIcon)  waitingIcon.innerHTML = '<i class="fas fa-check-double"></i>';
-                if (waitingTitle) waitingTitle.textContent = 'Você concluiu sua carteira! 🎉';
-                if (waitingText)  waitingText.textContent =
-                    'Todos os clientes liberados já foram trabalhados. ' +
-                    'Assim que o administrador liberar uma nova lista, ela aparecerá aqui automaticamente.';
-                if (waitingPulse) waitingPulse.style.display = 'none';
-                if (waitingHist)  waitingHist.style.display = 'block';
-                if (histCountEsp) histCountEsp.textContent = stats.trabalhados;
-            } else {
-                waitingState.classList.remove('all-done');
-                if (waitingIcon)  waitingIcon.innerHTML = '<i class="fas fa-hourglass-half"></i>';
-                if (waitingTitle) waitingTitle.textContent = 'Aguarde seu gerente liberar sua nova carteira';
-                if (waitingText)  waitingText.textContent =
-                    'Você está na fila para receber os próximos clientes. ' +
-                    'Assim que o administrador liberar uma nova lista, ela aparecerá aqui automaticamente.';
-                if (waitingPulse) waitingPulse.style.display = 'flex';
-                if (waitingHist)  waitingHist.style.display = 'none';
-            }
+            const { usuario } = await ApiClient.get('/api/me');
+            if (headerUserName) headerUserName.textContent = usuario.nome.split(' ')[0];
+            localStorage.setItem('sr_usuario', usuario.nome);
         } catch (err) {
-            console.error('[corretor] erro na tela de espera:', err);
+            console.error('[corretor] erro ao carregar usuário:', err);
         }
     }
 
     /* =========================================================
-       ESTATÍSTICAS
+       CARTEIRAS
        ========================================================= */
-    async function atualizarEstatisticas() {
-    try {
-        // 🔑 Usa a carteiraAtiva em vez do leadAtual
-        const listaId = carteiraAtiva ? carteiraAtiva.id : null;
-        const url = listaId
-            ? `/api/corretor/estatisticas?lista_id=${listaId}`
-            : '/api/corretor/estatisticas';
-
-        const stats = await ApiClient.get(url);
-
-        if (progressCount) progressCount.textContent = `${stats.trabalhados} de ${stats.total} trabalhados`;
-        const pct = stats.total > 0 ? (stats.trabalhados / stats.total) * 100 : 0;
-        if (progressFill) progressFill.style.width = `${pct}%`;
-
-        if (statQualificadosTop) statQualificadosTop.textContent = stats.trabalhados;
-        if (statRestantesTop)    statRestantesTop.textContent    = stats.restantes;
-        if (historicoCount)       historicoCount.textContent       = stats.trabalhados;
-        if (historicoCountEspera) historicoCountEspera.textContent = stats.trabalhados;
-
-        if (resultList) {
-            resultList.querySelectorAll('.result-tag').forEach(btn => {
-                const tag = btn.dataset.tag;
-                const count = (stats.porTag && stats.porTag[tag]) || 0;
-                const el = btn.querySelector('.tag-count');
-                if (el) el.textContent = `+${count}`;
-            });
-        }
-    } catch (err) {
-        console.error('[corretor] erro nas estatísticas:', err);
-    }
-}
-
-    /* =========================================================
-       LIGAR
-       ========================================================= */
-    function handleLigar() {
-        if (!leadAtual) return;
-
-        const res = Acoes.ligar(leadAtual.telefone);
-        if (!res.ok) {
-            mostrarToast(res.erro || 'Telefone inválido.', 'error');
-            return;
-        }
-
-        const hora = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-
-        if (res.modo === 'desktop') {
-            if (modalLigarNome)   modalLigarNome.textContent = leadAtual.nome;
-            if (modalLigarNumero) modalLigarNumero.textContent = Acoes.formatarTelefone(leadAtual.telefone);
-            if (btnModalWhatsApp) btnModalWhatsApp.href = Acoes.linkWhatsApp(
-                leadAtual,
-                localStorage.getItem('sr_usuario') || 'Corretor'
-            );
-            if (modalLigar) modalLigar.style.display = 'flex';
-        }
-
-        if (callNoticeText) callNoticeText.textContent = `Chamada iniciada às ${hora}. Registre o resultado abaixo.`;
-        if (callNotice)     callNotice.style.display = 'flex';
-    }
-
-    /* =========================================================
-       WHATSAPP
-       ========================================================= */
-    function handleWhatsApp() {
-        if (!leadAtual) return;
-
-        const nomeCorretor = localStorage.getItem('sr_usuario') || 'Corretor';
-        const res = Acoes.abrirWhatsApp(leadAtual, nomeCorretor);
-
-        if (!res.ok) {
-            mostrarToast(res.erro || 'Telefone inválido.', 'error');
-            return;
-        }
-
-        if (callNoticeText) callNoticeText.textContent = 'WhatsApp aberto com mensagem pronta. Registre o resultado abaixo.';
-        if (callNotice)     callNotice.style.display = 'flex';
-
-        mostrarToast('WhatsApp aberto em nova aba.', 'success');
-    }
-
-    /* =========================================================
-       COPIAR NÚMERO
-       ========================================================= */
-    async function copiarNumero() {
-        const texto = modalLigarNumero.textContent;
-        try {
-            await navigator.clipboard.writeText(texto);
-            mostrarToast('Número copiado!', 'success');
-        } catch {
-            const range = document.createRange();
-            range.selectNode(modalLigarNumero);
-            window.getSelection().removeAllRanges();
-            window.getSelection().addRange(range);
-            document.execCommand('copy');
-            mostrarToast('Número copiado!', 'success');
-        }
-    }
-
-    /* =========================================================
-       CLIQUE NA TAG (lead ativo)
-       ========================================================= */
-    async function handleTagClick(btn) {
-        if (!leadAtual || processando) return;
-
-        const tag = btn.dataset.tag;
-
-        if (tag === 'agendado' || tag === 'retornar_depois') {
-            abrirModalAgendamento({
-                leadId: leadAtual.id,
-                leadNome: leadAtual.nome,
-                leadTelefone: leadAtual.telefone,
-                tag,
-                modo: 'novo',
-                agendamentoAtual: null,
-                localAtual: ''
-            });
-            return;
-        }
-
-        await salvarResultadoDireto(leadAtual.id, tag);
-    }
-
-    async function salvarResultadoDireto(leadId, tag, agendamentoData = null, agendamentoLocal = null) {
-        if (processando) return;
-        processando = true;
-
-        const textoObs = observacao ? observacao.value.trim() : '';
-
-        try {
-            await ApiClient.post(`/api/corretor/leads/${leadId}/resultado`, {
-                resultado: tag,
-                observacao: textoObs,
-                agendamento_data: agendamentoData,
-                agendamento_local: agendamentoLocal
-            });
-
-// mostrarToast(`Registrado: ${tagParaTexto(tag)}`, 'success'); Por enquanto não vou usar
-
-
-            await atualizarEstatisticas();
-            await new Promise(r => setTimeout(r, 400));
-            await carregarProximoLead();
-
-        } catch (err) {
-            mostrarToast(err.message || 'Erro ao registrar.', 'error');
-            processando = false;
-        }
-    }
-
-    /* =========================================================
-       MODAL DE AGENDAMENTO
-       ========================================================= */
-    function abrirModalAgendamento({ leadId, leadNome, leadTelefone, tag, modo, agendamentoAtual = null, localAtual = '' }) {
-        if (!modalAgendamento) {
-            console.error('[agendamento] modal não encontrado');
-            mostrarToast('Modal de agendamento não está no HTML.', 'error');
-            return;
-        }
-
-        agendamentoPendente = { leadId, tag, modo };
-
-        if (tag === 'agendado') {
-            if (agendamentoTitulo)    agendamentoTitulo.innerHTML = '<i class="fas fa-calendar-check"></i> Agendamento';
-            if (agendamentoSubtitulo) agendamentoSubtitulo.textContent = 'Informe data, hora e local do agendamento';
-        } else {
-            if (agendamentoTitulo)    agendamentoTitulo.innerHTML = '<i class="fas fa-clock"></i> Retornar depois';
-            if (agendamentoSubtitulo) agendamentoSubtitulo.textContent = 'Informe quando quer retornar a ligar';
-        }
-
-        if (agendamentoLeadNome)     agendamentoLeadNome.textContent = leadNome || '—';
-        if (agendamentoLeadTelefone) agendamentoLeadTelefone.textContent = Acoes.formatarTelefone(leadTelefone) || '—';
-
-        if (agendamentoDataError) agendamentoDataError.textContent = '';
-        if (agendamentoHoraError) agendamentoHoraError.textContent = '';
-        if (agendamentoDataError) agendamentoDataError.classList.remove('visible');
-        if (agendamentoHoraError) agendamentoHoraError.classList.remove('visible');
-        if (agendamentoData) agendamentoData.classList.remove('error');
-        if (agendamentoHora) agendamentoHora.classList.remove('error');
-
-        if (agendamentoAtual) {
-            try {
-                const dt = parseDataAgendamento(agendamentoAtual);
-                const ano    = dt.getFullYear();
-                const mes    = String(dt.getMonth() + 1).padStart(2, '0');
-                const dia    = String(dt.getDate()).padStart(2, '0');
-                const hora   = String(dt.getHours()).padStart(2, '0');
-                const minuto = String(dt.getMinutes()).padStart(2, '0');
-
-                if (agendamentoData) agendamentoData.value = `${ano}-${mes}-${dia}`;
-                if (agendamentoHora) agendamentoHora.value = `${hora}:${minuto}`;
-            } catch {
-                if (agendamentoData) agendamentoData.value = '';
-                if (agendamentoHora) agendamentoHora.value = '';
-            }
-        } else {
-            if (agendamentoData) agendamentoData.value = '';
-            if (agendamentoHora) agendamentoHora.value = '';
-        }
-
-        if (agendamentoLocal) agendamentoLocal.value = localAtual || '';
-
-        const hoje = new Date();
-        const anoHoje = hoje.getFullYear();
-        const mesHoje = String(hoje.getMonth() + 1).padStart(2, '0');
-        const diaHoje = String(hoje.getDate()).padStart(2, '0');
-        if (agendamentoData) agendamentoData.min = `${anoHoje}-${mesHoje}-${diaHoje}`;
-
-        if (btnSalvarAgendamentoTexto) {
-            btnSalvarAgendamentoTexto.textContent = modo === 'novo' ? 'Salvar agendamento' : 'Salvar alteração';
-        }
-
-        modalAgendamento.style.display = 'flex';
-        setTimeout(() => { if (agendamentoData) agendamentoData.focus(); }, 120);
-    }
-
-    function fecharModalAgendamento() {
-        if (modalAgendamento) modalAgendamento.style.display = 'none';
-        agendamentoPendente = null;
-    }
-
-    async function salvarAgendamento() {
-        if (!agendamentoPendente) return;
-
-        const { leadId, tag, modo } = agendamentoPendente;
-
-        const data  = agendamentoData ? agendamentoData.value : '';
-        const hora  = agendamentoHora ? agendamentoHora.value : '';
-        const local = agendamentoLocal ? agendamentoLocal.value.trim() : '';
-
-        let temErro = false;
-
-        if (!data) {
-            if (agendamentoDataError) {
-                agendamentoDataError.textContent = 'Informe a data.';
-                agendamentoDataError.classList.add('visible');
-            }
-            if (agendamentoData) agendamentoData.classList.add('error');
-            temErro = true;
-        }
-
-        if (!hora) {
-            if (agendamentoHoraError) {
-                agendamentoHoraError.textContent = 'Informe a hora.';
-                agendamentoHoraError.classList.add('visible');
-            }
-            if (agendamentoHora) agendamentoHora.classList.add('error');
-            temErro = true;
-        }
-
-        if (temErro) return;
-
-        const agendamentoDataISO = `${data} ${hora}:00-03:00`;
-
-        if (btnSalvarAgendamento) btnSalvarAgendamento.disabled = true;
-        if (btnSalvarAgendamentoTexto) btnSalvarAgendamentoTexto.textContent = 'Salvando...';
-
-        try {
-            if (modo === 'novo') {
-                await ApiClient.post(`/api/corretor/leads/${leadId}/resultado`, {
-                    resultado: tag,
-                    observacao: observacao ? observacao.value.trim() : '',
-                    agendamento_data: agendamentoDataISO,
-                    agendamento_local: local
-                });
-
-                mostrarToast(`${tag === 'agendado' ? 'Agendado' : 'Retorno'}: ${formatarDataHora(data, hora)}`, 'success');
-
-                fecharModalAgendamento();
-                processando = false;
-                await atualizarEstatisticas();
-                await new Promise(r => setTimeout(r, 300));
-                await carregarProximoLead();
-
-            } else {
-                await ApiClient.patch(`/api/corretor/leads/${leadId}/qualificacao`, {
-                    resultado: tag,
-                    agendamento_data: agendamentoDataISO,
-                    agendamento_local: local
-                });
-
-                mostrarToast('Agendamento atualizado', 'success');
-                fecharModalAgendamento();
-
-                const lead = leadsDaCarteiraAtual.find(l => Number(l.id) === Number(leadId));
-                if (lead) {
-                    lead.agendamento_data = agendamentoDataISO;
-                    lead.agendamento_local = local;
-                    lead.resultado = tag;
-                }
-
-                const itemBtn = document.querySelector(`.historico-item .tag-editavel[data-lead-id="${leadId}"]`);
-                if (itemBtn) {
-                    const card = itemBtn.closest('.historico-item');
-
-                    itemBtn.dataset.resultado = tag;
-                    itemBtn.className = `historico-item-tag ${tagCor(tag)} tag-editavel`;
-                    itemBtn.innerHTML = `${escapeHtml(tagParaTexto(tag))} <i class="fas fa-pen"></i>`;
-
-                    const ehDescartado = ['sem_interesse', 'telefone_invalido', 'sem_resposta'].includes(tag);
-                    card.classList.toggle('descartado', ehDescartado);
-
-                    const linhaAntiga = card.querySelector('.historico-item-agendamento');
-                    if (linhaAntiga) linhaAntiga.remove();
-
-                    const dtAg = parseDataAgendamento(agendamentoDataISO);
-                    const dtAgStr = dtAg.toLocaleString('pt-BR', {
-                        day: '2-digit', month: '2-digit', year: '2-digit',
-                        hour: '2-digit', minute: '2-digit'
-                    });
-
-                    const linhaNova = document.createElement('div');
-                    linhaNova.className = 'historico-item-agendamento';
-                    linhaNova.innerHTML = `
-                        <i class="fas fa-calendar-alt"></i>
-                        <span>${dtAgStr}${local ? ` · ${escapeHtml(local)}` : ''}</span>
-                    `;
-
-                    const obsAntiga = card.querySelector('.historico-item-obs');
-                    if (obsAntiga) {
-                        card.insertBefore(linhaNova, obsAntiga);
-                    } else {
-                        card.appendChild(linhaNova);
-                    }
-                }
-            }
-
-        } catch (err) {
-            mostrarToast(err.message || 'Erro ao salvar.', 'error');
-        } finally {
-            if (btnSalvarAgendamento) btnSalvarAgendamento.disabled = false;
-            if (btnSalvarAgendamentoTexto) {
-                btnSalvarAgendamentoTexto.textContent = modo === 'novo' ? 'Salvar agendamento' : 'Salvar alteração';
-            }
-        }
-    }
-
-    /* =========================================================
-       HISTÓRICO — NÍVEL 1 (carteiras)
-       ========================================================= */
-    async function abrirHistorico() {
-        carteiraAtual = null;
-        leadsDaCarteiraAtual = [];
-        if (modalHistorico) modalHistorico.style.display = 'flex';
-
-        historicoLista.innerHTML = `
-            <div class="historico-loading">
-                <i class="fas fa-circle-notch fa-spin"></i>
-                <p>Carregando...</p>
-            </div>
-        `;
-        if (historicoVazio) historicoVazio.style.display = 'none';
-        if (historicoResumo) historicoResumo.textContent = 'Carregando...';
-
-        await carregarCarteiras();
-    }
-
     async function carregarCarteiras() {
         try {
-            const { carteiras } = await ApiClient.get('/api/corretor/historico/carteiras');
+            const { carteiras: lista } = await ApiClient.get('/api/corretor/minhas-carteiras');
+            carteiras = lista || [];
 
-            historicoLista.innerHTML = '';
+            const comFila = carteiras.find(c => c.restantes > 0);
+            carteiraAtiva = comFila || carteiras[0] || null;
 
-            if (!carteiras.length) {
-                if (historicoVazio) historicoVazio.style.display = 'block';
-                historicoLista.style.display = 'none';
-                if (historicoResumo) historicoResumo.textContent = 'Você ainda não trabalhou nenhum cliente.';
-                return;
+            if (carteiraNomeTop) {
+                carteiraNomeTop.textContent = carteiraAtiva ? carteiraAtiva.nome : 'Carteiras';
             }
 
-            if (historicoVazio) historicoVazio.style.display = 'none';
-            historicoLista.style.display = 'flex';
-
-            const totalTrabalhados = carteiras.reduce((acc, c) => acc + c.total_qualificados, 0);
-            if (historicoResumo) {
-                historicoResumo.textContent = `${carteiras.length} ${carteiras.length === 1 ? 'carteira' : 'carteiras'} · ${totalTrabalhados} trabalhados`;
-            }
-
-            historicoLista.innerHTML = carteiras.map(c => `
-                <button class="carteira-item" data-lista-id="${c.lista_id}">
-                    <div class="carteira-item-icon">
-                        <i class="fas fa-folder-open"></i>
-                    </div>
-                    <div class="carteira-item-info">
-                        <strong>${escapeHtml(c.lista_nome)}</strong>
-                        <small>
-                            <i class="fas fa-check-circle"></i>
-                            ${c.total_qualificados} ${c.total_qualificados === 1 ? 'trabalhado' : 'trabalhados'}
-                            · Última atividade ${dataCurta(c.ultima_atividade)}
-                        </small>
-                    </div>
-                    <i class="fas fa-chevron-right carteira-item-arrow"></i>
-                </button>
-            `).join('');
-
-            historicoLista.querySelectorAll('.carteira-item').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    const listaId = Number(btn.dataset.listaId);
-                    abrirCarteira(listaId);
-                });
-            });
-
+            renderizarMenuCarteiras();
         } catch (err) {
-            console.error('[historico] erro:', err);
-            historicoLista.innerHTML = '';
-            if (historicoVazio) historicoVazio.style.display = 'block';
-            if (historicoResumo) historicoResumo.textContent = 'Erro ao carregar.';
+            console.error('[corretor] erro ao carregar carteiras:', err);
+            mostrarToast('Erro ao carregar carteiras.', 'error');
         }
     }
 
-    /* =========================================================
-       HISTÓRICO — NÍVEL 2 (leads de uma carteira)
-       ========================================================= */
-    async function abrirCarteira(listaId) {
-        carteiraAtual = { listaId, busca: '' };
-        await carregarCarteira();
-    }
+    function renderizarMenuCarteiras() {
+        if (!carteirasMenu) return;
 
-    function renderizarListaLeads(leads) {
-        const leadsContainer = document.getElementById('carteiraLeadsLista');
-        if (!leadsContainer) return;
-
-        if (!leads.length) {
-            leadsContainer.innerHTML = `
-                <div class="historico-vazio" style="padding: 1.5rem;">
-                    <i class="fas fa-search"></i>
-                    <p>Nenhum cliente encontrado.</p>
-                </div>
-            `;
+        if (!carteiras.length) {
+            carteirasMenu.innerHTML = `
+                <div style="padding:1rem;text-align:center;color:var(--gray-500);font-size:0.85rem;">
+                    Nenhuma carteira.
+                </div>`;
             return;
         }
 
-        leadsContainer.innerHTML = leads.map(item => {
-            const classeCor = tagCor(item.resultado);
-            const ehDescartado = item.status === 'descartado' || item.status === 'sem_resposta';
-            const data = parseDataSegura(item.decidido_em)?.toLocaleString('pt-BR', {
-                timeZone: 'America/Sao_Paulo',
-                day: '2-digit', month: '2-digit', year: '2-digit',
-                hour: '2-digit', minute: '2-digit'
-            }) || '—';
-
-            let linhaAgendamento = '';
-            if (item.agendamento_data) {
-                const dtAg = parseDataAgendamento(item.agendamento_data);
-                const dtAgStr = dtAg.toLocaleString('pt-BR', {
-                    day: '2-digit', month: '2-digit', year: '2-digit',
-                    hour: '2-digit', minute: '2-digit'
-                });
-                linhaAgendamento = `
-                    <div class="historico-item-agendamento">
-                        <i class="fas fa-calendar-alt"></i>
-                        <span>${dtAgStr}${item.agendamento_local ? ` · ${escapeHtml(item.agendamento_local)}` : ''}</span>
-                    </div>
-                `;
-            }
-
+        carteirasMenu.innerHTML = carteiras.map(c => {
+            const isAtual = carteiraAtiva && c.id === carteiraAtiva.id;
             return `
-                <div class="historico-item ${ehDescartado ? 'descartado' : ''}">
-                    <div class="historico-item-top">
-                        <span class="historico-item-nome">${escapeHtml(item.nome)}</span>
-                        <button
-                            class="historico-item-tag ${classeCor} tag-editavel"
-                            data-lead-id="${item.id}"
-                            data-resultado="${item.resultado}"
-                            title="Clique para alterar"
-                        >
-                            ${escapeHtml(tagParaTexto(item.resultado))}
-                            <i class="fas fa-pen"></i>
-                        </button>
-                    </div>
-                    <div class="historico-item-info">
-                        <span><i class="fas fa-phone"></i> ${escapeHtml(Acoes.formatarTelefone(item.telefone))}</span>
-                        <span><i class="fas fa-clock"></i> ${data}</span>
-                    </div>
-                    ${linhaAgendamento}
-                    ${item.observacao
-                        ? `<div class="historico-item-obs">
-                               <i class="fas fa-comment-dots"></i>
-                               <span>${escapeHtml(item.observacao)}</span>
-                           </div>`
-                        : ''}
-                </div>
+                <button class="dash-select-item ${isAtual ? 'active' : ''}"
+                        data-id="${c.id}" type="button">
+                    <i class="fas fa-folder-open"></i>
+                    <span>${escapeHtml(c.nome)}</span>
+                    <span class="badge-mini">${c.restantes}</span>
+                </button>
             `;
         }).join('');
 
-        leadsContainer.querySelectorAll('.tag-editavel').forEach(btn => {
-            btn.addEventListener('click', () => abrirSeletorTag(btn));
+        carteirasMenu.querySelectorAll('.dash-select-item').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const id = Number(btn.dataset.id);
+                carteiraAtiva = carteiras.find(c => c.id === id) || null;
+                if (carteiraNomeTop) {
+                    carteiraNomeTop.textContent = carteiraAtiva ? carteiraAtiva.nome : 'Carteiras';
+                }
+                dashSelectWrap?.classList.remove('open');
+                await carregarDashboard();
+            });
         });
     }
 
-    async function carregarCarteira(silencioso = false) {
-        if (!carteiraAtual) return;
-
-        const { listaId, busca } = carteiraAtual;
-
-        if (!silencioso) {
-            historicoLista.innerHTML = `
-                <div class="historico-loading">
-                    <i class="fas fa-circle-notch fa-spin"></i>
-                    <p>Carregando carteira...</p>
-                </div>
-            `;
-        }
-
+    /* =========================================================
+       DASHBOARD — KPIs
+       ========================================================= */
+    async function carregarDashboard() {
         try {
-            const url = busca
-                ? `/api/corretor/historico/carteiras/${listaId}?busca=${encodeURIComponent(busca)}`
-                : `/api/corretor/historico/carteiras/${listaId}`;
+            const url = carteiraAtiva
+                ? `/api/corretor/estatisticas?lista_id=${carteiraAtiva.id}`
+                : '/api/corretor/estatisticas';
 
-            const { lista, leads } = await ApiClient.get(url);
+            stats = await ApiClient.get(url);
 
-            leadsDaCarteiraAtual = leads;
+            if (kpiTrabalhados)   kpiTrabalhados.textContent   = stats.trabalhados || 0;
+            if (kpiEmAtendimento) kpiEmAtendimento.textContent = stats.em_atendimento || 0;
+            if (kpiFollowUp)      kpiFollowUp.textContent      = stats.follow_up || 0;
+            if (kpiNaFila)        kpiNaFila.textContent        = stats.na_fila || 0;
 
-            if (historicoResumo) {
-                historicoResumo.textContent = `${lista.nome} · ${leads.length} ${
-                    leads.length === 1 ? 'cliente' : 'clientes'
-                }`;
+            const mensagens = stats.mensagens_enviadas || 0;
+            if (kpiMensagens) kpiMensagens.textContent = mensagens;
+            const trabalhados = Number(stats.trabalhados) || 0;
+            const pct = trabalhados > 0 ? Math.round((mensagens / trabalhados) * 100) : 0;
+            if (progressMensagens) progressMensagens.style.width = pct + '%';
+
+            if (kpiTempoMedio) {
+                if (stats.tempoMedioRequalificacao > 0) {
+                    kpiTempoMedio.textContent = formatarTempo(Number(stats.tempoMedioRequalificacao));
+                } else {
+                    kpiTempoMedio.textContent = '—';
+                }
             }
 
-            historicoLista.innerHTML = `
-                <div class="carteira-header">
-                    <button class="btn-voltar" id="btnVoltarCarteiras">
-                        <i class="fas fa-arrow-left"></i>
-                        Voltar
-                    </button>
-                    <strong class="carteira-header-nome">${escapeHtml(lista.nome)}</strong>
-                </div>
-                <div class="carteira-busca">
-                    <i class="fas fa-search"></i>
-                    <input
-                        type="text"
-                        id="carteiraBusca"
-                        placeholder="Buscar cliente por nome..."
-                        value="${escapeHtml(busca)}"
-                    >
-                </div>
-                <div id="carteiraLeadsLista"></div>
-            `;
-
-            document.getElementById('btnVoltarCarteiras').addEventListener('click', () => {
-                carteiraAtual = null;
-                leadsDaCarteiraAtual = [];
-                carregarCarteiras();
-            });
-
-            const inputBusca = document.getElementById('carteiraBusca');
-            let timeoutBusca = null;
-            inputBusca.addEventListener('input', (e) => {
-                clearTimeout(timeoutBusca);
-                const valor = e.target.value.trim();
-                timeoutBusca = setTimeout(() => {
-                    carteiraAtual.busca = valor;
-                    atualizarListaLeadsCarteira();
-                }, 600);
-            });
-
-            renderizarListaLeads(leads);
+            await carregarListasAgendamentos();
 
         } catch (err) {
-            console.error('[historico-carteira] erro:', err);
-            historicoLista.innerHTML = '';
-            if (historicoVazio) historicoVazio.style.display = 'block';
-            if (historicoResumo) historicoResumo.textContent = 'Erro ao carregar carteira.';
+            console.error('[corretor] erro no dashboard:', err);
+            mostrarToast('Erro ao carregar dashboard.', 'error');
         }
-    }
-
-    async function atualizarListaLeadsCarteira() {
-        if (!carteiraAtual) return;
-
-        const { listaId, busca } = carteiraAtual;
-
-        try {
-            const url = busca
-                ? `/api/corretor/historico/carteiras/${listaId}?busca=${encodeURIComponent(busca)}`
-                : `/api/corretor/historico/carteiras/${listaId}`;
-
-            const { lista, leads } = await ApiClient.get(url);
-            leadsDaCarteiraAtual = leads;
-
-            if (historicoResumo) {
-                historicoResumo.textContent = `${lista.nome} · ${leads.length} ${
-                    leads.length === 1 ? 'cliente' : 'clientes'
-                }`;
-            }
-
-            renderizarListaLeads(leads);
-
-        } catch (err) {
-            console.error('[busca-carteira] erro:', err);
-        }
-    }
-
-    function fecharHistorico() {
-        if (modalHistorico) modalHistorico.style.display = 'none';
-        carteiraAtual = null;
-        leadsDaCarteiraAtual = [];
-        const editor = document.querySelector('.tag-editor');
-        if (editor) editor.remove();
     }
 
     /* =========================================================
-       EDITAR TAG NO HISTÓRICO
+       LISTAS — Retornar / Agendamentos
+       ========================================================= */
+    async function carregarListasAgendamentos() {
+        try {
+            const { agendamentos } = await ApiClient.get('/api/corretor/agendamentos');
+
+            const retornar = (agendamentos || [])
+                .filter(a => a.resultado === 'retornar_depois')
+                .slice(0, 3);
+
+            const ags = (agendamentos || [])
+                .filter(a => a.resultado === 'agendado')
+                .slice(0, 3);
+
+            renderizarLista(listaRetornar, retornar, 'retornar');
+            renderizarLista(listaAgendamentos, ags, 'agendamento');
+
+        } catch (err) {
+            console.error('[corretor] erro agendamentos:', err);
+        }
+    }
+
+    function renderizarLista(container, itens, tipo) {
+        if (!container) return;
+
+        if (!itens.length) {
+            container.innerHTML = `
+                <div class="list-empty">
+                    <i class="fas fa-inbox"></i>
+                    <p>Nenhum ${tipo === 'retornar' ? 'retorno agendado' : 'agendamento'}.</p>
+                </div>`;
+            return;
+        }
+
+        container.innerHTML = itens.map(item => renderizarItemLista(item, tipo)).join('');
+    }
+
+    function renderizarItemLista(item, tipo) {
+        const nome = item.nome || '—';
+        const ini = iniciais(nome);
+        const cor = corDoNome(nome);
+
+        let subtitulo = '';
+        let tag = '';
+        let tagClasse = 'tag-ok';
+
+        if (tipo === 'retornar') {
+            subtitulo = item.observacao || 'Retornar depois';
+            tag = 'Retornar';
+            tagClasse = 'tag-hoje';
+        } else {
+            const data = item.agendamento_data ? new Date(item.agendamento_data) : null;
+            const hora = data
+                ? data.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+                : '';
+
+            subtitulo = item.agendamento_local
+                ? `${item.agendamento_local}${hora ? ' · ' + hora : ''}`
+                : (hora || 'Agendado');
+
+            if (data) {
+                const hoje = new Date();
+                const amanha = new Date();
+                amanha.setDate(hoje.getDate() + 1);
+
+                const d = new Date(data.getFullYear(), data.getMonth(), data.getDate());
+                const h = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
+                const a = new Date(amanha.getFullYear(), amanha.getMonth(), amanha.getDate());
+
+                if (d.getTime() === h.getTime()) {
+                    tag = 'Hoje'; tagClasse = 'tag-hoje';
+                } else if (d.getTime() === a.getTime()) {
+                    tag = 'Amanhã'; tagClasse = 'tag-amanha';
+                } else if (d < h) {
+                    tag = 'Atrasado'; tagClasse = 'tag-atrasado';
+                } else {
+                    tag = data.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+                    tagClasse = 'tag-amanha';
+                }
+            } else {
+                tag = 'Agendado';
+                tagClasse = 'tag-amanha';
+            }
+        }
+
+        return `
+            <div class="list-item" data-id="${item.id}">
+                <div class="list-item-avatar" style="background:${cor};">${ini}</div>
+                <div class="list-item-info">
+                    <strong>${escapeHtml(nome)}</strong>
+                    <small>${escapeHtml(subtitulo)}</small>
+                </div>
+                <span class="list-item-tag ${tagClasse}">${tag}</span>
+            </div>
+        `;
+    }
+
+    /* =========================================================
+       INICIAR PROSPECÇÃO
+       ========================================================= */
+    function iniciarProspeccao() {
+        const listaId = carteiraAtiva ? carteiraAtiva.id : '';
+        const url = listaId
+            ? `prospeccao.html?lista=${listaId}`
+            : 'prospeccao.html';
+        window.location.href = url;
+    }
+
+    /* =========================================================
+       MODAL DOS KPIs
+       ========================================================= */
+    const MAPA_KPIS = {
+        kpiTrabalhados:   { status: 'trabalhados',        titulo: 'Clientes Trabalhados' },
+        kpiEmAtendimento: { status: 'em_atendimento',     titulo: 'Em Atendimento' },
+        kpiFollowUp:      { status: 'follow_up',          titulo: 'Follow Up' },
+        kpiNaFila:        { status: 'na_fila',            titulo: 'Na Fila' },
+        kpiMensagens:     { status: 'mensagens_enviadas', titulo: 'Mensagens Enviadas' }
+    };
+
+    const MAPA_LISTAS = {
+        retornar:     { status: 'retornar_depois', titulo: 'Retornar Depois' },
+        agendamento:  { status: 'agendado',        titulo: 'Agendamentos' }
+    };
+
+    function configurarCliquesKpis() {
+        Object.entries(MAPA_KPIS).forEach(([idCard, config]) => {
+            const valorEl = $(idCard);
+            if (!valorEl) return;
+
+            const card = valorEl.closest('.kpi-card');
+            if (!card) return;
+
+            card.style.cursor = 'pointer';
+            card.setAttribute('role', 'button');
+            card.setAttribute('tabindex', '0');
+
+            card.addEventListener('click', () => abrirModalKpi(config.status, config.titulo));
+
+            card.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    abrirModalKpi(config.status, config.titulo);
+                }
+            });
+        });
+    }
+
+    async function abrirModalKpi(status, titulo) {
+        const modal = $('modalKpi');
+        if (!modal) return;
+
+        kpiStatusAtual = status;
+
+        $('modalKpiTituloTexto').textContent = titulo;
+        $('modalKpiInfo').textContent = 'Carregando...';
+        $('modalKpiBusca').value = '';
+
+        modal.style.display = 'flex';
+        setTimeout(() => $('modalKpiBusca')?.focus(), 100);
+
+        await carregarLeadsKpi();
+    }
+
+    async function carregarLeadsKpi() {
+        if (!kpiStatusAtual) return;
+
+        const listaEl = $('modalKpiLista');
+        const loadingEl = $('modalKpiLoading');
+        const vazioEl = $('modalKpiVazio');
+
+        listaEl.innerHTML = '';
+        vazioEl.style.display = 'none';
+        loadingEl.style.display = 'block';
+
+        try {
+            const listaId = carteiraAtiva ? carteiraAtiva.id : null;
+
+            const url = `/api/corretor/leads-por-status?status=${kpiStatusAtual}` +
+                (listaId ? `&lista_id=${listaId}` : '');
+
+            const { leads, total } = await ApiClient.get(url);
+
+            loadingEl.style.display = 'none';
+            $('modalKpiInfo').textContent = `${total} cliente${total !== 1 ? 's' : ''}`;
+
+            if (!leads || !leads.length) {
+                listaEl.innerHTML = '';
+                vazioEl.style.display = 'block';
+                return;
+            }
+
+            vazioEl.style.display = 'none';
+            listaEl.innerHTML = leads.map(l => renderizarItemKpi(l)).join('');
+
+            listaEl.querySelectorAll('.btn-ver-historico').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    abrirHistoricoLead(Number(btn.dataset.id));
+                });
+            });
+
+        } catch (err) {
+            console.error('[corretor] erro KPI:', err);
+            loadingEl.style.display = 'none';
+            $('modalKpiInfo').textContent = 'Erro ao carregar';
+            mostrarToast(err.message || 'Erro ao carregar.', 'error');
+        }
+    }
+
+    function renderizarItemKpi(l) {
+        const classe = classeTagPorResultado(l.resultado);
+        const data = l.decidido_em ? formatarDataCurta(l.decidido_em) : '';
+        const tag = labelTag(l.resultado) || labelTag(l.status);
+
+        let agendamentoHtml = '';
+        if (l.agendamento_data) {
+            const dtAg = formatarDataCurta(l.agendamento_data);
+            const local = l.agendamento_local || '';
+            agendamentoHtml = `
+                <div class="historico-item-agendamento">
+                    <i class="fas fa-calendar-check"></i>
+                    <span>${dtAg}${local ? ' · ' + escapeHtml(local) : ''}</span>
+                </div>
+            `;
+        }
+
+        const obsHtml = l.observacao
+            ? `<div class="historico-item-obs">
+                   <i class="fas fa-comment-dots"></i>
+                   <span>${escapeHtml(l.observacao)}</span>
+               </div>`
+            : '';
+
+        return `
+            <div class="historico-item ${l.status === 'descartado' ? 'descartado' : ''}" data-lead-id="${l.id}">
+                <div class="historico-item-top">
+                    <div class="historico-item-nome">${escapeHtml(l.nome || '—')}</div>
+                    <button
+                        class="historico-item-tag ${classe} tag-editavel"
+                        data-lead-id="${l.id}"
+                        data-resultado="${l.resultado}"
+                        title="Clique para alterar"
+                        type="button"
+                    >
+                        <span>${tag}</span>
+                        <i class="fas fa-pen"></i>
+                    </button>
+                </div>
+                <div class="historico-item-info">
+                    <span><i class="fas fa-phone"></i> ${Acoes.formatarTelefone(l.telefone)}</span>
+                    <span><i class="fas fa-folder-open"></i> ${escapeHtml(l.lista_nome || '—')}</span>
+                    ${data ? `<span><i class="fas fa-clock"></i> ${data}</span>` : ''}
+                </div>
+                ${agendamentoHtml}
+                ${obsHtml}
+                <button class="btn-ver-historico" data-id="${l.id}" type="button">
+                    <i class="fas fa-history"></i>
+                    Ver histórico
+                </button>
+            </div>
+        `;
+    }
+
+    /* =========================================================
+       HISTÓRICO INDIVIDUAL DO LEAD
+       ========================================================= */
+    async function abrirHistoricoLead(leadId) {
+        try {
+            const { historico } = await ApiClient.get(`/api/corretor/lead/${leadId}/historico`);
+
+            if (!historico || !historico.length) {
+                mostrarToast('Sem histórico registrado.', 'info');
+                return;
+            }
+
+            const linhas = historico.map(h => {
+                const data = formatarDataCurta(h.criado_em);
+                const tag = labelTag(h.acao);
+                const obs = h.observacao ? ` — ${h.observacao}` : '';
+                return `• ${data} → ${tag}${obs}`;
+            }).join('\n');
+
+            alert(`Histórico do lead:\n\n${linhas}`);
+
+        } catch (err) {
+            console.error('[corretor] erro histórico lead:', err);
+            mostrarToast('Erro ao carregar histórico.', 'error');
+        }
+    }
+
+    /* =========================================================
+       EDITOR DE TAG INLINE (9 tags)
        ========================================================= */
     function abrirSeletorTag(btn) {
         const leadId = Number(btn.dataset.leadId);
@@ -1200,47 +596,23 @@ return;
                     return;
                 }
 
-                if (novoResultado === 'agendado' || novoResultado === 'retornar_depois') {
-                    const lead = leadsDaCarteiraAtual.find(l => Number(l.id) === Number(leadId));
-                    editor.remove();
-
-                    abrirModalAgendamento({
-                        leadId,
-                        leadNome: lead ? lead.nome : '—',
-                        leadTelefone: lead ? lead.telefone : '—',
-                        tag: novoResultado,
-                        modo: 'editar',
-                        agendamentoAtual: lead ? lead.agendamento_data : null,
-                        localAtual: lead ? lead.agendamento_local : ''
-                    });
-                    return;
-                }
-
                 try {
                     await ApiClient.patch(`/api/corretor/leads/${leadId}/qualificacao`, {
                         resultado: novoResultado
                     });
 
-                    mostrarToast(`Alterado para: ${tagParaTexto(novoResultado)}`, 'success');
+                    mostrarToast(`Alterado para: ${labelTag(novoResultado)}`, 'success');
                     editor.remove();
 
                     btn.dataset.resultado = novoResultado;
-                    btn.className = `historico-item-tag ${tagCor(novoResultado)} tag-editavel`;
-                    btn.innerHTML = `${escapeHtml(tagParaTexto(novoResultado))} <i class="fas fa-pen"></i>`;
-
-                    const lead = leadsDaCarteiraAtual.find(l => Number(l.id) === Number(leadId));
-                    if (lead) {
-                        lead.resultado = novoResultado;
-                        lead.status = ['sem_interesse', 'telefone_invalido', 'sem_resposta'].includes(novoResultado)
-                            ? 'descartado'
-                            : 'qualificado';
-                    }
+                    btn.className = `historico-item-tag ${classeTagPorResultado(novoResultado)} tag-editavel`;
+                    btn.innerHTML = `<span>${labelTag(novoResultado)}</span> <i class="fas fa-pen"></i>`;
 
                     const card = btn.closest('.historico-item');
-                    if (card && lead) {
-                        const ehDescartado = lead.status === 'descartado';
-                        card.classList.toggle('descartado', ehDescartado);
-                    }
+                    const ehDescartado = ['sem_interesse', 'telefone_invalido', 'sem_resposta'].includes(novoResultado);
+                    card?.classList.toggle('descartado', ehDescartado);
+
+                    await carregarDashboard();
 
                 } catch (err) {
                     console.error('[editar-tag] erro:', err);
@@ -1251,295 +623,95 @@ return;
     }
 
     /* =========================================================
-       NOTIFICAÇÕES
+       EVENTOS
        ========================================================= */
-    async function verificarAgendamentos() {
-        try {
-            const { agendamentos } = await ApiClient.get('/api/corretor/agendamentos');
-            const agora = new Date();
+    function configurarEventosModalKpi() {
+        $('btnFecharModalKpi')?.addEventListener('click', fecharModalKpi);
 
-            agendamentos.forEach(ag => {
-                if (!ag.agendamento_data) return;
-
-                const dataAgendada = parseDataAgendamento(ag.agendamento_data);
-                const diffMin = Math.round((dataAgendada - agora) / 60000);
-
-                const chave30 = `30min-${ag.id}`;
-                const chaveHora = `hora-${ag.id}`;
-
-                if (diffMin > 25 && diffMin <= 35 && !agendamentosNotificados[chave30]) {
-                    agendamentosNotificados[chave30] = true;
-                    mostrarNotificacao({
-                        tipo: 'warning',
-                        titulo: `Faltam 30min — ${ag.nome}`,
-                        msg: `${ag.resultado === 'agendado' ? 'Agendamento' : 'Retorno'} às ${
-                            dataAgendada.toLocaleTimeString('pt-BR', {
-                                timeZone: 'America/Sao_Paulo',
-                                hour: '2-digit',
-                                minute: '2-digit'
-                            })
-                        }${ag.agendamento_local ? ` · ${ag.agendamento_local}` : ''}`,
-                        leadId: ag.id
-                    });
-                }
-
-                if (diffMin >= -5 && diffMin <= 5 && !agendamentosNotificados[chaveHora]) {
-                    agendamentosNotificados[chaveHora] = true;
-                    mostrarNotificacao({
-                        tipo: 'danger',
-                        titulo: `É agora! — ${ag.nome}`,
-                        msg: `Ligar para ${Acoes.formatarTelefone(ag.telefone)}${
-                            ag.agendamento_local ? ` · ${ag.agendamento_local}` : ''
-                        }`,
-                        leadId: ag.id
-                    });
-                }
-            });
-
-        } catch (err) {
-            console.error('[notif] erro:', err);
-        }
-    }
-
-    function mostrarNotificacao({ tipo, titulo, msg, leadId }) {
-        if (!notifContainer) return;
-
-        const el = document.createElement('div');
-        el.className = `notif-card ${tipo}`;
-        el.innerHTML = `
-            <div class="notif-icon">
-                <i class="fas ${tipo === 'danger' ? 'fa-bell' : 'fa-clock'}"></i>
-            </div>
-            <div class="notif-body">
-                <span class="notif-title">${escapeHtml(titulo)}</span>
-                <span class="notif-msg">${escapeHtml(msg)}</span>
-            </div>
-            <button class="notif-close" type="button" aria-label="Fechar">
-                <i class="fas fa-times"></i>
-            </button>
-        `;
-
-        el.querySelector('.notif-close').addEventListener('click', (e) => {
-            e.stopPropagation();
-            el.remove();
+        $('modalKpi')?.addEventListener('click', (e) => {
+            if (e.target.id === 'modalKpi') fecharModalKpi();
         });
 
-        el.addEventListener('click', async (e) => {
-            if (e.target.closest('.notif-close')) return;
-            el.remove();
-
-            if (leadId) {
-                await abrirLeadEspecifico(leadId);
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && $('modalKpi')?.style.display === 'flex') {
+                fecharModalKpi();
             }
         });
 
-        notifContainer.appendChild(el);
+        $('modalKpiBusca')?.addEventListener('input', (e) => {
+            const termo = e.target.value.toLowerCase().trim();
+            const cards = $('modalKpiLista').querySelectorAll('.historico-item');
+            let visiveis = 0;
 
-        setTimeout(() => {
-            if (el.parentElement) el.remove();
+            cards.forEach(card => {
+                const texto = card.textContent.toLowerCase();
+                const mostrar = !termo || texto.includes(termo);
+                card.style.display = mostrar ? '' : 'none';
+                if (mostrar) visiveis++;
+            });
+
+            const temCards = cards.length > 0;
+            $('modalKpiVazio').style.display = (temCards && visiveis === 0) ? 'block' : 'none';
+        });
+
+        // DELEGAÇÃO — clique nas tags do modal KPI
+        const listaKpi = $('modalKpiLista');
+        if (listaKpi && !listaKpi.dataset.delegado) {
+            listaKpi.addEventListener('click', (e) => {
+                const btn = e.target.closest('.tag-editavel');
+                if (!btn) return;
+                e.preventDefault();
+                e.stopPropagation();
+                abrirSeletorTag(btn);
+            });
+            listaKpi.dataset.delegado = '1';
+        }
+    }
+
+    function fecharModalKpi() {
+        const modal = $('modalKpi');
+        if (modal) modal.style.display = 'none';
+        kpiStatusAtual = null;
+        const editor = document.querySelector('.tag-editor');
+        if (editor) editor.remove();
+    }
+
+    /* =========================================================
+       INIT
+       ========================================================= */
+    async function init() {
+        await carregarUsuario();
+        await carregarCarteiras();
+        await carregarDashboard();
+
+        configurarCliquesKpis();
+        configurarEventosModalKpi();
+
+        btnIniciar.addEventListener('click', iniciarProspeccao);
+
+        btnCarteiras.addEventListener('click', (e) => {
+            e.stopPropagation();
+            dashSelectWrap?.classList.toggle('open');
+        });
+
+        document.addEventListener('click', (e) => {
+            if (dashSelectWrap && !dashSelectWrap.contains(e.target)) {
+                dashSelectWrap.classList.remove('open');
+            }
+        });
+
+        $('linkVerTodosRetornar')?.addEventListener('click', () => {
+            abrirModalKpi(MAPA_LISTAS.retornar.status, MAPA_LISTAS.retornar.titulo);
+        });
+
+        $('linkVerTodosAgendamentos')?.addEventListener('click', () => {
+            abrirModalKpi(MAPA_LISTAS.agendamento.status, MAPA_LISTAS.agendamento.titulo);
+        });
+
+        setInterval(() => {
+            carregarDashboard();
         }, 120000);
     }
 
-    /* =========================================================
-       ABRIR LEAD ESPECÍFICO (via notificação)
-       ========================================================= */
-    async function abrirLeadEspecifico(leadId) {
-        try {
-            const { lead } = await ApiClient.get(`/api/corretor/lead/${leadId}`);
-
-            if (!lead) {
-                mostrarToast('Lead não encontrado.', 'error');
-                return;
-            }
-
-            leadEmModoAgendamento = true;
-            leadAtual = lead;
-            processando = false;
-
-            if (leadNome)     leadNome.textContent = lead.nome;
-            if (leadTelefone) leadTelefone.textContent = Acoes.formatarTelefone(lead.telefone) || lead.telefone;
-            if (leadOrigem)   leadOrigem.textContent = lead.lista_nome || 'SR Lançamentos';
-
-            mostrarBadgeAgendamento(lead);
-
-            if (resultList) {
-                resultList.querySelectorAll('.result-tag').forEach(btn => {
-                    btn.classList.remove('processing');
-                });
-            }
-
-            if (observacao) observacao.value = lead.observacao || '';
-            if (callNotice) callNotice.style.display = 'none';
-
-            mostrarTelaLead();
-            await atualizarEstatisticas();
-
-            mostrarToast('Lead agendado aberto', 'info');
-
-        } catch (err) {
-            console.error('[abrir-lead] erro:', err);
-            mostrarToast(err.message || 'Erro ao abrir lead.', 'error');
-        }
-    }
-
-    function mostrarBadgeAgendamento(lead) {
-        const antigo = document.getElementById('badgeAgendamento');
-        if (antigo) antigo.remove();
-
-        if (!lead.agendamento_data) return;
-
-        const dt = parseDataAgendamento(lead.agendamento_data);
-        const dataStr = dt.toLocaleString('pt-BR', {
-            day: '2-digit', month: '2-digit', year: '2-digit',
-            hour: '2-digit', minute: '2-digit'
-        });
-
-        const badge = document.createElement('div');
-        badge.id = 'badgeAgendamento';
-        badge.className = 'badge-agendamento';
-        badge.innerHTML = `
-            <i class="fas fa-calendar-check"></i>
-            <span>
-                <strong>${lead.resultado === 'agendado' ? 'Agendamento' : 'Retorno'}</strong>
-                ${dataStr}
-                ${lead.agendamento_local ? ` · ${escapeHtml(lead.agendamento_local)}` : ''}
-            </span>
-        `;
-
-        const leadCard = document.querySelector('.lead-card');
-        if (leadCard) {
-            leadCard.insertBefore(badge, leadCard.firstChild);
-        }
-    }
-
-    function removerBadgeAgendamento() {
-        const badge = document.getElementById('badgeAgendamento');
-        if (badge) badge.remove();
-    }
-
-    /* =========================================================
-       UTILS
-       ========================================================= */
-
-    /* =========================================================
-       HELPER DE DATA — normaliza timezone
-       Aceita:
-         - "2026-10-02 22:59:37.289+00"  → UTC explícito
-         - "2026-10-02 22:59:37"          → SEM timezone (colunas migradas: UTC)
-         - "2026-10-02T22:59:37Z"         → já ISO com Z
-         - Date                            → retorna direto
-       ========================================================= */
-    function parseDataSegura(iso) {
-        if (!iso) return null;
-
-        if (iso instanceof Date) return iso;
-
-        let str = String(iso).trim();
-        if (!str || str === 'null' || str === 'undefined') return null;
-
-        str = str.replace(' ', 'T');
-
-        if (str.endsWith('Z')) return new Date(str);
-
-        const match = str.match(/([+-])(\d{2})(:?(\d{2}))?$/);
-        if (match) {
-            const sinal = match[1];
-            const hh = match[2];
-            const mm = match[4] || '00';
-            str = str.replace(/([+-]\d{2})(:?\d{2})?$/, sinal + hh + ':' + mm);
-            return new Date(str);
-        }
-
-        return new Date(str + 'Z');
-    }
-
-    function tagParaTexto(tag) {
-        const mapa = {
-            agendado:          'Agendado',
-            em_atendimento:    'Em atendimento',
-            vendido:           'Vendido',
-            mensagem_enviada:  'Mensagem enviada',
-            retornar_depois:   'Retornar depois',
-            follow_up:         'Follow up',
-            sem_interesse:     'Cliente sem interesse',
-            telefone_invalido: 'Telefone inexistente',
-            sem_resposta:      'Sem resposta'
-        };
-        return mapa[tag] || tag;
-    }
-
-    function tagCor(tag) {
-        if (['agendado', 'em_atendimento', 'vendido'].includes(tag)) return 'success';
-        if (['mensagem_enviada', 'retornar_depois', 'follow_up'].includes(tag)) return 'warning';
-        return 'danger';
-    }
-
-    function dataCurta(iso) {
-        if (!iso) return '—';
-        const d = parseDataSegura(iso);
-        if (!d || isNaN(d.getTime())) return '—';
-        return d.toLocaleDateString('pt-BR', {
-            timeZone: 'America/Sao_Paulo',
-            day: '2-digit',
-            month: '2-digit'
-        });
-    }
-
-    function formatarDataHora(dataStr, horaStr) {
-        const [ano, mes, dia] = dataStr.split('-');
-        return `${dia}/${mes} às ${horaStr}`;
-    }
-
-    function parseDataAgendamento(valor) {
-        if (!valor) return null;
-
-        const s = String(valor);
-
-        const matchISO = s.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?(?:\.\d+)?Z$/);
-        if (matchISO) {
-            const [, ano, mes, dia, hora, min, seg] = matchISO;
-            return new Date(
-                Number(ano),
-                Number(mes) - 1,
-                Number(dia),
-                Number(hora),
-                Number(min),
-                Number(seg || 0)
-            );
-        }
-
-        const matchLocal = s.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?$/);
-        if (matchLocal) {
-            const [, ano, mes, dia, hora, min, seg] = matchLocal;
-            return new Date(
-                Number(ano),
-                Number(mes) - 1,
-                Number(dia),
-                Number(hora),
-                Number(min),
-                Number(seg || 0)
-            );
-        }
-
-        if (/[+-]\d{2}:?\d{2}$/.test(s)) {
-            return new Date(s);
-        }
-
-        return new Date(s);
-    }
-
-    function escapeHtml(str) {
-        return String(str || '')
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;')
-            .replace(/'/g, '&#039;');
-    }
-
-    /* =========================================================
-       START
-       ========================================================= */
     init();
-
 });

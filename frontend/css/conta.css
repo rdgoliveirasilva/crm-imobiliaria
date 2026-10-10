@@ -1,6 +1,6 @@
 /* =========================================================
    CONTA.CSS — Página Minha Conta
-   Header/avatar/dropdown IGUAIS ao corretor.css
+   Header/avatar/dropdown vêm do avatar.css (compartilhado)
    ========================================================= */
 
 /* ---------- PÁGINA ---------- */
@@ -36,7 +36,7 @@
 }
 
 /* =========================================================
-   HEADER — GLASS + NEON (igual ao corretor.css)
+   HEADER — GLASS + NEON
    ========================================================= */
 
 .app-header {
@@ -48,7 +48,7 @@
     top: 0;
     z-index: 50;
     max-width: 100vw;
-    overflow: visible;   /* 🔑 ESSENCIAL pro dropdown sair */
+    overflow: visible;
 }
 
 .app-header::before {
@@ -167,14 +167,6 @@
     text-overflow: ellipsis;
 }
 
-.header-user {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    flex-shrink: 0;
-    position: relative;   /* 🔑 pro dropdown ancorar */
-}
-
 .user-info {
     text-align: right;
     color: var(--white);
@@ -201,142 +193,39 @@
 }
 
 /* =========================================================
-   AVATAR + DROPDOWN
+   BOTÃO VOLTAR NO HEADER
    ========================================================= */
 
-.btn-avatar {
-    width: 44px;
-    height: 44px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.08));
-    border: 1.5px solid rgba(255, 255, 255, 0.25);
-    color: var(--white);
-    cursor: pointer;
-    display: flex;
+.btn-back-header {
+    display: inline-flex;
     align-items: center;
     justify-content: center;
-    font-size: 0.95rem;
-    font-weight: 800;
-    letter-spacing: 0.5px;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1.5px solid rgba(255, 255, 255, 0.2);
+    color: var(--white);
+    text-decoration: none;
     transition: all var(--transition);
+    flex-shrink: 0;
+    margin-right: 0.4rem;
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
-    flex-shrink: 0;
-    text-transform: uppercase;
-    padding: 0;
-    font-family: inherit;
-    overflow: hidden;
+    font-size: 0.85rem;
+    position: relative;
+    z-index: 2;
 }
 
-.btn-avatar:hover {
-    background: linear-gradient(135deg, rgba(127, 179, 255, 0.35), rgba(59, 130, 246, 0.2));
-    border-color: rgba(127, 179, 255, 0.7);
-    box-shadow: 0 0 20px rgba(127, 179, 255, 0.5);
-    transform: translateY(-1px);
+.btn-back-header:hover {
+    background: rgba(127, 179, 255, 0.25);
+    border-color: rgba(127, 179, 255, 0.6);
+    transform: translateX(-3px);
+    box-shadow: 0 0 16px rgba(127, 179, 255, 0.4);
 }
 
-.btn-avatar img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    border-radius: 50%;
-}
-
-.dropdown-menu {
-    position: absolute;
-    top: calc(100% + 10px);
-    right: 0;
-    min-width: 220px;
-    background: var(--white);
-    border-radius: 14px;
-    box-shadow:
-        0 20px 45px -18px rgba(0, 44, 97, 0.4),
-        0 0 0 1px rgba(0, 44, 97, 0.06);
-    overflow: hidden;
-    z-index: 99999;
-    opacity: 0;
-    pointer-events: none;
-    transform: translateY(-8px);
-    transition: all var(--transition);
-}
-
-.dropdown-menu.open {
-    opacity: 1;
-    pointer-events: auto;
-    transform: translateY(0);
-}
-
-.dropdown-header {
-    padding: 1rem 1.1rem 0.85rem;
-    border-bottom: 1px solid rgba(0, 44, 97, 0.06);
-    background: linear-gradient(135deg, rgba(0, 44, 97, 0.03), rgba(59, 130, 246, 0.04));
-}
-
-.dropdown-header strong {
-    display: block;
-    font-size: 0.92rem;
-    font-weight: 800;
-    color: var(--dark-900);
-    letter-spacing: -0.2px;
-    margin-bottom: 2px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.dropdown-header small {
-    display: block;
-    font-size: 0.76rem;
-    color: var(--gray-500);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.dropdown-item {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    width: 100%;
-    padding: 0.85rem 1.1rem;
-    background: transparent;
-    border: none;
-    color: var(--dark-900);
-    font-family: inherit;
-    font-size: 0.9rem;
-    font-weight: 600;
-    text-align: left;
-    cursor: pointer;
-    text-decoration: none;
-    transition: all var(--transition-fast);
-}
-
-.dropdown-item i {
-    font-size: 0.95rem;
-    color: var(--primary);
-    width: 1.1rem;
-    text-align: center;
-    flex-shrink: 0;
-}
-
-.dropdown-item:hover {
-    background: rgba(0, 44, 97, 0.05);
-}
-
-.dropdown-item.danger {
-    color: #b91c1c;
-}
-.dropdown-item.danger i {
-    color: #b91c1c;
-}
-.dropdown-item.danger:hover {
-    background: rgba(220, 38, 38, 0.06);
-}
-
-.dropdown-divider {
-    height: 1px;
-    background: rgba(0, 44, 97, 0.06);
-    margin: 0.2rem 0;
+.btn-back-header:active {
+    transform: translateX(-1px);
 }
 
 /* =========================================================
@@ -705,10 +594,15 @@
     .header-brand-text h1 { font-size: 1.1rem; }
     .header-brand-text p { font-size: 0.66rem; }
 
-    .header-user { gap: 0.6rem; }
     .user-greeting { display: none; }
     .user-info strong { font-size: 0.88rem; max-width: 90px; }
-    .btn-avatar { width: 40px; height: 40px; font-size: 0.85rem; }
+
+    .btn-back-header {
+        width: 34px;
+        height: 34px;
+        font-size: 0.78rem;
+        margin-right: 0.2rem;
+    }
 
     .app-main { padding: 1.2rem 1rem 2.2rem; }
 
@@ -723,9 +617,5 @@
     .form-actions .btn {
         padding: 0.9rem 1.1rem;
         font-size: 0.9rem;
-    }
-
-    .dropdown-menu {
-        min-width: 200px;
     }
 }

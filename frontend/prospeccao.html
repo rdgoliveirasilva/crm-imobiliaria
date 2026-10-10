@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <script src="js/auth-guard.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prospect - Prospecção Ativa</title>
+
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Prospect SR Lançamentos">
+    <meta property="og:description" content="Ferramenta de prospecção da imobiliária Sônia e Ramalho.">
+    <meta property="og:url" content="https://srlancamentosprospect.vercel.app/">
+
+    <link rel="icon" type="image/png" href="assets/img/logo.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/avatar.css">
+<link rel="stylesheet" href="css/corretor.css">
+<link rel="stylesheet" href="css/prospeccao.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body class="corretor-page prospeccao-page">
+
+    <!-- =====================================================
+         HEADER
+         ===================================================== -->
+    <header class="app-header">
+        <div class="header-inner">
+            <div class="header-brand">
+                <a href="corretor.html" class="btn-back-header" title="Voltar ao dashboard">
+                    <i class="fas fa-arrow-left"></i>
+                </a>
+                <div class="logo-mark">
+                    <img
+                        src="assets/img/logo2.png"
+                        alt="SR Lançamentos"
+                        onerror="this.style.display='none'; this.parentElement.classList.add('fallback');"
+                    >
+                    <i class="fas fa-building logo-fallback"></i>
+                </div>
+                <div class="header-brand-text">
+                    <h1>SR <span>Lançamentos</span></h1>
+                    <p id="headerCarteiraNome">Prospecção ativa</p>
+                </div>
+            </div>
+
+            <div class="header-user">
+                <div class="user-info">
+                    <span class="user-greeting">Bem vindo,</span>
+                    <strong id="headerUserName">Corretor</strong>
+                </div>
+                <button class="btn-avatar" id="btnAvatar" title="Menu">
+                    <i class="fas fa-user"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- =====================================================
+         BARRA DE PROGRESSO
+         ===================================================== -->
+    <div class="progress-bar" id="progressBar">
+        <div class="progress-inner">
+            <div class="progress-text">
+                <span id="progressCount">0 de 0 trabalhados</span>
+            </div>
+            <div class="progress-track">
+                <div class="progress-fill" id="progressFill" style="width: 0%;"></div>
+            </div>
+            <div class="progress-right">
+                <div class="progress-stat">
+                    <strong id="statQualificadosTop">0</strong>
+                    <small>qualificados</small>
+                </div>
+                <div class="progress-stat">
+                    <strong id="statRestantesTop">0</strong>
+                    <small>na fila</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- =====================================================
+         SELETOR DE CARTEIRA
+         ===================================================== -->
+    <div class="carteira-selector-wrap" id="carteiraSelectorWrap">
+        <div class="custom-select carteira-select" id="carteiraSelect">
+            <input type="hidden" id="carteiraAtivaId" value="">
+
+            <button type="button" class="custom-select-trigger carteira-trigger" id="carteiraTrigger">
+                <i class="fas fa-folder-open carteira-icon"></i>
+                <span class="carteira-nome" id="carteiraNome">Carregando...</span>
+                <span class="carteira-badge" id="carteiraBadge">0</span>
+                <i class="fas fa-chevron-down custom-select-arrow"></i>
+            </button>
+
+            <div class="custom-select-menu carteira-menu" id="carteiraMenu"></div>
+        </div>
+    </div>
+
+    <!-- =====================================================
+         MAIN
+         ===================================================== -->
+    <main class="app-main">
+
+        <!-- ESTADO 1: AGUARDANDO -->
+        <section class="waiting-state" id="waitingState">
+
+            <div class="waiting-icon" id="waitingIcon">
+                <i class="fas fa-hourglass-half"></i>
+            </div>
+
+            <h2 id="waitingTitle">Aguarde seu gerente liberar sua nova carteira</h2>
+
+            <p id="waitingText">Você está na fila para receber os próximos clientes. Assim que o administrador liberar uma nova lista, ela aparecerá aqui automaticamente.</p>
+
+            <div class="waiting-pulse" id="waitingPulse">
+                <span></span><span></span><span></span>
+            </div>
+
+            <button class="btn btn-outline" id="btnVerificar" type="button">
+                <i class="fas fa-sync-alt"></i> Verificar novamente
+            </button>
+
+            <div class="waiting-historico" id="waitingHistorico" style="display: none;">
+                <button class="btn-historico" id="btnHistoricoEspera" type="button">
+                    <i class="fas fa-history"></i>
+                    <span>Ver todos os clientes que qualifiquei</span>
+                    <span class="historico-count" id="historicoCountEspera">0</span>
+                </button>
+            </div>
+
+        </section>
+
+        <!-- ESTADO 2: LEAD ATIVO -->
+        <section class="lead-state" id="leadState" style="display: none;">
+
+            <article class="lead-card">
+
+                <header class="lead-identity">
+                    <h2 id="leadNome">—</h2>
+                    <p class="lead-phone" id="leadTelefone">—</p>
+                    <span class="lead-origem" id="leadOrigem">—</span>
+                </header>
+
+                <div class="primary-actions">
+                    <button class="btn-primary-action call" id="btnLigar" type="button">
+                        <i class="fas fa-phone"></i>
+                        <span>Ligar</span>
+                    </button>
+                    <button class="btn-primary-action whatsapp" id="btnWhatsApp" type="button">
+                        <i class="fab fa-whatsapp"></i>
+                        <span>WhatsApp</span>
+                    </button>
+                </div>
+
+                <div class="call-notice" id="callNotice" style="display: none;">
+                    <i class="fas fa-info-circle"></i>
+                    <span id="callNoticeText"></span>
+                </div>
+
+                <section class="result-section">
+                    <h3>Registrar resultado</h3>
+
+                    <div class="result-list" id="resultList">
+
+                        <button class="result-tag success" data-tag="agendado" type="button">
+                            <span class="tag-label">Agendado</span>
+                            <span class="tag-count">+0</span>
+                        </button>
+
+                        <button class="result-tag success" data-tag="em_atendimento" type="button">
+                            <span class="tag-label">Em atendimento</span>
+                            <span class="tag-count">+0</span>
+                        </button>
+
+                        <button class="result-tag warning" data-tag="mensagem_enviada" type="button">
+                            <span class="tag-label">Mensagem enviada</span>
+                            <span class="tag-count">+0</span>
+                        </button>
+
+                        <button class="result-tag warning" data-tag="retornar_depois" type="button">
+                            <span class="tag-label">Retornar depois</span>
+                            <span class="tag-count">+0</span>
+                        </button>
+
+                        <button class="result-tag danger" data-tag="sem_interesse" type="button">
+                            <span class="tag-label">Cliente sem interesse</span>
+                            <span class="tag-count">+0</span>
+                        </button>
+
+                        <button class="result-tag danger" data-tag="telefone_invalido" type="button">
+                            <span class="tag-label">Telefone inexistente</span>
+                            <span class="tag-count">+0</span>
+                        </button>
+
+                    </div>
+
+                    <div class="obs-field">
+                        <textarea
+                            id="observacao"
+                            placeholder="Observação (opcional)"
+                            rows="2"
+                            maxlength="300"
+                        ></textarea>
+                    </div>
+                </section>
+
+            </article>
+
+            <div class="historico-bar">
+                <button class="btn-historico" id="btnHistorico" type="button">
+                    <i class="fas fa-history"></i>
+                    <span>Ver todos os clientes que qualifiquei</span>
+                    <span class="historico-count" id="historicoCount">0</span>
+                </button>
+            </div>
+
+        </section>
+
+    </main>
+
+    <!-- =====================================================
+         MODAL — HISTÓRICO DE QUALIFICADOS
+         ===================================================== -->
+    <div class="modal-overlay" id="modalHistorico" style="display: none;">
+        <div class="modal-card">
+            <header class="modal-header">
+                <div>
+                    <h2><i class="fas fa-history"></i> Meus clientes qualificados</h2>
+                    <p id="historicoResumo">0 clientes</p>
+                </div>
+                <button class="modal-close" id="btnFecharHistorico" aria-label="Fechar">
+                    <i class="fas fa-times"></i>
+                </button>
+            </header>
+
+            <div class="modal-body">
+                <div id="historicoLista" class="historico-lista"></div>
+                <div id="historicoVazio" class="historico-vazio" style="display: none;">
+                    <i class="fas fa-inbox"></i>
+                    <p>Você ainda não qualificou nenhum cliente.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- =====================================================
+         MODAL — LIGAR (fallback desktop)
+         ===================================================== -->
+    <div class="modal-overlay" id="modalLigar" style="display: none;">
+        <div class="modal-card modal-small">
+            <header class="modal-header">
+                <div>
+                    <h2><i class="fas fa-phone-volume"></i> Ligar para</h2>
+                    <p id="modalLigarNome">—</p>
+                </div>
+                <button class="modal-close" id="btnFecharLigar" aria-label="Fechar">
+                    <i class="fas fa-times"></i>
+                </button>
+            </header>
+
+            <div class="modal-body">
+                <div class="phone-display">
+                    <span id="modalLigarNumero">—</span>
+                </div>
+                <p class="phone-hint">
+                    <i class="fas fa-info-circle"></i>
+                    No celular, o discador abre automaticamente. No desktop, copie o número abaixo.
+                </p>
+
+                <div class="modal-actions">
+                    <button class="btn-modal-copy" id="btnCopiarNumero" type="button">
+                        <i class="fas fa-copy"></i>
+                        <span>Copiar número</span>
+                    </button>
+                    <a class="btn-modal-wa" id="btnModalWhatsApp" href="#" target="_blank">
+                        <i class="fab fa-whatsapp"></i>
+                        <span>Abrir no WhatsApp</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- =====================================================
+         MODAL — AGENDAMENTO
+         ===================================================== -->
+    <div class="modal-overlay" id="modalAgendamento" style="display: none;">
+        <div class="modal-card modal-small">
+            <header class="modal-header">
+                <div>
+                    <h2 id="agendamentoTitulo">
+                        <i class="fas fa-calendar-check"></i>
+                        Agendar
+                    </h2>
+                    <p id="agendamentoSubtitulo">Informe data, hora e local</p>
+                </div>
+                <button class="modal-close" id="btnFecharAgendamento" aria-label="Fechar">
+                    <i class="fas fa-times"></i>
+                </button>
+            </header>
+
+            <div class="modal-body">
+                <div class="agendamento-info" id="agendamentoLeadInfo">
+                    <strong id="agendamentoLeadNome">—</strong>
+                    <small id="agendamentoLeadTelefone">—</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="agendamentoData">Data <span class="required">*</span></label>
+                    <input type="date" id="agendamentoData">
+                    <span class="form-error" id="agendamentoDataError"></span>
+                </div>
+
+                <div class="form-group">
+                    <label for="agendamentoHora">Hora <span class="required">*</span></label>
+                    <input type="time" id="agendamentoHora">
+                    <span class="form-error" id="agendamentoHoraError"></span>
+                </div>
+
+                <div class="form-group">
+                    <label for="agendamentoLocal">
+                        Local / Observação do agendamento
+                        <small style="font-weight: 400; color: var(--gray-500);">(opcional)</small>
+                    </label>
+                    <textarea
+                        id="agendamentoLocal"
+                        rows="3"
+                        placeholder="Ex: Rua das Flores, 123 — apto 45. Levar documentos."
+                        maxlength="300"
+                    ></textarea>
+                </div>
+
+                <div class="modal-actions-row">
+                    <button class="btn-modal-cancel" id="btnCancelarAgendamento" type="button">
+                        Cancelar
+                    </button>
+                    <button class="btn-modal-confirm" id="btnSalvarAgendamento" type="button">
+                        <i class="fas fa-check"></i>
+                        <span id="btnSalvarAgendamentoTexto">Salvar agendamento</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="notifContainer"></div>
+    <div class="toast" id="toast"></div>
+
+    <script src="js/api-client.js"></script>
+    <script src="js/avatar.js"></script>
+    <script src="js/acoes.js"></script>
+    <script src="js/prospeccao.js"></script>
+</body>
+</html>
