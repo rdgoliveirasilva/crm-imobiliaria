@@ -153,6 +153,21 @@ document.addEventListener('DOMContentLoaded', () => {
             btnLogin.classList.remove('loading');
             btnLogin.disabled = false;
         }
+
+        // Corretor OU teste tentando acessar área de admin? Volta pro login (limpa)
+if (pagina === 'corretor.html' && tipo !== 'corretor' && tipo !== 'teste') {
+    localStorage.clear();
+    window.location.replace('index.html');
+    return;
+}
+
+// 🔑 NOVO: ninguém sem ser corretor/teste entra na página de empreendimentos
+if (pagina === 'empreendimentos.html' && tipo !== 'corretor' && tipo !== 'teste') {
+    localStorage.clear();
+    window.location.replace('index.html');
+    return;
+}
+
     });
 
 });

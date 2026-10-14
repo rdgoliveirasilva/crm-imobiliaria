@@ -34,6 +34,7 @@
 
         const nome  = localStorage.getItem('sr_usuario') || '—';
         const login = localStorage.getItem('sr_usuario_login') || '—';
+        const tipo  = localStorage.getItem('sr_tipo');   // 🔑 chave correta
 
         btn.textContent = iniciais(nome);
 
@@ -41,15 +42,30 @@
         dropdown.className = 'dropdown-menu';
         dropdown.id = 'avatarDropdown';
 
+        // 🔑 Mostra "Empreendimentos" pra corretor E teste (ambos usam a área do corretor)
+        // Se tipo for null/undefined (cache limpo), esconde — mais seguro
+        const mostrarEmpreendimentos = tipo === 'corretor' || tipo === 'teste';
+
         dropdown.innerHTML = `
             <div class="dropdown-header">
                 <strong>${escapeHtml(nome)}</strong>
                 <small>@${escapeHtml(login)}</small>
             </div>
+
             <a href="conta.html" class="dropdown-item">
                 <i class="fas fa-user"></i>
                 Minha conta
             </a>
+
+            ${mostrarEmpreendimentos ? `
+                <a href="empreendimentos.html" class="dropdown-item">
+                    <i class="fas fa-building"></i>
+                    Empreendimentos
+                </a>
+            ` : ''}
+
+            <div class="dropdown-divider"></div>
+
             <button class="dropdown-item danger" id="btnDropdownSair" type="button">
                 <i class="fas fa-sign-out-alt"></i>
                 Sair

@@ -186,6 +186,11 @@ const btnToggleTipoText = $('btnToggleTipoText');
     let filtroTagAtual = { chave: null, label: '', busca: '', de: '', ate: '' };
     let leadsTagAtuais = [];
 
+    let empEditandoId = null;
+    let empCapaAtual = null;      // { url, public_id } ou null
+    let empPdfAtual = null;       // { url, public_id } ou null
+    let empComodidadesTemp = [];  // array de strings
+
     /* =========================================================
        TOAST
        ========================================================= */
@@ -376,10 +381,377 @@ const btnToggleTipoText = $('btnToggleTipoText');
                 renderizarSeletorCorretores();
                 carregarListasParaAtualizacao();
             }
+            if (alvo === 'empreendimentos') renderizarEmpreendimentos();
             if (alvo === 'listas')     renderizarListas();
             if (alvo === 'corretores') renderizarCorretores();
         });
     });
+
+    /* =========================================================
+       GOOGLE DRIVE — Analisar pasta
+       ========================================================= */
+
+    async function analisarPastaDrive() {
+        const input = $('empDriveLink');
+        const btn = $('btnAnalisarDrive');
+
+        if (!input || !btn) return;
+
+        const driveUrl = input.value.trim();
+
+        if (!driveUrl) {
+            mostrarToast('Cole o link da pasta do Drive primeiro.', 'error');
+            input.focus();
+            return;
+        }
+
+        // Feedback visual
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Analisando...';
+
+        try {
+            const { pdfs, totalArquivos, totalPdfs, outros, tipo } = await ApiClient.post(
+                '/api/admin/empreendimentos/drive/analisar',
+                { driveUrl }
+            );
+
+            renderizarPreviewDrive(pdfs, totalArquivos, totalPdfs, outros, tipo);
+
+            if (totalPdfs === 0) {
+                mostrarToast('Nenhum PDF encontrado nessa pasta.', 'info');
+            } else {
+                mostrarToast(`✅ ${totalPdfs} PDF${totalPdfs > 1 ? 's' : ''} encontrado${totalPdfs > 1 ? 's' : ''}!`, 'success');
+            }
+
+        } catch (err) {
+            console.error('[drive/analisar] erro:', err);
+            mostrarToast(err.message || 'Erro ao analisar pasta.', 'error');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-search"></i> Analisar pasta';
+        }
+    }
+
+    function renderizarPreviewDrive(pdfs, totalArquivos, totalPdfs, outros, tipo) {
+        const preview = $('empDrivePreview');
+        const info = $('empDrivePreviewInfo');
+        const lista = $('empDrivePreviewLista');
+        const btnImportar = $('btnImportarDrive');
+
+        if (!preview || !lista) return;
+
+        preview.style.display = 'block';
+
+        // Título conforme tipo
+        const tituloEl = $('empDrivePreviewTitulo');
+        if (tituloEl) {
+            tituloEl.textContent = tipo === 'arquivo'
+                ? 'Arquivo analisado'
+                : 'Pasta analisada';
+        }
+
+        const labelInfo = totalPdfs === 1
+            ? '1 PDF encontrado'
+            : `${totalPdfs} PDFs encontrados`;
+
+        const extraOutros = outros > 0
+            ? ` · ${outros} outro${outros > 1 ? 's' : ''} arquivo${outros > 1 ? 's' : ''}`
+            : '';
+
+        if (info) info.textContent = labelInfo + extraOutros;
+
+        if (totalPdfs === 0) {
+            lista.innerHTML = `
+                <div class="emp-drive-empty">
+                    <i class="fas fa-file-pdf"></i>
+                    <p>Nenhum PDF encontrado.</p>
+                </div>
+            `;
+            if (btnImportar) btnImportar.disabled = true;
+            return;
+        }
+
+        const ICONES = {
+            book: 'fa-book',
+            tabela: 'fa-table',
+            planta: 'fa-drafting-compass',
+            memorial: 'fa-file-alt',
+            imagem: 'fa-image',
+            contrato: 'fa-file-signature',
+            regulamento: 'fa-gavel',
+            outro: 'fa-file'
+        };
+
+        const LABELS = {
+            book: 'Book',
+            tabela: 'Tabela',
+            planta: 'Planta',
+            memorial: 'Memorial',
+            imagem: 'Imagem',
+            contrato: 'Contrato',
+            regulamento: 'Regulamento',
+            outro: 'Documento'
+        };
+
+        // Checkbox "selecionar todos" no topo
+        const headerSelecionarTodos = `
+            <div class="emp-drive-selecionar-todos">
+                <label class="emp-drive-check-label">
+                    <input type="checkbox" id="empDriveCheckTodos" checked>
+                    <span class="emp-drive-check-box"></span>
+                    <span>Selecionar todos</span>
+                </label>
+                <small id="empDriveSelecionados">${pdfs.length} de ${pdfs.length} selecionados</small>
+            </div>
+        `;
+
+        lista.innerHTML = headerSelecionarTodos + pdfs.map((pdf, idx) => {
+            const tamanho = pdf.tamanho
+                ? (pdf.tamanho > 1024 * 1024
+                    ? (pdf.tamanho / 1024 / 1024).toFixed(1) + ' MB'
+                    : Math.round(pdf.tamanho / 1024) + ' KB')
+                : '—';
+
+            const icone = ICONES[pdf.tipo] || ICONES.outro;
+            const label = LABELS[pdf.tipo] || LABELS.outro;
+
+            return `
+                <label class="emp-drive-file emp-drive-file-checkable" data-idx="${idx}">
+                    <input type="checkbox" class="emp-drive-file-check" data-pdf-id="${pdf.id}" checked>
+                    <span class="emp-drive-check-box"></span>
+                    <div class="emp-drive-file-icon">
+                        <i class="fas fa-file-pdf"></i>
+                    </div>
+                    <div class="emp-drive-file-info">
+                        <strong>${escapeHtml(pdf.nome)}</strong>
+                        <small>${tamanho}</small>
+                    </div>
+                    <span class="emp-drive-file-tag tag-${pdf.tipo}">
+                        <i class="fas ${icone}"></i>
+                        ${label}
+                    </span>
+                </label>
+            `;
+        }).join('');
+
+        // Listeners dos checkboxes
+        const checkTodos = $('empDriveCheckTodos');
+        const checkIndividuais = lista.querySelectorAll('.emp-drive-file-check');
+
+        function atualizarContador() {
+            const total = checkIndividuais.length;
+            const marcados = Array.from(checkIndividuais).filter(c => c.checked).length;
+
+            const el = $('empDriveSelecionados');
+            if (el) el.textContent = `${marcados} de ${total} selecionados`;
+
+            if (btnImportar) {
+                btnImportar.disabled = marcados === 0;
+            }
+        }
+
+        if (checkTodos) {
+            checkTodos.addEventListener('change', () => {
+                checkIndividuais.forEach(c => c.checked = checkTodos.checked);
+                atualizarContador();
+            });
+        }
+
+        checkIndividuais.forEach(c => {
+            c.addEventListener('change', () => {
+                const todos = Array.from(checkIndividuais).every(x => x.checked);
+                const nenhum = Array.from(checkIndividuais).every(x => !x.checked);
+
+                if (checkTodos) {
+                    checkTodos.checked = todos;
+                    checkTodos.indeterminate = !todos && !nenhum;
+                }
+
+                atualizarContador();
+            });
+        });
+
+        // Botão "Importar" habilitado (Fase 4)
+        if (btnImportar) {
+            btnImportar.disabled = false;
+
+            // ✅ Anexa o listener AQUI, toda vez que o preview é (re)renderizado
+            btnImportar.onclick = null;
+            btnImportar.addEventListener('click', importarPdfsDrive);
+        }
+    }
+
+    function fecharPreviewDrive() {
+        const preview = $('empDrivePreview');
+        if (preview) preview.style.display = 'none';
+    }
+
+
+    
+    /* =========================================================
+       GOOGLE DRIVE — Importar PDFs selecionados
+       ========================================================= */
+
+    async function importarPdfsDrive() {
+        const lista = $('empDrivePreviewLista');
+        const btn = $('btnImportarDrive');
+        const btnTxt = $('btnImportarDriveTexto');
+
+        if (!lista || !btn) return;
+
+        // Pega os PDFs marcados
+        const checkboxes = lista.querySelectorAll('.emp-drive-file-check');
+        const pdfsSelecionados = [];
+
+        checkboxes.forEach(cb => {
+            if (!cb.checked) return;
+
+            const pdfId = cb.dataset.pdfId;
+
+            // Pega o nome do arquivo do card pai
+            const card = cb.closest('.emp-drive-file');
+            const nomeEl = card?.querySelector('.emp-drive-file-info strong');
+            const nome = nomeEl?.textContent || 'documento.pdf';
+
+            // Pega o tipo (da tag)
+            const tagEl = card?.querySelector('.emp-drive-file-tag');
+            const tipoClasse = tagEl?.className || '';
+            const tipoMatch = tipoClasse.match(/tag-(\w+)/);
+            const tipo = tipoMatch ? tipoMatch[1] : 'outro';
+
+            pdfsSelecionados.push({ id: pdfId, nome, tipo });
+        });
+
+        if (!pdfsSelecionados.length) {
+            mostrarToast('Selecione pelo menos 1 PDF.', 'error');
+            return;
+        }
+
+        // Confirma
+        const confirmar = await new Promise(resolve => {
+            abrirConfirm(
+                'Importar PDFs?',
+                `Vamos baixar ${pdfsSelecionados.length} PDF${pdfsSelecionados.length > 1 ? 's' : ''} do Drive e extrair o texto. Isso pode levar até 1 minuto.`,
+                () => resolve(true)
+            );
+            // Se fechar sem confirmar, resolve false depois de um tempo
+            const check = setInterval(() => {
+                const modal = $('modalConfirm');
+                if (!modal || modal.style.display === 'none') {
+                    clearInterval(check);
+                    resolve(false);
+                }
+            }, 200);
+        });
+
+        if (!confirmar) return;
+
+        // Feedback visual
+        btn.disabled = true;
+        btnTxt.textContent = 'Processando...';
+        btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> <span id="btnImportarDriveTexto">Processando PDFs...</span>';
+
+        try {
+            const resposta = await ApiClient.post('/api/admin/empreendimentos/drive/importar', {
+                pdfs: pdfsSelecionados
+            });
+
+            // Abre a tela de revisão
+            abrirTelaRevisao(resposta);
+
+            mostrarToast(`✅ ${resposta.sucesso} PDF${resposta.sucesso > 1 ? 's' : ''} processado${resposta.sucesso > 1 ? 's' : ''}!`, 'success');
+
+        } catch (err) {
+            console.error('[drive/importar] erro:', err);
+            mostrarToast(err.message || 'Erro ao importar.', 'error');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-bolt"></i> <span id="btnImportarDriveTexto">Importar e processar</span>';
+        }
+    }
+
+    /* =========================================================
+       TELA DE REVISÃO — abre o modal já preenchido pela IA
+       ========================================================= */
+
+    function abrirTelaRevisao(resposta) {
+        const { resultados } = resposta;
+        const pdfOk = resultados.find(r => r.sucesso && r.dados_ia);
+
+        if (!pdfOk) {
+            mostrarToast('Nenhum PDF processado com sucesso.', 'error');
+            return;
+        }
+
+        const d = pdfOk.dados_ia;
+
+        // Fecha preview e esconde importador
+        fecharPreviewDrive();
+        const importerCard = document.querySelector('.emp-importer-card');
+        if (importerCard) importerCard.style.display = 'none';
+
+        // Abre o modal existente já preenchido
+        limparFormularioEmp();
+
+        // Preenche os campos com o que a IA extraiu
+        $('empNome').value        = d.nome || '';
+        $('empConstrutora').value = d.construtora || '';
+        $('empTipoImovel').value  = d.tipo_imovel || '';
+        $('empDormitorios').value = d.dormitorios || '';
+        $('empMetragens').value   = d.metragens || '';
+        $('empVagas').value       = d.vagas || '';
+        $('empCidade').value      = d.cidade || '';
+        $('empEstado').value      = d.estado || '';
+        $('empBairro').value      = d.bairro || '';
+        $('empEndereco').value    = d.endereco || '';
+        $('empDescricao').value   = d.descricao || '';
+
+        // Comodidades: array → string separada por vírgula
+        const comodidades = d.comodidades || [];
+        $('empComodidades').value = Array.isArray(comodidades) ? comodidades.join(', ') : '';
+
+        // Capa extraída pela IA
+        if (pdfOk.capa_url) {
+            empCapaAtual = { url: pdfOk.capa_url, public_id: pdfOk.capa_public_id };
+            $('empCoverImg').src = pdfOk.capa_url;
+            $('empCoverPreview').style.display = 'block';
+            $('empCoverEmpty').style.display = 'none';
+        }
+
+        // PDF do empreendimento
+if (pdfOk.drive_url) {
+    empPdfAtual = { url: pdfOk.drive_url, public_id: null };
+    $('empPdfNome').textContent = pdfOk.nome || 'book.pdf';
+    $('empPdfInfo').style.display = 'flex';
+    $('empPdfEmpty').style.display = 'none';
+}
+
+        // Marca os campos como "preenchido pela IA"
+        marcarCamposComIA();
+
+        // Abre o modal
+        const modal = $('modalEmpreendimento');
+        if (modal) modal.style.display = 'flex';
+
+        const titulo = $('empModalTituloTexto');
+        if (titulo) titulo.textContent = '✨ Revisar dados extraídos pela IA';
+
+        const subtitulo = $('empModalSubtitulo');
+        if (subtitulo) subtitulo.textContent = 'Confira e edite o que precisar antes de salvar';
+    }
+
+    /* Marca visualmente os campos como preenchidos pela IA */
+    function marcarCamposComIA() {
+        const ids = [
+            'empNome','empConstrutora','empDormitorios',
+            'empMetragens','empVagas','empComodidades','empDescricao'
+        ];
+        ids.forEach(id => {
+            const el = $(id);
+            if (!el) return;
+            el.classList.add('campo-preenchido-ia');
+        });
+    }
 
     /* =========================================================
        DASHBOARD
@@ -400,6 +772,626 @@ const btnToggleTipoText = $('btnToggleTipoText');
 
         } catch (err) {
             console.error('[dashboard] erro:', err);
+        }
+    }
+
+    /* =========================================================
+       MODAL DE EMPREENDIMENTO — Cadastrar / Editar
+       ========================================================= */
+
+    function limparFormularioEmp() {
+        empEditandoId = null;
+        empCapaAtual = null;
+        empPdfAtual = null;
+        empComodidadesTemp = [];
+
+        ['empNome', 'empConstrutora', 'empPrevisao', 'empEndereco',
+         'empBairro', 'empCidade', 'empEstado', 'empDormitorios',
+         'empMetragens', 'empVagas', 'empComodidades', 'empDescricao'
+        ].forEach(id => {
+            const el = $(id);
+            if (el) el.value = '';
+        });
+
+        ['empTipoImovel', 'empFase'].forEach(id => {
+            const el = $(id);
+            if (el) el.value = '';
+        });
+
+        // Limpa erros visuais
+        const empNomeError = $('empNomeError');
+        if (empNomeError) {
+            empNomeError.textContent = '';
+            empNomeError.classList.remove('visible');
+        }
+        const empNome = $('empNome');
+        if (empNome) empNome.classList.remove('error');
+
+        // Esconde preview de capa
+        const coverPreview = $('empCoverPreview');
+        const coverEmpty = $('empCoverEmpty');
+        if (coverPreview) coverPreview.style.display = 'none';
+        if (coverEmpty) coverEmpty.style.display = 'flex';
+        const coverImg = $('empCoverImg');
+        if (coverImg) coverImg.src = '';
+
+        // Esconde info do PDF
+        const pdfInfo = $('empPdfInfo');
+        const pdfEmpty = $('empPdfEmpty');
+        if (pdfInfo) pdfInfo.style.display = 'none';
+        if (pdfEmpty) pdfEmpty.style.display = 'flex';
+    }
+
+    function abrirModalEmpreendimento(empreendimento = null) {
+        limparFormularioEmp();
+
+        const titulo = $('empModalTituloTexto');
+        const subtitulo = $('empModalSubtitulo');
+        const btnTxt = $('btnSalvarEmpTexto');
+
+        if (empreendimento) {
+            // Modo edição
+            empEditandoId = empreendimento.id;
+
+            if (titulo) titulo.textContent = 'Editar empreendimento';
+            if (subtitulo) subtitulo.textContent = 'Atualize as informações';
+            if (btnTxt) btnTxt.textContent = 'Salvar alterações';
+
+            // Preenche os campos
+            $('empNome').value = empreendimento.nome || '';
+            $('empConstrutora').value = empreendimento.construtora || '';
+            $('empTipoImovel').value = empreendimento.tipo_imovel || '';
+            $('empFase').value = empreendimento.fase || '';
+            $('empPrevisao').value = empreendimento.previsao_entrega || '';
+            $('empEndereco').value = empreendimento.endereco || '';
+            $('empBairro').value = empreendimento.bairro || '';
+            $('empCidade').value = empreendimento.cidade || '';
+            $('empEstado').value = empreendimento.estado || '';
+            $('empDormitorios').value = empreendimento.dormitorios || '';
+            $('empMetragens').value = empreendimento.metragens || '';
+            $('empVagas').value = empreendimento.vagas || '';
+            $('empDescricao').value = empreendimento.descricao || '';
+
+            // Comodidades: array → string separada por vírgula
+            const comodidades = empreendimento.comodidades || [];
+            empComodidadesTemp = Array.isArray(comodidades) ? [...comodidades] : [];
+            $('empComodidades').value = empComodidadesTemp.join(', ');
+
+            // Capa
+            if (empreendimento.capa_url) {
+                empCapaAtual = {
+                    url: empreendimento.capa_url,
+                    public_id: empreendimento.capa_public_id
+                };
+                $('empCoverImg').src = empreendimento.capa_url;
+                $('empCoverPreview').style.display = 'block';
+                $('empCoverEmpty').style.display = 'none';
+            }
+
+            // PDF
+            if (empreendimento.pdf_url) {
+                empPdfAtual = {
+                    url: empreendimento.pdf_url,
+                    public_id: empreendimento.pdf_public_id
+                };
+                // Pega só o nome do arquivo da URL do Cloudinary
+                const nomePdf = decodeURIComponent(
+                    empreendimento.pdf_url.split('/').pop() || 'book.pdf'
+                ).replace(/^\d+_/, '');
+                $('empPdfNome').textContent = nomePdf;
+                $('empPdfInfo').style.display = 'flex';
+                $('empPdfEmpty').style.display = 'none';
+            }
+
+        } else {
+            // Modo criação
+            if (titulo) titulo.textContent = 'Cadastrar empreendimento';
+            if (subtitulo) subtitulo.textContent = 'Preencha as informações principais';
+            if (btnTxt) btnTxt.textContent = 'Salvar empreendimento';
+        }
+
+// Atualiza o badge de status + botão de publicar
+const statusAtual = empreendimento?.status || 'rascunho';
+atualizarBadgeStatusEmp(statusAtual);
+atualizarBotaoStatusEmp(statusAtual);
+
+// Só permite publicar se já existe (tem ID)
+const btnToggle = $('btnToggleStatus');
+if (btnToggle) {
+    btnToggle.style.display = empEditandoId ? 'inline-flex' : 'none';
+}
+
+        // Abre o modal
+        const modal = $('modalEmpreendimento');
+        if (modal) modal.style.display = 'flex';
+
+        setTimeout(() => {
+            const inp = $('empNome');
+            if (inp) inp.focus();
+        }, 120);
+    }
+
+function fecharModalEmpreendimento() {
+    const modal = $('modalEmpreendimento');
+    if (modal) modal.style.display = 'none';
+
+    // Reset o input file (senão não deixa subir a mesma imagem 2x)
+    const capaInput = $('empCapaInput');
+    const pdfInput = $('empPdfInput');
+    if (capaInput) capaInput.value = '';
+    if (pdfInput) pdfInput.value = '';
+
+    limparFormularioEmp();
+
+    // 🔑 Reexibe o card do importador (que foi escondido pela abrirTelaRevisao)
+    const importerCard = document.querySelector('.emp-importer-card');
+    if (importerCard) importerCard.style.display = '';
+
+    // 🔑 Limpa o campo de link pra próxima importação
+    const inputLink = $('empDriveLink');
+    if (inputLink) inputLink.value = '';
+
+    // 🔑 Esconde o preview de arquivos (que ficou aberto)
+    const preview = $('empDrivePreview');
+    if (preview) preview.style.display = 'none';
+}
+
+    async function uploadCapaEmp(file) {
+        const formData = new FormData();
+        formData.append('capa', file);
+
+        const token = localStorage.getItem('sr_token');
+        const res = await fetch('/api/admin/empreendimentos/upload-capa', {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` },
+            body: formData
+        });
+
+        if (!res.ok) {
+            const erro = await res.json().catch(() => ({}));
+            throw new Error(erro.erro || 'Erro ao subir a capa.');
+        }
+
+        return res.json(); // { url, public_id }
+    }
+
+    async function uploadPdfEmp(file) {
+        const formData = new FormData();
+        formData.append('pdf', file);
+
+        const token = localStorage.getItem('sr_token');
+        const res = await fetch('/api/admin/empreendimentos/upload-pdf', {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` },
+            body: formData
+        });
+
+        if (!res.ok) {
+            const erro = await res.json().catch(() => ({}));
+            throw new Error(erro.erro || 'Erro ao subir o PDF.');
+        }
+
+        return res.json(); // { url, public_id }
+    }
+
+    function processarComodidades() {
+        const input = $('empComodidades');
+        if (!input) return [];
+
+        return input.value
+            .split(',')
+            .map(s => s.trim())
+            .filter(Boolean);
+    }
+
+    async function salvarEmpreendimento() {
+        const btn = $('btnSalvarEmp');
+        const btnTxt = $('btnSalvarEmpTexto');
+
+        // Limpa erros visuais
+        const empNomeError = $('empNomeError');
+        const empNome = $('empNome');
+        if (empNomeError) {
+            empNomeError.textContent = '';
+            empNomeError.classList.remove('visible');
+        }
+        if (empNome) empNome.classList.remove('error');
+
+        // Validação
+        const nome = ($('empNome')?.value || '').trim();
+
+        if (!nome) {
+            if (empNomeError) {
+                empNomeError.textContent = 'Informe o nome do empreendimento.';
+                empNomeError.classList.add('visible');
+            }
+            if (empNome) empNome.classList.add('error');
+            return;
+        }
+
+        if (!empCapaAtual) {
+            mostrarToast('Adicione uma capa para o empreendimento.', 'error');
+            return;
+        }
+
+        btn.disabled = true;
+        btnTxt.textContent = 'Salvando...';
+
+        try {
+            const body = {
+                nome,
+                construtora: ($('empConstrutora')?.value || '').trim() || null,
+                tipo_imovel: $('empTipoImovel')?.value || null,
+                fase: $('empFase')?.value || null,
+                previsao_entrega: ($('empPrevisao')?.value || '').trim() || null,
+                endereco: ($('empEndereco')?.value || '').trim() || null,
+                bairro: ($('empBairro')?.value || '').trim() || null,
+                cidade: ($('empCidade')?.value || '').trim() || null,
+                estado: (($('empEstado')?.value || '').trim() || '').toUpperCase() || null,
+                dormitorios: ($('empDormitorios')?.value || '').trim() || null,
+                metragens: ($('empMetragens')?.value || '').trim() || null,
+                vagas: ($('empVagas')?.value || '').trim() || null,
+                comodidades: processarComodidades(),
+                descricao: ($('empDescricao')?.value || '').trim() || null,
+                capa_url: empCapaAtual.url,
+                capa_public_id: empCapaAtual.public_id,
+                pdf_url: empPdfAtual ? empPdfAtual.url : null,
+                pdf_public_id: empPdfAtual ? empPdfAtual.public_id : null
+            };
+
+            if (empEditandoId) {
+                // Editar
+                await ApiClient.patch(`/api/admin/empreendimentos/${empEditandoId}`, body);
+                mostrarToast('✅ Empreendimento atualizado!', 'success');
+            } else {
+                // Criar
+                await ApiClient.post('/api/admin/empreendimentos', body);
+                mostrarToast('✅ Empreendimento cadastrado!', 'success');
+            }
+
+            fecharModalEmpreendimento();
+            await renderizarEmpreendimentos();
+
+        } catch (err) {
+            console.error('[emp-salvar] erro:', err);
+            mostrarToast(err.message || 'Erro ao salvar.', 'error');
+        } finally {
+            btn.disabled = false;
+            btnTxt.textContent = empEditandoId ? 'Salvar alterações' : 'Salvar empreendimento';
+        }
+    }
+
+    async function excluirEmpreendimento(id, nome) {
+        abrirConfirm(
+            'Excluir empreendimento?',
+            `Tem certeza que quer excluir "${nome}"? A capa e o PDF serão removidos também.`,
+            async () => {
+                try {
+                    await ApiClient.del(`/api/admin/empreendimentos/${id}`);
+                    mostrarToast('Empreendimento excluído.', 'success');
+                    await renderizarEmpreendimentos();
+                } catch (err) {
+                    console.error('[emp-excluir] erro:', err);
+                    mostrarToast(err.message || 'Erro ao excluir.', 'error');
+                }
+            }
+        );
+    }
+
+/* =========================================================
+   PUBLICAR / DESPUBLICAR EMPREENDIMENTO
+   ========================================================= */
+
+async function toggleStatusEmpreendimento() {
+    if (!empEditandoId) {
+        mostrarToast('Salve o empreendimento antes de publicar.', 'error');
+        return;
+    }
+
+    const btn = $('btnToggleStatus');
+    const badge = $('empStatusBadgeAtual');
+
+    // Pega o status atual pela classe do badge
+    const statusAtual = badge?.dataset.status || 'rascunho';
+    const vaiPublicar = statusAtual !== 'publicado';
+
+    const novostatus = vaiPublicar ? 'publicado' : 'rascunho';
+
+    btn.disabled = true;
+    const textoOriginal = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Salvando...';
+
+    try {
+        await ApiClient.patch(`/api/admin/empreendimentos/${empEditandoId}/status`, {
+            status: novostatus
+        });
+
+        mostrarToast(
+            vaiPublicar
+                ? '✅ Empreendimento publicado! Já está visível pros corretores.'
+                : '📝 Empreendimento despublicado. Voltou pra rascunho.',
+            'success'
+        );
+
+        // Atualiza o badge no header do modal
+        atualizarBadgeStatusEmp(novostatus);
+
+        // Atualiza o botão
+        atualizarBotaoStatusEmp(novostatus);
+
+        // Recarrega a lista pra atualizar o card
+        await renderizarEmpreendimentos();
+
+    } catch (err) {
+        console.error('[toggle-status] erro:', err);
+        mostrarToast(err.message || 'Erro ao alterar status.', 'error');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = textoOriginal;
+    }
+}
+
+function atualizarBadgeStatusEmp(status) {
+    const badge = $('empStatusBadgeAtual');
+    if (!badge) return;
+
+    badge.dataset.status = status;
+    badge.className = `emp-status-badge ${status}`;
+
+    const labels = {
+        rascunho: 'Rascunho',
+        publicado: 'Publicado',
+        arquivado: 'Arquivado'
+    };
+    badge.textContent = labels[status] || status;
+}
+
+function atualizarBotaoStatusEmp(status) {
+    const btn = $('btnToggleStatus');
+    const btnTexto = $('btnToggleStatusTexto');
+    if (!btn || !btnTexto) return;
+
+    if (status === 'publicado') {
+        btn.classList.add('despublicar');
+        btnTexto.textContent = 'Despublicar';
+    } else {
+        btn.classList.remove('despublicar');
+        btnTexto.textContent = 'Publicar';
+    }
+}
+
+    function configurarEventosModalEmpreendimento() {
+        // Fechar
+        $('btnFecharModalEmp')?.addEventListener('click', fecharModalEmpreendimento);
+        $('btnCancelarEmp')?.addEventListener('click', fecharModalEmpreendimento);
+
+        // Clicar no overlay fecha
+        $('modalEmpreendimento')?.addEventListener('click', (e) => {
+            if (e.target.id === 'modalEmpreendimento') fecharModalEmpreendimento();
+        });
+
+        // ESC fecha
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && $('modalEmpreendimento')?.style.display === 'flex') {
+                fecharModalEmpreendimento();
+            }
+        });
+
+        // Salvar
+        $('btnSalvarEmp')?.addEventListener('click', salvarEmpreendimento);
+
+        // ---- Upload de capa ----
+        const capaInput = $('empCapaInput');
+        const uploadCoverEl = $('empUploadCover');
+
+        if (uploadCoverEl && capaInput) {
+            uploadCoverEl.addEventListener('click', (e) => {
+                // Se clicou no botão de remover, ignora
+                if (e.target.closest('#btnRemoverCapa')) return;
+                capaInput.click();
+            });
+
+            capaInput.addEventListener('change', async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                if (!file.type.startsWith('image/')) {
+                    mostrarToast('Envie uma imagem (JPG, PNG).', 'error');
+                    return;
+                }
+
+                if (file.size > 10 * 1024 * 1024) {
+                    mostrarToast('Imagem muito grande (máx. 10MB).', 'error');
+                    return;
+                }
+
+                try {
+                    mostrarToast('Subindo capa...', 'info');
+                    const res = await uploadCapaEmp(file);
+
+                    empCapaAtual = { url: res.url, public_id: res.public_id };
+                    $('empCoverImg').src = res.url;
+                    $('empCoverPreview').style.display = 'block';
+                    $('empCoverEmpty').style.display = 'none';
+
+                    mostrarToast('✅ Capa carregada!', 'success');
+                } catch (err) {
+                    console.error('[capa] erro:', err);
+                    mostrarToast(err.message || 'Erro ao subir a capa.', 'error');
+                } finally {
+                    capaInput.value = '';
+                }
+            });
+        }
+
+        // Remover capa
+        $('btnRemoverCapa')?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            empCapaAtual = null;
+            $('empCoverImg').src = '';
+            $('empCoverPreview').style.display = 'none';
+            $('empCoverEmpty').style.display = 'flex';
+        });
+
+        // ---- Upload de PDF ----
+        const pdfInput = $('empPdfInput');
+        const uploadPdfEl = $('empUploadPdf');
+
+        if (uploadPdfEl && pdfInput) {
+            uploadPdfEl.addEventListener('click', (e) => {
+                if (e.target.closest('#btnRemoverPdf')) return;
+                pdfInput.click();
+            });
+
+            pdfInput.addEventListener('change', async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                if (file.type !== 'application/pdf') {
+                    mostrarToast('Envie um arquivo PDF.', 'error');
+                    return;
+                }
+
+                if (file.size > 20 * 1024 * 1024) {
+                    mostrarToast('PDF muito grande (máx. 20MB).', 'error');
+                    return;
+                }
+
+                try {
+                    mostrarToast('Subindo PDF...', 'info');
+                    const res = await uploadPdfEmp(file);
+
+                    empPdfAtual = { url: res.url, public_id: res.public_id };
+                    $('empPdfNome').textContent = file.name;
+                    $('empPdfInfo').style.display = 'flex';
+                    $('empPdfEmpty').style.display = 'none';
+
+                    mostrarToast('✅ PDF carregado!', 'success');
+                } catch (err) {
+                    console.error('[pdf] erro:', err);
+                    mostrarToast(err.message || 'Erro ao subir o PDF.', 'error');
+                } finally {
+                    pdfInput.value = '';
+                }
+            });
+        }
+
+        // Remover PDF
+        $('btnRemoverPdf')?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            empPdfAtual = null;
+            $('empPdfInfo').style.display = 'none';
+            $('empPdfEmpty').style.display = 'flex';
+        });
+    }
+
+
+    /* =========================================================
+       EMPREENDIMENTOS
+       ========================================================= */
+
+    async function renderizarEmpreendimentos() {
+        const grid = document.getElementById('empGrid');
+        const vazio = document.getElementById('empVazio');
+        const badge = document.getElementById('empBadgeTotal');
+        if (!grid) return;
+
+        try {
+            const { empreendimentos } = await ApiClient.get('/api/admin/empreendimentos');
+
+            if (badge) badge.textContent = empreendimentos.length;
+
+            if (!empreendimentos.length) {
+                grid.innerHTML = '';
+                if (vazio) vazio.style.display = 'block';
+                return;
+            }
+
+            if (vazio) vazio.style.display = 'none';
+
+        grid.innerHTML = empreendimentos.map(e => {
+            // Monta as infos estruturadas com ícone + label
+            const quartosTxt = e.dormitorios
+                ? `<i class="fas fa-bed"></i> ${escapeHtml(e.dormitorios)}`
+                : '';
+
+            const metragemTxt = e.metragens
+                ? `<i class="fas fa-ruler-combined"></i> ${escapeHtml(e.metragens)}`
+                : '';
+
+            const vagasTxt = e.vagas
+                ? `<i class="fas fa-car"></i> ${escapeHtml(e.vagas)}`
+                : '';
+
+            return `
+                <article class="emp-card" data-id="${e.id}">
+                    <div class="emp-card-cover">
+                        ${e.capa_url
+                            ? `<img src="${e.capa_url}" alt="${escapeHtml(e.nome)}">`
+                            : `<i class="fas fa-building placeholder"></i>`
+                        }
+                        <span class="emp-card-status ${e.status}">${e.status}</span>
+                    </div>
+                    <div class="emp-card-body">
+                        <div class="emp-card-body-head">
+                            <h4>${escapeHtml(e.nome)}</h4>
+                            <button class="emp-card-delete" data-id="${e.id}" title="Excluir" type="button">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+
+                        ${e.construtora ? `
+                            <div class="emp-card-info">
+                                <i class="fas fa-industry"></i>
+                                ${escapeHtml(e.construtora)}
+                            </div>
+                        ` : ''}
+
+                        ${(e.cidade || e.estado) ? `
+                            <div class="emp-card-info">
+                                <i class="fas fa-map-marker-alt"></i>
+                                ${escapeHtml([e.cidade, e.estado].filter(Boolean).join('/'))}
+                            </div>
+                        ` : ''}
+
+                        ${(quartosTxt || metragemTxt || vagasTxt) ? `
+                            <div class="emp-card-meta">
+                                ${quartosTxt  ? `<span class="emp-card-chip">${quartosTxt}</span>`  : ''}
+                                ${metragemTxt ? `<span class="emp-card-chip">${metragemTxt}</span>` : ''}
+                                ${vagasTxt    ? `<span class="emp-card-chip">${vagasTxt}</span>`    : ''}
+                            </div>
+                        ` : ''}
+
+                        ${e.descricao ? `
+                            <p class="emp-card-desc">${escapeHtml(e.descricao)}</p>
+                        ` : ''}
+                    </div>
+                </article>
+            `;
+        }).join('');
+
+        // Listeners: botão de excluir em cada card
+        grid.querySelectorAll('.emp-card-delete').forEach(btn => {
+            btn.addEventListener('click', (ev) => {
+                ev.stopPropagation();
+                const id = Number(btn.dataset.id);
+                const emp = empreendimentos.find(e => e.id === id);
+                if (emp) excluirEmpreendimento(emp.id, emp.nome);
+            });
+        });
+
+        // Listeners: clicar no card abre o modal de edição
+        grid.querySelectorAll('.emp-card').forEach(card => {
+            card.addEventListener('click', () => {
+                const id = Number(card.dataset.id);
+                const emp = empreendimentos.find(e => e.id === id);
+                if (emp) abrirModalEmpreendimento(emp);
+            });
+        });
+
+        } catch (err) {
+            console.error('[empreendimentos] erro:', err);
+            mostrarToast('Erro ao carregar empreendimentos.', 'error');
         }
     }
 
@@ -2555,6 +3547,39 @@ if (btnToggleTipo) {
         await atualizarDashboard();      // só KPIs antigos (que não existem mais, mas é seguro)
     await initDashboardV2();          // carrega o dashboard v2 UMA VEZ
 
+        // Google Drive — analisar pasta
+        const btnAnalisarDrive = $('btnAnalisarDrive');
+        if (btnAnalisarDrive) {
+            btnAnalisarDrive.addEventListener('click', analisarPastaDrive);
+        }
+
+        const btnFecharPreviewDrive = $('btnFecharPreviewDrive');
+        if (btnFecharPreviewDrive) {
+            btnFecharPreviewDrive.addEventListener('click', fecharPreviewDrive);
+        }
+
+        // Enter no input dispara análise
+        const empDriveLink = $('empDriveLink');
+        if (empDriveLink) {
+            empDriveLink.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    analisarPastaDrive();
+                }
+            });
+        }
+
+        // Botão "Cadastrar manualmente" do empreendimento
+        const btnNovoEmp = document.getElementById('btnNovoEmpreendimento');
+        if (btnNovoEmp) {
+            btnNovoEmp.addEventListener('click', () => abrirModalEmpreendimento());
+        }
+
+        // Eventos do modal de empreendimento
+        configurarEventosModalEmpreendimento();
+
+        // 🔑 Toggle de status (publicar/despublicar)
+        $('btnToggleStatus')?.addEventListener('click', toggleStatusEmpreendimento);
 
         // Botão gerenciar
         if (btnGerenciarCorretores) btnGerenciarCorretores.addEventListener('click', abrirGerenciarCorretores);

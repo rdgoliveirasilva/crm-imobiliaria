@@ -90,6 +90,10 @@
                 <i class="fas fa-folder-open"></i>
                 <span>Carteiras</span>
             </button>
+            <button class="nav-tab" data-tab="empreendimentos">
+    <i class="fas fa-building"></i>
+    <span>Subir Empreendimentos</span>
+</button>
             <button class="nav-tab" data-tab="corretores">
                 <i class="fas fa-users"></i>
                 <span>Corretores</span>
@@ -532,6 +536,99 @@
 
         </section>
 
+<!-- ================================================
+     ABA — EMPREENDIMENTOS
+     ================================================ -->
+<section class="tab-panel" id="tab-empreendimentos">
+
+    <div class="emp-header">
+        <div>
+            <h2>
+                <i class="fas fa-building"></i>
+                Importador de Empreendimentos
+            </h2>
+            <p>Cole o link público do Google Drive com os PDFs (book + tabela). A IA vai extrair as informações automaticamente.</p>
+        </div>
+    </div>
+
+    <!-- Bloco do importador (placeholder) -->
+<div class="form-card emp-importer-card">
+    <header class="card-header">
+        <h2>
+            <i class="fas fa-magic"></i>
+            Importar do Google Drive
+        </h2>
+        <span class="emp-badge-fase">FASE 3</span>
+    </header>
+
+    <div class="form-body">
+        <div class="form-group">
+            <label for="empDriveLink">Link público da pasta do Drive</label>
+            <input
+                type="url"
+                id="empDriveLink"
+                placeholder="https://drive.google.com/drive/folders/..."
+            >
+            <span class="form-hint">
+                <i class="fas fa-info-circle"></i>
+                Cole o link de uma <strong>pasta</strong> ou de um <strong>PDF único</strong> do Drive (precisa estar público).
+            </span>
+        </div>
+
+        <div class="form-actions emp-importer-actions">
+            <button class="btn btn-primary" id="btnAnalisarDrive" type="button">
+                <i class="fas fa-search"></i>
+                Analisar pasta
+            </button>
+            <button class="btn btn-outline" id="btnNovoEmpreendimento" type="button">
+                <i class="fas fa-plus"></i>
+                Cadastrar manualmente
+            </button>
+        </div>
+
+        <!-- Preview dos arquivos encontrados -->
+        <div class="emp-drive-preview" id="empDrivePreview" style="display: none;">
+            <div class="emp-drive-preview-header">
+                <div>
+                    <strong id="empDrivePreviewTitulo">Pasta analisada</strong>
+                    <small id="empDrivePreviewInfo">0 PDFs encontrados</small>
+                </div>
+                <button type="button" class="emp-drive-preview-close" id="btnFecharPreviewDrive">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div class="emp-drive-preview-list" id="empDrivePreviewLista"></div>
+
+            <div class="emp-drive-preview-actions">
+                <button class="btn btn-primary" id="btnImportarDrive" type="button" disabled>
+                    <i class="fas fa-bolt"></i>
+                    <span id="btnImportarDriveTexto">Importar e processar</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+    <!-- Lista de empreendimentos -->
+    <div class="emp-list-header">
+        <h3>
+            <i class="fas fa-list"></i>
+            Empreendimentos cadastrados
+        </h3>
+        <span class="card-badge" id="empBadgeTotal">0</span>
+    </div>
+
+    <div class="emp-grid" id="empGrid"></div>
+
+    <div class="empty-state" id="empVazio">
+        <i class="fas fa-building"></i>
+        <h3>Nenhum empreendimento cadastrado ainda</h3>
+        <p>Clique em "Cadastrar manualmente" pra começar.</p>
+    </div>
+
+</section>
+
         <!-- ================================================
              ABA 4 — CORRETORES
              ================================================ -->
@@ -625,6 +722,179 @@
         </section>
 
     </main>
+
+<!-- =====================================================
+     MODAL — EMPREENDIMENTO (Cadastrar / Editar)
+     ===================================================== -->
+<div class="modal-overlay" id="modalEmpreendimento" style="display: none;">
+    <div class="modal-card modal-emp">
+<header class="modal-header emp-modal-header-com-status">
+    <div class="emp-modal-header-left">
+        <h2 id="empModalTitulo">
+            <i class="fas fa-building"></i>
+            <span id="empModalTituloTexto">Cadastrar empreendimento</span>
+        </h2>
+        <p id="empModalSubtitulo">Preencha as informações principais</p>
+        <span class="emp-status-badge rascunho" id="empStatusBadgeAtual" data-status="rascunho" style="display: none;">
+            Rascunho
+        </span>
+    </div>
+
+    <div class="emp-modal-header-actions">
+        <button type="button" class="btn-toggle-status" id="btnToggleStatus" style="display: none;">
+            <i class="fas fa-eye"></i>
+            <span id="btnToggleStatusTexto">Publicar</span>
+        </button>
+        <button class="modal-close" id="btnFecharModalEmp" aria-label="Fechar">
+            <i class="fas fa-times"></i>
+        </button>
+    </div>
+</header>
+
+        <div class="modal-body emp-modal-body">
+
+            <!-- Upload de capa -->
+            <div class="emp-upload-cover" id="empUploadCover">
+                <input type="file" id="empCapaInput" accept="image/*" hidden>
+                <div class="emp-upload-cover-content" id="empCoverEmpty">
+                    <i class="fas fa-image"></i>
+                    <strong>Adicionar capa</strong>
+                    <small>Clique ou arraste uma imagem (JPG, PNG)</small>
+                </div>
+                <div class="emp-upload-cover-preview" id="empCoverPreview" style="display: none;">
+                    <img id="empCoverImg" src="" alt="Capa">
+                    <button type="button" class="emp-upload-cover-remove" id="btnRemoverCapa">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Grid de campos -->
+            <div class="emp-form-grid">
+
+                <div class="form-group emp-col-full">
+                    <label for="empNome">Nome do empreendimento <span class="required">*</span></label>
+                    <input type="text" id="empNome" maxlength="150" placeholder="Ex: Lume Residencial">
+                    <span class="form-error" id="empNomeError"></span>
+                </div>
+
+                <div class="form-group">
+                    <label for="empConstrutora">Construtora</label>
+                    <input type="text" id="empConstrutora" maxlength="120" placeholder="Ex: MRV">
+                </div>
+
+                <div class="form-group">
+                    <label for="empTipoImovel">Tipo de imóvel</label>
+                    <select id="empTipoImovel">
+                        <option value="">Selecione...</option>
+                        <option value="Apartamento">Apartamento</option>
+                        <option value="Casa">Casa</option>
+                        <option value="Terreno">Terreno</option>
+                        <option value="Sala comercial">Sala comercial</option>
+                        <option value="Studio">Studio</option>
+                        <option value="Cobertura">Cobertura</option>
+                        <option value="Chácara">Chácara</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="empFase">Fase</label>
+                    <select id="empFase">
+                        <option value="">Selecione...</option>
+                        <option value="Lançamento">Lançamento</option>
+                        <option value="Em obras">Em obras</option>
+                        <option value="Entregue">Entregue</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="empPrevisao">Previsão de entrega</label>
+                    <input type="text" id="empPrevisao" maxlength="30" placeholder="Ex: Dez/2026">
+                </div>
+
+                <div class="form-group emp-col-full">
+                    <label for="empEndereco">Endereço</label>
+                    <input type="text" id="empEndereco" maxlength="200" placeholder="Ex: Rua das Flores, 123">
+                </div>
+
+                <div class="form-group">
+                    <label for="empBairro">Bairro</label>
+                    <input type="text" id="empBairro" maxlength="100" placeholder="Centro">
+                </div>
+
+                <div class="form-group">
+                    <label for="empCidade">Cidade</label>
+                    <input type="text" id="empCidade" maxlength="100" placeholder="São Paulo">
+                </div>
+
+                <div class="form-group">
+                    <label for="empEstado">Estado (UF)</label>
+                    <input type="text" id="empEstado" maxlength="2" placeholder="SP" style="text-transform: uppercase;">
+                </div>
+
+                <div class="form-group">
+                    <label for="empDormitorios">Dormitórios</label>
+                    <input type="text" id="empDormitorios" maxlength="60" placeholder="Ex: 2 e 3 dormitórios">
+                </div>
+
+                <div class="form-group">
+                    <label for="empMetragens">Metragens</label>
+                    <input type="text" id="empMetragens" maxlength="120" placeholder="Ex: 45 m² a 72 m²">
+                </div>
+
+                <div class="form-group">
+                    <label for="empVagas">Vagas</label>
+                    <input type="text" id="empVagas" maxlength="60" placeholder="Ex: 1 vaga">
+                </div>
+
+                <div class="form-group emp-col-full">
+                    <label for="empComodidades">Comodidades do condomínio</label>
+                    <input type="text" id="empComodidades" placeholder="Ex: Piscina, Academia, Salão de festas...">
+                    <span class="form-hint">
+                        <i class="fas fa-info-circle"></i>
+                        Separe por vírgula. Serão salvas como tags.
+                    </span>
+                </div>
+
+                <div class="form-group emp-col-full">
+                    <label for="empDescricao">Descrição</label>
+                    <textarea id="empDescricao" rows="3" maxlength="2000" placeholder="Breve descrição do empreendimento..."></textarea>
+                </div>
+
+                <!-- Upload de PDF -->
+                <div class="form-group emp-col-full">
+                    <label>Book / Tabela em PDF</label>
+                    <div class="emp-upload-pdf" id="empUploadPdf">
+                        <input type="file" id="empPdfInput" accept="application/pdf" hidden>
+                        <div class="emp-upload-pdf-content" id="empPdfEmpty">
+                            <i class="fas fa-file-pdf"></i>
+                            <span>Clique pra anexar o PDF</span>
+                        </div>
+                        <div class="emp-upload-pdf-info" id="empPdfInfo" style="display: none;">
+                            <i class="fas fa-file-pdf"></i>
+                            <span id="empPdfNome">arquivo.pdf</span>
+                            <button type="button" class="emp-upload-pdf-remove" id="btnRemoverPdf">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+        <div class="modal-actions-row">
+            <button class="btn-modal-cancel" id="btnCancelarEmp" type="button">
+                Cancelar
+            </button>
+            <button class="btn-modal-confirm" id="btnSalvarEmp" type="button">
+                <i class="fas fa-check"></i>
+                <span id="btnSalvarEmpTexto">Salvar empreendimento</span>
+            </button>
+        </div>
+    </div>
+</div>
 
     <!-- =====================================================
          MODAL — DETALHES DA LISTA

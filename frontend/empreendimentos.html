@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <script src="js/auth-guard.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Empreendimentos - Prospect SR Lançamentos</title>
+
+    <meta name="description" content="Empreendimentos disponíveis para prospecção - SR Lançamentos">
+
+    <link rel="icon" type="image/png" href="assets/img/logo.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/avatar.css">
+    <link rel="stylesheet" href="css/corretor.css">
+    <link rel="stylesheet" href="css/empreendimentos.css">
+</head>
+<body class="corretor-page empreendimentos-page">
+
+    <!-- =====================================================
+         HEADER
+         ===================================================== -->
+    <header class="app-header">
+        <div class="header-inner">
+            <a href="corretor.html" class="btn-back-header" title="Voltar">
+                <i class="fas fa-arrow-left"></i>
+            </a>
+
+            <div class="header-brand">
+                <div class="logo-mark">
+                    <img
+                        src="assets/img/logo2.png"
+                        alt="SR Lançamentos"
+                        onerror="this.style.display='none'; this.parentElement.classList.add('fallback');"
+                    >
+                    <i class="fas fa-building logo-fallback"></i>
+                </div>
+                <div class="header-brand-text">
+                    <h1>SR <span>Lançamentos</span></h1>
+                    <p>Empreendimentos</p>
+                </div>
+            </div>
+
+            <div class="header-user">
+                <div class="user-info">
+                    <span class="user-greeting">Bem vindo,</span>
+                    <strong id="headerUserName">Corretor</strong>
+                </div>
+                <button class="btn-avatar" id="btnAvatar" title="Menu">
+                    <i class="fas fa-user"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- =====================================================
+         MAIN
+         ===================================================== -->
+    <main class="app-main">
+
+        <!-- Cabeçalho da página -->
+        <section class="emp-page-head">
+            <div>
+                <h2 class="emp-page-title">
+                    <i class="fas fa-building"></i>
+                    Empreendimentos
+                </h2>
+                <p class="emp-page-sub">
+                    Consulte os lançamentos disponíveis e acesse o book completo.
+                </p>
+            </div>
+            <span class="emp-page-count" id="empTotalCount">0</span>
+        </section>
+
+        <!-- Barra de filtros -->
+        <section class="emp-filtros">
+            <div class="emp-filtro-busca">
+                <i class="fas fa-search"></i>
+                <input
+                    type="text"
+                    id="empBusca"
+                    placeholder="Buscar por nome do empreendimento..."
+                    autocomplete="off"
+                >
+            </div>
+
+            <div class="emp-filtros-selects">
+                <div class="emp-filtro-select">
+                    <i class="fas fa-industry"></i>
+                    <select id="empFiltroConstrutora">
+                        <option value="">Todas as construtoras</option>
+                    </select>
+                </div>
+
+                <div class="emp-filtro-select">
+                    <i class="fas fa-map-marker-alt"></i>
+                    <select id="empFiltroCidade">
+                        <option value="">Todas as cidades</option>
+                    </select>
+                </div>
+
+                <button class="emp-filtro-limpar" id="empLimparFiltros" type="button" style="display:none;">
+                    <i class="fas fa-times"></i>
+                    <span>Limpar</span>
+                </button>
+            </div>
+        </section>
+
+        <!-- Grid de empreendimentos -->
+        <section class="emp-grid-vitrine" id="empGridVitrine">
+            <!-- Preenchido via JS -->
+        </section>
+
+        <!-- Loading (aparece enquanto carrega) -->
+        <div class="emp-loading" id="empLoading">
+            <i class="fas fa-circle-notch fa-spin"></i>
+            <p>Carregando empreendimentos...</p>
+        </div>
+
+        <!-- Estado vazio -->
+        <div class="empty-state" id="empVazio" style="display: none;">
+            <i class="fas fa-building"></i>
+            <h3>Nenhum empreendimento disponível</h3>
+            <p id="empVazioMensagem">Aguarde novos lançamentos serem publicados.</p>
+        </div>
+
+    </main>
+
+    <!-- =====================================================
+         MODAL — DETALHES DO EMPREENDIMENTO
+         ===================================================== -->
+    <div class="modal-overlay" id="modalEmpCorretor" style="display: none;">
+        <div class="modal-card modal-emp-vitrine">
+            <header class="modal-header emp-detalhe-header">
+                <div class="emp-detalhe-header-left">
+                    <h2 id="empDetalheNome">—</h2>
+                    <p id="empDetalheConstrutora">—</p>
+                </div>
+                <button class="modal-close" id="btnFecharDetalheEmp" aria-label="Fechar">
+                    <i class="fas fa-times"></i>
+                </button>
+            </header>
+
+            <div class="modal-body emp-detalhe-body">
+
+                <!-- Capa grande -->
+                <div class="emp-detalhe-capa" id="empDetalheCapaWrap">
+                    <img id="empDetalheCapa" src="" alt="">
+                    <div class="emp-detalhe-capa-vazia" id="empDetalheCapaVazia" style="display: none;">
+                        <i class="fas fa-building"></i>
+                    </div>
+                </div>
+
+                <!-- Chips de destaque -->
+                <div class="emp-detalhe-chips" id="empDetalheChips"></div>
+
+                <!-- Localização -->
+                <div class="emp-detalhe-secao" id="empDetalheLocalSeccao">
+                    <h3><i class="fas fa-map-marker-alt"></i> Localização</h3>
+                    <p id="empDetalheLocal">—</p>
+                </div>
+
+                <!-- Descrição -->
+                <div class="emp-detalhe-secao" id="empDetalheDescricaoSeccao">
+                    <h3><i class="fas fa-align-left"></i> Sobre o empreendimento</h3>
+                    <p id="empDetalheDescricao">—</p>
+                </div>
+
+                <!-- Comodidades -->
+                <div class="emp-detalhe-secao" id="empDetalheComodidadesSeccao">
+                    <h3><i class="fas fa-star"></i> Comodidades</h3>
+                    <div class="emp-detalhe-comodidades" id="empDetalheComodidades"></div>
+                </div>
+
+            </div>
+
+            <div class="modal-actions-row emp-detalhe-actions">
+                <button class="btn-modal-cancel" id="btnFecharDetalheEmpFooter" type="button">
+                    Fechar
+                </button>
+                <a class="btn-modal-confirm btn-abrir-book" id="btnAbrirBook" href="#" target="_blank" rel="noopener noreferrer">
+                    <i class="fas fa-file-pdf"></i>
+                    <span>Abrir book</span>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script src="js/api-client.js"></script>
+    <script src="js/avatar.js"></script>
+    <script src="js/empreendimentos.js"></script>
+
+</body>
+</html>

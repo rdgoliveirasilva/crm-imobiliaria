@@ -5,10 +5,14 @@
 // 🔑 Força o Node a operar em UTC (deve ser a PRIMEIRA linha executável)
 process.env.TZ = 'UTC';
 
+// 🔑 dotenv precisa vir ANTES de qualquer require que use process.env
 const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '.env') });
+
 const express = require('express');
 const cors = require('cors');
-require('dotenv').config();
+
+require('./config/cloudinary');
 
 const { inicializarSchema } = require('./config/db');
 
@@ -24,18 +28,37 @@ app.use((req, res, next) => {
     next();
 });
 
+/* =========================================================
+   ROTAS
+   ⚠️ Ordem importa: rotas específicas ANTES das genéricas
+   ========================================================= */
+
+// Auth
 app.use('/api', require('./routes/auth'));
+
+// Empreendimentos (admin + corretor) — ANTES dos routers genéricos
+const {
+    routerAdmin: empreendimentosAdmin,
+    routerCorretor: empreendimentosCorretor
+} = require('./routes/empreendimentos');
+
+app.use('/api/admin/empreendimentos', empreendimentosAdmin);
+app.use('/api/corretor/empreendimentos', empreendimentosCorretor);
+
+// Admin (genérico — vem depois pra não engolir as rotas específicas)
 app.use('/api/admin', require('./routes/admin'));
+
+// Corretor (genérico — vem depois)
 app.use('/api/corretor', require('./routes/corretor'));
+
+/* =========================================================
+   HEALTH CHECK
+   ========================================================= */
 
 app.get('/api/health', (req, res) => {
     res.json({ ok: true, hora: new Date().toISOString() });
 });
 
-/* =========================================================
-   DEBUG — confere o timezone do servidor
-   ⚠️ Remova esse endpoint depois que confirmar que tá tudo certo
-   ========================================================= */
 app.get('/api/debug-tz', (req, res) => {
     res.json({
         tz: Intl.DateTimeFormat().resolvedOptions().timeZone,
@@ -45,6 +68,10 @@ app.get('/api/debug-tz', (req, res) => {
     });
 });
 
+/* =========================================================
+   FRONTEND ESTÁTICO
+   ========================================================= */
+
 const frontendPath = path.join(__dirname, '..', 'frontend');
 app.use(express.static(frontendPath));
 
@@ -53,10 +80,18 @@ app.use((req, res, next) => {
     res.sendFile(path.join(frontendPath, 'index.html'));
 });
 
+/* =========================================================
+   ERROR HANDLER
+   ========================================================= */
+
 app.use((err, req, res, next) => {
     console.error('[ERRO]', err);
     res.status(500).json({ erro: 'Erro interno do servidor.' });
 });
+
+/* =========================================================
+   START
+   ========================================================= */
 
 const PORT = process.env.PORT || 3000;
 
