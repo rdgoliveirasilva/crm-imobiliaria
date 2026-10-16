@@ -7276,3 +7276,100 @@
         justify-content: center;
     }
 }
+
+/* =========================================================
+   FIX — Toast acima dos modais
+   ========================================================= */
+
+.toast {
+    z-index: 10000 !important;   /* acima do modal (8000) e do confirm (9000) */
+}
+
+/* =========================================================
+   FIX — Botão publicar com estados claros
+   ========================================================= */
+
+.btn-toggle-status {
+    position: relative;
+    min-width: 130px;
+    justify-content: center;
+    transition: all 0.25s ease;
+}
+
+.btn-toggle-status.loading {
+    background: linear-gradient(135deg, #64748b, #475569) !important;
+    cursor: wait;
+    pointer-events: none;
+}
+
+.btn-toggle-status.publicado {
+    background: linear-gradient(135deg, #f59e0b, #d97706) !important;
+    box-shadow: 0 6px 16px -8px rgba(245, 158, 11, 0.6) !important;
+}
+
+.btn-toggle-status.publicado:hover {
+    box-shadow: 0 10px 22px -8px rgba(245, 158, 11, 0.85) !important;
+}
+
+/* Aviso visual quando está publicado */
+.btn-toggle-status.publicado::after {
+    content: '✓';
+    margin-left: 0.3rem;
+    font-size: 0.7rem;
+    opacity: 0.7;
+}
+
+/* =========================================================
+   FIX — Ordem dos botões do modal de empreendimento
+   ---------------------------------------------------------
+   Header: "Publicar/Despublicar" à esquerda, "X" à direita
+   Footer: "Cancelar" à esquerda, "Salvar" à direita (padrão)
+   ========================================================= */
+
+.modal-emp .modal-actions-row {
+    display: grid;
+    grid-template-columns: 1fr 1.3fr;
+    gap: 0.75rem;
+    padding: 1rem 1.5rem 1.4rem;
+    border-top: 1px solid rgba(0, 44, 97, 0.06);
+}
+
+/* =========================================================
+   FIX — Preview de capa mais explícito quando vazio
+   ========================================================= */
+
+.emp-upload-cover.emp-sem-capa {
+    border-color: #f59e0b !important;
+    background: linear-gradient(135deg, #fef9e7, #fef3c7) !important;
+}
+
+.emp-upload-cover.emp-sem-capa .emp-upload-cover-content i {
+    color: #d97706;
+}
+
+/* =========================================================
+   FIX — Header do modal quando publicado
+   ========================================================= */
+
+.emp-modal-header-com-status {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.emp-modal-header-left {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    flex: 1;
+    min-width: 0;
+}
+
+.emp-modal-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    flex-shrink: 0;
+}

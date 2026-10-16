@@ -674,71 +674,119 @@ const btnToggleTipoText = $('btnToggleTipoText');
        TELA DE REVISÃO — abre o modal já preenchido pela IA
        ========================================================= */
 
-    function abrirTelaRevisao(resposta) {
-        const { resultados } = resposta;
-        const pdfOk = resultados.find(r => r.sucesso && r.dados_ia);
+function abrirTelaRevisao(resposta) {
+    const { resultados } = resposta;
+    const pdfOk = resultados.find(r => r.sucesso && r.dados_ia)
+                 || resultados.find(r => r.sucesso);
 
-        if (!pdfOk) {
-            mostrarToast('Nenhum PDF processado com sucesso.', 'error');
-            return;
-        }
+    if (!pdfOk) {
+        mostrarToast('Nenhum PDF processado com sucesso.', 'error');
+        return;
+    }
 
-        const d = pdfOk.dados_ia;
+    fecharPreviewDrive();
+    const importerCard = document.querySelector('.emp-importer-card');
+    if (importerCard) importerCard.style.display = 'none';
 
-        // Fecha preview e esconde importador
-        fecharPreviewDrive();
-        const importerCard = document.querySelector('.emp-importer-card');
-        if (importerCard) importerCard.style.display = 'none';
+    limparFormularioEmp();
 
-        // Abre o modal existente já preenchido
-        limparFormularioEmp();
-
-        // Preenche os campos com o que a IA extraiu
-        $('empNome').value        = d.nome || '';
-        $('empConstrutora').value = d.construtora || '';
-        $('empTipoImovel').value  = d.tipo_imovel || '';
-        $('empDormitorios').value = d.dormitorios || '';
-        $('empMetragens').value   = d.metragens || '';
-        $('empVagas').value       = d.vagas || '';
-        $('empCidade').value      = d.cidade || '';
-        $('empEstado').value      = d.estado || '';
-        $('empBairro').value      = d.bairro || '';
-        $('empEndereco').value    = d.endereco || '';
-        $('empDescricao').value   = d.descricao || '';
-
-        // Comodidades: array → string separada por vírgula
-        const comodidades = d.comodidades || [];
-        $('empComodidades').value = Array.isArray(comodidades) ? comodidades.join(', ') : '';
-
-        // Capa extraída pela IA
+    // ---- Se for PDF escaneado, abre em branco ----
+    if (pdfOk.pdf_escaneado) {
         if (pdfOk.capa_url) {
             empCapaAtual = { url: pdfOk.capa_url, public_id: pdfOk.capa_public_id };
             $('empCoverImg').src = pdfOk.capa_url;
-            $('empCoverPreview').style.display = 'block';
-            $('empCoverEmpty').style.display = 'none';
+            $('empCoverImg').onload = () => {
+                $('empCoverPreview').style.display = 'block';
+                $('empCoverEmpty').style.display = 'none';
+                $('empUploadCover')?.classList.remove('emp-sem-capa');
+            };
+        } else {
+            $('empUploadCover')?.classList.add('emp-sem-capa');
         }
 
-        // PDF do empreendimento
-if (pdfOk.drive_url) {
-    empPdfAtual = { url: pdfOk.drive_url, public_id: null };
-    $('empPdfNome').textContent = pdfOk.nome || 'book.pdf';
-    $('empPdfInfo').style.display = 'flex';
-    $('empPdfEmpty').style.display = 'none';
-}
+        if (pdfOk.drive_url) {
+            empPdfAtual = { url: pdfOk.drive_url, public_id: null };
+            $('empPdfNome').textContent = pdfOk.nome || 'book.pdf';
+            $('empPdfInfo').style.display = 'flex';
+            $('empPdfEmpty').style.display = 'none';
+        }
 
-        // Marca os campos como "preenchido pela IA"
-        marcarCamposComIA();
-
-        // Abre o modal
         const modal = $('modalEmpreendimento');
         if (modal) modal.style.display = 'flex';
 
         const titulo = $('empModalTituloTexto');
-        if (titulo) titulo.textContent = '✨ Revisar dados extraídos pela IA';
+        if (titulo) titulo.textContent = '📝 Cadastrar empreendimento (PDF escaneado)';
 
         const subtitulo = $('empModalSubtitulo');
-        if (subtitulo) subtitulo.textContent = 'Confira e edite o que precisar antes de salvar';
+        if (subtitulo) subtitulo.textContent = 'A IA não conseguiu ler esse PDF. Preencha os dados manualmente.';
+
+        mostrarToast('PDF escaneado. Preencha manualmente.', 'info');
+        return;
     }
+
+    // ---- Fluxo normal (IA preencheu) ----
+    const d = pdfOk.dados_ia || {};
+
+    $('empNome').value        = d.nome || '';
+    $('empConstrutora').value = d.construtora || '';
+    $('empTipoImovel').value  = d.tipo_imovel || '';
+    $('empDormitorios').value = d.dormitorios || '';
+    $('empMetragens').value   = d.metragens || '';
+    $('empVagas').value       = d.vagas || '';
+    $('empCidade').value      = d.cidade || '';
+    $('empEstado').value      = d.estado || '';
+    $('empBairro').value      = d.bairro || '';
+    $('empEndereco').value    = d.endereco || '';
+    $('empDescricao').value   = d.descricao || '';
+
+    const comodidades = d.comodidades || [];
+    $('empComodidades').value = Array.isArray(comodidades) ? comodidades.join(', ') : '';
+
+    // ---- CAPA (com log pra debugar) ----
+    console.log('[revisao] capa_url:', pdfOk.capa_url);
+
+    if (pdfOk.capa_url) {
+        empCapaAtual = { url: pdfOk.capa_url, public_id: pdfOk.capa_public_id };
+        const img = $('empCoverImg');
+        img.src = pdfOk.capa_url;
+        img.onerror = () => {
+            console.warn('[revisao] erro ao carregar capa:', pdfOk.capa_url);
+            $('empUploadCover')?.classList.add('emp-sem-capa');
+        };
+        img.onload = () => {
+            $('empCoverPreview').style.display = 'block';
+            $('empCoverEmpty').style.display = 'none';
+            $('empUploadCover')?.classList.remove('emp-sem-capa');
+        };
+    } else {
+        $('empUploadCover')?.classList.add('emp-sem-capa');
+        console.warn('[revisao] sem capa_url na resposta');
+    }
+
+    // ---- PDF ----
+    if (pdfOk.drive_url) {
+        empPdfAtual = { url: pdfOk.drive_url, public_id: null };
+        $('empPdfNome').textContent = pdfOk.nome || 'book.pdf';
+        $('empPdfInfo').style.display = 'flex';
+        $('empPdfEmpty').style.display = 'none';
+    } else if (pdfOk.cloudinary_url) {
+        empPdfAtual = { url: pdfOk.cloudinary_url, public_id: pdfOk.cloudinary_public_id };
+        $('empPdfNome').textContent = pdfOk.nome || 'book.pdf';
+        $('empPdfInfo').style.display = 'flex';
+        $('empPdfEmpty').style.display = 'none';
+    }
+
+    marcarCamposComIA();
+
+    const modal = $('modalEmpreendimento');
+    if (modal) modal.style.display = 'flex';
+
+    const titulo = $('empModalTituloTexto');
+    if (titulo) titulo.textContent = '✨ Revisar dados extraídos pela IA';
+
+    const subtitulo = $('empModalSubtitulo');
+    if (subtitulo) subtitulo.textContent = 'Confira e edite o que precisar antes de salvar';
+}
 
     /* Marca visualmente os campos como preenchidos pela IA */
     function marcarCamposComIA() {
@@ -779,48 +827,61 @@ if (pdfOk.drive_url) {
        MODAL DE EMPREENDIMENTO — Cadastrar / Editar
        ========================================================= */
 
-    function limparFormularioEmp() {
-        empEditandoId = null;
-        empCapaAtual = null;
-        empPdfAtual = null;
-        empComodidadesTemp = [];
+function limparFormularioEmp() {
+    empEditandoId = null;
+    empCapaAtual = null;
+    empPdfAtual = null;
+    empComodidadesTemp = [];
 
-        ['empNome', 'empConstrutora', 'empPrevisao', 'empEndereco',
-         'empBairro', 'empCidade', 'empEstado', 'empDormitorios',
-         'empMetragens', 'empVagas', 'empComodidades', 'empDescricao'
-        ].forEach(id => {
-            const el = $(id);
-            if (el) el.value = '';
-        });
+    ['empNome', 'empConstrutora', 'empPrevisao', 'empEndereco',
+     'empBairro', 'empCidade', 'empEstado', 'empDormitorios',
+     'empMetragens', 'empVagas', 'empComodidades', 'empDescricao'
+    ].forEach(id => {
+        const el = $(id);
+        if (el) el.value = '';
+    });
 
-        ['empTipoImovel', 'empFase'].forEach(id => {
-            const el = $(id);
-            if (el) el.value = '';
-        });
+    ['empTipoImovel', 'empFase'].forEach(id => {
+        const el = $(id);
+        if (el) el.value = '';
+    });
 
-        // Limpa erros visuais
-        const empNomeError = $('empNomeError');
-        if (empNomeError) {
-            empNomeError.textContent = '';
-            empNomeError.classList.remove('visible');
-        }
-        const empNome = $('empNome');
-        if (empNome) empNome.classList.remove('error');
-
-        // Esconde preview de capa
-        const coverPreview = $('empCoverPreview');
-        const coverEmpty = $('empCoverEmpty');
-        if (coverPreview) coverPreview.style.display = 'none';
-        if (coverEmpty) coverEmpty.style.display = 'flex';
-        const coverImg = $('empCoverImg');
-        if (coverImg) coverImg.src = '';
-
-        // Esconde info do PDF
-        const pdfInfo = $('empPdfInfo');
-        const pdfEmpty = $('empPdfEmpty');
-        if (pdfInfo) pdfInfo.style.display = 'none';
-        if (pdfEmpty) pdfEmpty.style.display = 'flex';
+    const empNomeError = $('empNomeError');
+    if (empNomeError) {
+        empNomeError.textContent = '';
+        empNomeError.classList.remove('visible');
     }
+    const empNome = $('empNome');
+    if (empNome) empNome.classList.remove('error');
+
+    // Limpa preview de capa
+    const coverPreview = $('empCoverPreview');
+    const coverEmpty = $('empCoverEmpty');
+    const coverImg = $('empCoverImg');
+    if (coverPreview) coverPreview.style.display = 'none';
+    if (coverEmpty) coverEmpty.style.display = 'flex';
+    if (coverImg) {
+        coverImg.src = '';
+        coverImg.onload = null;
+        coverImg.onerror = null;
+    }
+    $('empUploadCover')?.classList.remove('emp-sem-capa');
+
+    // Limpa info do PDF
+    const pdfInfo = $('empPdfInfo');
+    const pdfEmpty = $('empPdfEmpty');
+    if (pdfInfo) pdfInfo.style.display = 'none';
+    if (pdfEmpty) pdfEmpty.style.display = 'flex';
+
+    // Esconde badge + botão de status (só aparecem após salvar)
+    const badge = $('empStatusBadgeAtual');
+    const btnToggle = $('btnToggleStatus');
+    if (badge) badge.style.display = 'none';
+    if (btnToggle) {
+        btnToggle.style.display = 'none';
+        btnToggle.classList.remove('publicado', 'loading');
+    }
+}
 
     function abrirModalEmpreendimento(empreendimento = null) {
         limparFormularioEmp();
@@ -1089,45 +1150,58 @@ async function toggleStatusEmpreendimento() {
     }
 
     const btn = $('btnToggleStatus');
+    const btnTexto = $('btnToggleStatusTexto');
     const badge = $('empStatusBadgeAtual');
 
-    // Pega o status atual pela classe do badge
     const statusAtual = badge?.dataset.status || 'rascunho';
     const vaiPublicar = statusAtual !== 'publicado';
-
     const novostatus = vaiPublicar ? 'publicado' : 'rascunho';
 
+    if (!btn || !btnTexto) return;
+
+    // 🔑 Feedback visual IMEDIATO
     btn.disabled = true;
-    const textoOriginal = btn.innerHTML;
-    btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Salvando...';
+    btn.classList.add('loading');
+    btnTexto.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> ' +
+                         (vaiPublicar ? 'Publicando...' : 'Despublicando...');
 
     try {
-        await ApiClient.patch(`/api/admin/empreendimentos/${empEditandoId}/status`, {
-            status: novostatus
-        });
-
-        mostrarToast(
-            vaiPublicar
-                ? '✅ Empreendimento publicado! Já está visível pros corretores.'
-                : '📝 Empreendimento despublicado. Voltou pra rascunho.',
-            'success'
+        const { empreendimento } = await ApiClient.patch(
+            `/api/admin/empreendimentos/${empEditandoId}/status`,
+            { status: novostatus }
         );
 
-        // Atualiza o badge no header do modal
-        atualizarBadgeStatusEmp(novostatus);
+        // 🔑 Confirma que o backend REALMENTE mudou o status
+        const statusFinal = empreendimento?.status || novostatus;
 
-        // Atualiza o botão
-        atualizarBotaoStatusEmp(novostatus);
+        if (statusFinal !== novostatus) {
+            throw new Error(`O servidor não alterou o status. Esperado: "${novostatus}", recebido: "${statusFinal}".`);
+        }
 
-        // Recarrega a lista pra atualizar o card
-        await renderizarEmpreendimentos();
+        // 🔑 Atualiza badge + botão com o status FINAL confirmado pelo backend
+        atualizarBadgeStatusEmp(statusFinal);
+        atualizarBotaoStatusEmp(statusFinal);
+
+        // 🔑 Se despublicou, fecha o modal (não faz sentido continuar editando)
+        if (novostatus === 'rascunho') {
+            mostrarToast('📝 Empreendimento despublicado.', 'success');
+        } else {
+            mostrarToast('✅ Publicado! O corretor já consegue ver.', 'success');
+        }
+
+        // 🔑 Recarrega a lista em background (não bloqueia a UX)
+        renderizarEmpreendimentos();
 
     } catch (err) {
         console.error('[toggle-status] erro:', err);
         mostrarToast(err.message || 'Erro ao alterar status.', 'error');
     } finally {
         btn.disabled = false;
-        btn.innerHTML = textoOriginal;
+        btn.classList.remove('loading');
+
+        // 🔑 Reconstrói o botão pro estado correto
+        const statusFinalAtual = badge?.dataset.status || 'rascunho';
+        atualizarBotaoStatusEmp(statusFinalAtual);
     }
 }
 
@@ -1151,12 +1225,14 @@ function atualizarBotaoStatusEmp(status) {
     const btnTexto = $('btnToggleStatusTexto');
     if (!btn || !btnTexto) return;
 
+    // Remove classes antigas
+    btn.classList.remove('publicado', 'loading');
+
     if (status === 'publicado') {
-        btn.classList.add('despublicar');
-        btnTexto.textContent = 'Despublicar';
+        btn.classList.add('publicado');
+        btnTexto.innerHTML = '<i class="fas fa-eye-slash"></i> Despublicar';
     } else {
-        btn.classList.remove('despublicar');
-        btnTexto.textContent = 'Publicar';
+        btnTexto.innerHTML = '<i class="fas fa-eye"></i> Publicar';
     }
 }
 
