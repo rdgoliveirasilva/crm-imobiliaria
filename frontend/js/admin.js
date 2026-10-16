@@ -3616,12 +3616,12 @@ if (btnToggleTipo) {
         blocoArquivo.style.display = 'flex';
         blocoTexto.style.display = 'none';
 
-        await renderizarSeletorCorretores();
-        await renderizarListas();
-        await renderizarCorretores();
-        await carregarListasParaAtualizacao();
-        await atualizarDashboard();      // só KPIs antigos (que não existem mais, mas é seguro)
-    await initDashboardV2();          // carrega o dashboard v2 UMA VEZ
+        // 🔑 Carrega tudo em paralelo (o que sobrar de duplicado a gente resolve)
+        await Promise.all([
+            renderizarSeletorCorretores(),   // GET /api/admin/corretores
+            renderizarListas(),              // GET /api/admin/listas
+            initDashboardV2()                // GET /api/admin/dashboard + /graficos + /carteiras
+        ]);
 
         // Google Drive — analisar pasta
         const btnAnalisarDrive = $('btnAnalisarDrive');
@@ -3688,23 +3688,23 @@ if (btnToggleTipo) {
 
         // Select de lista (modo atualizar)
         if (customSelectListaTrigger && customSelectListaMenu) {
-    customSelectListaTrigger.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const aberto = customSelectListaMenu.classList.contains('open');
-        customSelectListaMenu.classList.toggle('open', !aberto);
-        customSelectListaTrigger.classList.toggle('open', !aberto);
-    });
+            customSelectListaTrigger.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const aberto = customSelectListaMenu.classList.contains('open');
+                customSelectListaMenu.classList.toggle('open', !aberto);
+                customSelectListaTrigger.classList.toggle('open', !aberto);
+            });
 
-    document.addEventListener('click', (e) => {
-        if (customSelectLista && !customSelectLista.contains(e.target)) {
-            fecharCustomSelectLista();
+            document.addEventListener('click', (e) => {
+                if (customSelectLista && !customSelectLista.contains(e.target)) {
+                    fecharCustomSelectLista();
+                }
+            });
+
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') fecharCustomSelectLista();
+            });
         }
-    });
-
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') fecharCustomSelectLista();
-    });
-}
 
         // Config avançada (colapsável)
         if (btnToggleConfig && configAvancada) {
