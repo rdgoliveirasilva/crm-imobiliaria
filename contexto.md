@@ -1,7 +1,7 @@
 # CONTEXTO DO PROJETO — CRM SR Lançamentos
 
 > **Última atualização:** Outubro/2026
-> **Último merge:** branch `refatoracao` → `main`
+> **Último merge:** `refatoracao` → `main`
 > **Status:** Em produção (Vercel + Neon)
 
 Este arquivo é um **handoff** para qualquer LLM ou desenvolvedor que pegar este projeto no futuro. Leia até o fim antes de fazer qualquer alteração estrutural.
@@ -46,13 +46,13 @@ crm-imobiliaria/
 │ │ ├── auth.js
 │ │ ├── admin.js
 │ │ ├── corretor.js
-│ │ └── empreendimentos.js ← [FASE 5] admin + corretor
-│ ├── controllers/
-│ ├── models/
+│ │ └── empreendimentos.js ← [FASE 5/6] admin + corretor
+│ ├── controllers/ (vazios)
+│ ├── models/ (vazios)
 │ └── services/
-│ ├── driveService.js ← [FASE 3] listar/baixar PDFs do Drive
-│ ├── pdfService.js ← [FASE 4/5] extrair texto + capa
-│ └── iaService.js ← [FASE 5] Gemini estruturado
+│ ├── driveService.js ← Google Drive API
+│ ├── pdfService.js ← extração de texto + capa
+│ └── iaservice.js ← Gemini (⚠️ NOME MINÚSCULO)
 └── frontend/
 ├── index.html
 ├── admin.html
@@ -83,34 +83,27 @@ crm-imobiliaria/
 
 text
 
+⚠️ **Case-sensitive:** `iaservice.js` está em **minúsculo**. Se renomear, ajustar o `require` em `routes/empreendimentos.js`.
+
 ---
 
 ## 3. Decisões arquiteturais importantes
 
 ### 3.1 Separação `corretor.html` vs `prospeccao.html`
 
-**Antes:** uma única página (`corretor.html`) fazia TUDO — dashboard com KPIs, listas de retorno, lead ativo, histórico, agendamentos.
-
-**Agora:** foram separados em 2 páginas com responsabilidades claras:
-
 | Página | Responsabilidade | CSS | JS |
 |--------|------------------|-----|-----|
-| `corretor.html` | Dashboard com KPIs, listas de retorno/agendamento, botão "Iniciar prospecção" | `corretor.css` | `corretor.js` |
+| `corretor.html` | Dashboard com KPIs, listas de retorno/agendamento | `corretor.css` | `corretor.js` |
 | `prospeccao.html` | Lead ativo (ligar, WhatsApp, registrar tag) | `corretor.css` + `prospeccao.css` | `prospeccao.js` |
 
-**Fluxo:** `corretor.html` → clica "Iniciar prospecção" → `prospeccao.html?lista=X` → trabalha leads → botão `←` volta pro dashboard.
-
-**Por quê:** cada tela tem escopo único, mais leve pra carregar, mais fácil de manter. **NÃO juntar de volta.**
+**NÃO juntar de volta.**
 
 ### 3.2 Header compartilhado compacto
 
-**Decisão:** o header é **compacto (820px) e centralizado** em TODAS as páginas (dashboard, prospecção, conta, admin, empreendimentos).
+Header é **compacto (820px) e centralizado** em TODAS as páginas (dashboard, prospecção, conta, admin, empreendimentos).
 
 - `corretor.css` define `.header-inner { max-width: 820px; justify-content: center }`
-- `prospeccao.css` **não sobrescreve** o header (só adiciona o botão voltar)
-- `empreendimentos.css` adiciona o mesmo `.btn-back-header` dentro do header
-
-**Não mudar** esse comportamento. Foi uma decisão explícita do cliente.
+- `empreendimentos.css` adiciona `.btn-back-header` no header (mesmo padrão da prospecção)
 
 ### 3.3 `.app-main` diferente por contexto
 
@@ -123,8 +116,8 @@ text
 ```html
 <link rel="stylesheet" href="css/style.css">
 <link rel="stylesheet" href="css/avatar.css">
-<link rel="stylesheet" href="css/corretor.css">      <!-- ou conta.css -->
-<link rel="stylesheet" href="css/prospeccao.css">    <!-- SÓ na prospeccao.html -->
+<link rel="stylesheet" href="css/corretor.css">       <!-- ou conta.css -->
+<link rel="stylesheet" href="css/prospeccao.css">     <!-- SÓ na prospeccao.html -->
 <link rel="stylesheet" href="css/empreendimentos.css"><!-- SÓ na empreendimentos.html -->
 avatar.css DEVE vir antes de corretor.css/conta.css.
 
@@ -139,24 +132,24 @@ Backend:
 
 server.js força process.env.TZ = 'UTC' na primeira linha
 
-config/db.js sobrescreve os parsers do pg (OIDs 1114 e 1184) para retornar strings cruas
+config/db.js sobrescreve os parsers do pg (OIDs 1114 e 1184) para strings cruas
 
 Frontend:
 
-Sempre formatar com timeZone: 'America/Sao_Paulo' explícito
-
-Helper parseDataAgendamento normaliza as datas do agendamento
+Sempre formatar com timeZone: 'America/Sao_Paulo'
 
 ⚠️ Se ver datas deslocadas 3h, é problema de timezone. Não mexer sem entender as duas pontas.
 
 3.7 Autenticação
 JWT salvo em localStorage com chave sr_token
 
-sr_tipo guarda o tipo do usuário (admin, corretor ou teste)
+sr_tipo guarda o tipo (admin, corretor ou teste)
 
 api-client.js injeta o token e faz logout automático em 401
 
-auth-guard.js roda no <head> de todas as páginas internas e redireciona se não tem token ou se o tipo não bate com a página
+auth-guard.js roda no <head> de todas as páginas internas
+
+⚠️ Atenção: o auth.js salva o tipo com chave sr_tipo (não sr_usuario_tipo).
 
 Backends:
 
@@ -166,63 +159,57 @@ routes/admin.js → router.use(autenticar, apenasAdmin) ⚠️ NUNCA trocar
 
 routes/corretor.js → router.use(autenticar, apenasCorretor)
 
-routes/empreendimentos.js → tem 2 routers:
+routes/empreendimentos.js → 2 routers:
 
-routerAdmin → router.use(autenticar, apenasAdmin) (rotas de import/CRUD)
+routerAdmin → router.use(autenticar, apenasAdmin)
 
-routerCorretor → router.use(autenticar, apenasCorretor) (leitura de publicados)
+routerCorretor → router.use(autenticar, apenasCorretor)
 
-Middleware apenasCorretor: aceita tipo === 'corretor' e tipo === 'teste'. Se mexer, garanta que ambos continuam passando.
+Middleware apenasCorretor: aceita tipo === 'corretor' e tipo === 'teste'.
 
-3.8 Dropdown do avatar — blindado
+3.8 Dropdown do avatar
 avatar.js remove qualquer .dropdown-menu existente antes de criar o novo. O item "Empreendimentos" só aparece se sr_tipo for corretor ou teste.
 
-⚠️ Importante: o auth.js salva o tipo com a chave sr_tipo (não sr_usuario_tipo). Se renomear, atualiza o avatar.js também.
-
-3.9 Importador de empreendimentos (FASES 5 e 6)
-Decisão importante: NÃO subimos mais o PDF pro Cloudinary.
+3.9 Importador de empreendimentos (FASE 5)
+Decisão: PDF não sobe pro Cloudinary. Só a capa.
 
 Por quê:
 
-Vercel tem limite de 4.5MB no corpo da requisição de funções serverless
+Vercel tem limite de 4.5MB no corpo da requisição serverless
 
 Cloudinary free tem limite de 10MB por arquivo
 
-Books de construtoras (MRV, Cyrela, ADN) geralmente têm 15-30MB
+Books de construtoras geralmente têm 15-30MB
 
-O que fazemos:
+Fluxo:
 
-Admin cola link de pasta ou PDF do Drive
+Admin cola link do Drive
 
-Backend baixa o PDF em memória (não persiste)
+Backend baixa o PDF em memória
 
 Extrai texto (pdf-parse@1.1.1)
 
 Extrai primeira página como capa (pdfjs-dist + canvas → JPEG)
 
-Sobe só a capa pro Cloudinary (é pequena, ~200KB)
+Sobe só a capa pro Cloudinary
 
 Chama Gemini com o texto pra estruturar em JSON
 
-Salva no banco: link do Drive (pdf_url) + URL do Cloudinary (capa_url)
+Salva: link do Drive (pdf_url) + URL do Cloudinary (capa_url)
 
-Resultado: PDFs de qualquer tamanho funcionam. O corretor abre o book via link do Drive (nova aba).
+PDFs escaneados: se o texto extraído for muito curto (< 100 chars), o backend detecta e devolve pdf_escaneado: true. O modal abre em branco com capa + link do Drive pré-preenchidos, e o admin preenche manualmente.
 
-Consequência: se o dono do arquivo apagar/fechar a permissão do Drive, o link quebra. Aceitável — foi decisão explícita.
-
-3.10 Publicação de empreendimentos
-Empreendimentos nascem com status = 'rascunho' (default do banco)
+3.10 Publicação de empreendimentos (FASE 6)
+Empreendimentos nascem com status = 'rascunho'
 
 Admin publica via PATCH /api/admin/empreendimentos/:id/status com { status: 'publicado' }
 
-Corretor só vê os publicados (a rota /api/corretor/empreendimentos filtra)
+Corretor só vê publicados
 
-Admin vê todos (rascunhos + publicados) na própria visão
+Admin vê todos (rascunhos + publicados)
 
-3.11 Vitrine do corretor
-Página nova: empreendimentos.html
-
-Acessível apenas por corretor ou teste (via auth-guard.js)
+3.11 Vitrine do corretor (FASE 6)
+Página empreendimentos.html — acessível apenas por corretor/teste
 
 Item no dropdown do avatar (só aparece pra esses 2 tipos)
 
@@ -243,52 +230,50 @@ follow_up	Follow up	warning	sim (follow_up)	não
 sem_interesse	Cliente sem interesse	danger	não	sim
 telefone_invalido	Telefone inexistente	danger	não	sim
 sem_resposta	Sem resposta	danger	não	sim (redistribui em 15 dias)
-Tags com data obrigatória: agendado e retornar_depois → modal abre pra pedir data/hora/local.
+Tags com data obrigatória: agendado e retornar_depois.
 
-Redistribuição automática: leads com status = 'sem_resposta' são redistribuídos em 15 dias pelo lazy-check no backend (reprocessarSemResposta()).
+Redistribuição automática: sem_resposta redistribui em 15 dias via reprocessarSemResposta().
 
 5. Endpoints do backend
 Auth (/api)
 POST /login → { usuario, senha } → { token, usuario }
 
-GET /me → dados do usuário logado
+GET /me → dados do usuário
 
 PUT /me → atualiza nome
 
 PUT /me/senha → altera senha
 
 Admin (/api/admin/*) — requer apenasAdmin
-Corretores: GET /corretores, POST /corretores, PATCH /corretores/:id, DELETE /corretores/:id, PATCH /corretores/:id/tipo
+Corretores: CRUD + PATCH /corretores/:id/tipo
 
-Listas: GET /listas, POST /listas, DELETE /listas/:id
-
-Listas (detalhe): POST /listas/preview-dedupe, GET /listas/:id/contatos, GET /listas/:id/corretores, PATCH /listas/:id/corretores, PATCH /listas/:id/mensagem
+Listas: GET /listas, POST /listas, DELETE /listas/:id, POST /listas/preview-dedupe, GET /listas/:id/contatos, GET /listas/:id/corretores, PATCH /listas/:id/corretores, PATCH /listas/:id/mensagem
 
 Leads: DELETE /leads/:id
 
 Dashboard: GET /dashboard, GET /dashboard/graficos, GET /dashboard/tag/:tag, GET /dashboard/carteiras
 
-Empreendimentos (FASE 5):
+Empreendimentos (FASE 5/6):
 
-POST /empreendimentos/drive/analisar → lista PDFs da pasta/arquivo do Drive
+POST /empreendimentos/drive/analisar
 
-POST /empreendimentos/drive/importar → baixa, extrai texto, extrai capa, chama IA
+POST /empreendimentos/drive/importar
 
-POST /empreendimentos/upload-capa → upload direto (cadastro manual)
+POST /empreendimentos/upload-capa
 
-POST /empreendimentos/upload-pdf → upload direto (cadastro manual)
+POST /empreendimentos/upload-pdf
 
 GET /empreendimentos, GET /empreendimentos/:id
 
-POST /empreendimentos (criar)
+POST /empreendimentos
 
-PATCH /empreendimentos/:id (editar)
+PATCH /empreendimentos/:id
 
-PATCH /empreendimentos/:id/status (publicar/rascunhar/arquivar)
+PATCH /empreendimentos/:id/status ← publicar/despublicar
 
 DELETE /empreendimentos/:id
 
-Corretor (/api/corretor/*) — requer apenasCorretor (aceita corretor e teste)
+Corretor (/api/corretor/*) — requer apenasCorretor
 GET /proximo-lead?lista_id=X
 
 GET /lead/:id, GET /lead/:id/historico
@@ -311,7 +296,7 @@ Empreendimentos (FASE 6):
 
 GET /empreendimentos → só publicados
 
-GET /empreendimentos/:id → detalhe de um publicado
+GET /empreendimentos/:id
 
 6. Bugs conhecidos e como evitar
 6.1 NÃO SOMAR TAGS NOS KPIs
@@ -321,114 +306,111 @@ const followUp = porTag.mensagem_enviada + porTag.retornar_depois + porTag.follo
 
 // ✅ CERTO
 const followUp = porTag.follow_up || 0;
-6.2 NÃO trocar apenasAdmin por apenasCorretor em routes/admin.js
-Já aconteceu. Resultado: 403 em todas as rotas do admin.
-
+6.2 NÃO trocar apenasAdmin por apenasCorretor
 6.3 NÃO usar position: absolute no .tag-editor
-Quebra por causa do scroll. Usar position: fixed.
-
 6.4 NÃO usar left + window.scrollX no abrirSeletorTag
-Com position: fixed, o top/left é relativo à viewport. Usar só left e top.
-
 6.5 NÃO esquecer pointer-events: none nos filhos do .tag-editavel
 6.6 NÃO remover visibility: hidden do .dropdown-menu
 6.7 Ordem dos <link> CSS importa
-style.css → avatar.css → corretor.css/conta.css → prospeccao.css/empreendimentos.css
-
 6.8 Falta do <link> do FontAwesome
-Sintoma: ícones não aparecem (ex: seta ← do botão voltar).
-
-6.9 Cache do navegador / Vercel
-Sempre testar com Ctrl+Shift+R.
-
+6.9 Cache: testar com Ctrl+Shift+R
 6.10 pdf-parse — fixar em 1.1.1
-A versão 2.x/3.x mudou a API ({ pdf }, PDFParse como classe). A 1.x usa require('pdf-parse') retornando uma função direta. Não atualizar sem adaptar o pdfService.js.
+A versão 2.x/3.x mudou a API. Não atualizar sem adaptar o pdfService.js.
 
 6.11 Gemini — modelos são aposentados com frequência
-O iaService.js descobre os modelos disponíveis em runtime via GET /v1beta/models?key=... e filtra por flash/flash-lite. Não fixar o nome do modelo em código.
+O iaservice.js descobre os modelos disponíveis em runtime e filtra por flash/flash-lite. Não fixar o nome do modelo.
 
-⚠️ NÃO usar thinkingConfig: { thinkingBudget: 0 } — o SDK @google/generative-ai atual dá 400 Bad Request. A correção pra isso só vem com a migração pra API REST direta (ver seção 11).
+6.12 NÃO usar thinkingConfig
+O SDK @google/generative-ai atual dá 400 Bad Request. Migração pra API REST direta é a solução futura (ver seção 10.1).
 
-6.12 Case-sensitive no Vercel
-Windows funciona com case-insensitive, Linux não. Arquivos com S maiúsculo (iaService.js) e C maiúsculo (CONTEXTO.md) precisam estar com o nome exato no git.
+6.13 Case-sensitive no Vercel
+Windows é case-insensitive, Linux não. Cuidado com:
 
-Se renomear arquivo só mudando o case, usar: git mv antigo.js Novo.js.
+iaservice.js (minúsculo)
 
-6.13 Vercel — limite de 4.5MB no request
-Funções serverless do Vercel rejeitam corpos de requisição > 4.5MB. Por isso o PDF não passa pelo backend. Ver seção 3.9.
+empreendimentos.js (minúsculo)
 
-6.14 Vercel — timeout de 10s (Hobby) / 60s (Pro)
-O import de empreendimentos leva 50-120s por causa do Gemini (thinking automático). Se estiver no plano Hobby, vai dar timeout.
+Ao renomear, usar: git mv antigo.js Novo.js.
 
-Confirme o plano do Vercel antes de depender dessa feature em produção.
+6.14 Vercel — limite de 4.5MB no request
+Funções serverless rejeitam corpos > 4.5MB. Por isso o PDF não passa pelo backend (ver 3.9).
 
-6.15 canvas no Vercel
-O pacote canvas tem binário nativo. Se o build do Vercel falhar por causa dele, trocar por @napi-rs/canvas (binário pré-compilado).
+6.15 Vercel — timeout de 10s (Hobby) / 60s (Pro)
+O import de empreendimentos leva 50-120s por causa do Gemini. Se estiver no plano Hobby, dá timeout.
+
+6.16 canvas no Vercel
+Binário nativo. Se o build falhar, trocar por @napi-rs/canvas.
+
+6.17 Vercel — variáveis de ambiente precisam de redeploy
+Só adicionar em Settings → Environment Variables não basta. Precisa fazer Redeploy depois.
+
+6.18 Variável sr_tipo (não sr_usuario_tipo)
+O auth.js salva sr_tipo. O avatar.js lê sr_tipo. Se renomear num, renomear no outro.
 
 7. Banco de dados (schema resumido)
 Tabelas principais:
 
 usuarios — admin + corretor + teste (campo tipo)
 
-listas — carteiras (nome, total, mensagem_whatsapp)
+listas — carteiras
 
 leads — contatos
 
-historico — log de todas as ações
+historico — log de ações
 
 tentativas_corretores — quem já tentou contato
 
-lista_corretores — quais corretores participam de cada lista
+lista_corretores — corretores por lista
 
-empreendimentos — [FASE 1] empreendimentos cadastrados
+empreendimentos — empreendimentos
 
-Campos: nome, construtora, endereco, bairro, cidade, estado, tipo_imovel, fase, previsao_entrega, dormitorios, metragens, vagas, comodidades (jsonb), descricao, observacoes, capa_url, capa_public_id, pdf_url, pdf_public_id, status ('rascunho'/'publicado'/'arquivado'), criado_por, criado_em, atualizado_em, publicado_em
+Campos: nome, construtora, endereco, bairro, cidade, estado, tipo_imovel, fase, previsao_entrega, dormitorios, metragens, vagas, comodidades (jsonb), descricao, observacoes, capa_url, capa_public_id, pdf_url, pdf_public_id, drive_folder_id, status ('rascunho'/'publicado'/'arquivado'), importado_em, publicado_em, atualizado_em, criado_por
 
-empreendimento_logs — log de ações nos empreendimentos
+empreendimento_logs — log de ações
 
-Colunas de timestamp: timestamp without time zone (por isso o parser customizado em db.js).
+Timestamps: timestamp without time zone (parser customizado em db.js).
 
 8. Fluxo de trabalho (dev)
 8.1 Rodar local
 powershell
 cd backend
 node server.js
-Servidor sobe em http://localhost:3000.
+Servidor em http://localhost:3000.
 
 8.2 Branches
-main → produção (Vercel faz deploy automático)
+main → produção (Vercel auto-deploy)
 
 refatoracao → trabalho em andamento
 
-Merge na main: usar git merge --squash refatoracao (histórico limpo).
+Merge na main: git merge --squash refatoracao ou merge normal.
 
 8.3 Deploy
 powershell
 git add .
-git commit -m "feat: descrição clara"
+git commit -m "feat: descrição"
 git push origin main
-Vercel detecta, faz build e deploy em ~1-2 min.
-
 8.4 Variáveis de ambiente
-Vercel + local .env (dentro de backend/):
+Local: backend/.env
+Vercel: Settings → Environment Variables + Redeploy após adicionar
 
 text
-DATABASE_URL=postgresql://... (Neon)
-JWT_SECRET=chave_secreta
+DATABASE_URL=postgresql://...
+JWT_SECRET=...
 JWT_EXPIRES_IN=7d
-CLOUDINARY_URL=cloudinary://key:secret@cloud_name
+CLOUDINARY_URL=cloudinary://...
 GEMINI_API_KEY=AQ.Ab8...
+GOOGLE_DRIVE_API_KEY=AIza...
 PORT=3000 (só local)
-⚠️ O server.js carrega o .env via require('dotenv').config({ path: path.join(__dirname, '.env') }) — o .env está em backend/, não na raiz.
+⚠️ O server.js carrega .env via require('dotenv').config({ path: path.join(__dirname, '.env') }).
 
 9. O que NÃO fazer (regras de ouro)
-❌ Não juntar corretor.html e prospeccao.html de volta
+❌ Não juntar corretor.html e prospeccao.html
 
 ❌ Não somar tags nos KPIs
 
-❌ Não trocar apenasAdmin por apenasCorretor em routes/admin.js
+❌ Não trocar apenasAdmin por apenasCorretor
 
-❌ Não remover os !important do bloco final do corretor.css
+❌ Não remover !important do corretor.css
 
 ❌ Não usar position: absolute no .tag-editor
 
@@ -440,59 +422,63 @@ PORT=3000 (só local)
 
 ❌ Não mexer no timezone sem entender as duas pontas
 
-❌ Não apagar arquivos .js/.css "que parecem não usados" sem confirmar
+❌ Não apagar arquivos "que parecem não usados"
 
-❌ Não atualizar pdf-parse pra 2.x/3.x sem adaptar o pdfService.js
+❌ Não atualizar pdf-parse pra 2.x/3.x
 
-❌ Não fixar modelo do Gemini em código (usar a descoberta em runtime)
+❌ Não fixar modelo do Gemini em código
 
-❌ Não usar thinkingConfig no SDK atual (dá 400)
+❌ Não usar thinkingConfig no SDK atual
 
-❌ Não subir PDF pro Cloudinary (estoura Vercel 4.5MB + Cloudinary 10MB)
+❌ Não subir PDF pro Cloudinary
 
-❌ Não esquecer o case-sensitive dos nomes (iaService.js, CONTEXTO.md)
+❌ Não esquecer o case-sensitive (iaservice.js, empreendimentos.js)
 
-❌ Não esquecer que auth.js salva o tipo em sr_tipo (não sr_usuario_tipo)
+❌ Não esquecer sr_tipo (não sr_usuario_tipo)
 
-10. Contato / próximos passos
-Dono do projeto: Rodrigo (cliente)
-Status atual: em produção, funcionando
+❌ Não esquecer o Redeploy no Vercel após adicionar variáveis
 
-Pendências conhecidas:
-
+10. Pendências conhecidas / próximos passos
 10.1 Gemini lento (50-120s por import)
-O gemini-flash-lite-latest faz thinking automático que a gente não consegue desligar via SDK. Solução futura: migrar pra API REST direta do Gemini (via fetch), onde o thinkingConfig: { thinkingBudget: 0 } funciona e derruba pra ~5-10s.
+O gemini-flash-lite-latest faz thinking automático que não conseguimos desligar via SDK. Solução futura: migrar pra API REST direta do Gemini, onde thinkingConfig: { thinkingBudget: 0 } funciona. Cai pra ~5-10s.
 
-Arquivo a alterar: backend/services/iaService.js
+Arquivo: backend/services/iaservice.js
 
 10.2 Timeout do Vercel
-Se estiver no plano Hobby (10s), o import de empreendimentos vai dar timeout. Opções:
+Se estiver no plano Hobby (10s), o import de empreendimentos dá timeout. Opções:
 
 Upgrade pro Pro (60s)
 
-Migrar pra API REST do Gemini (10.1) — reduz tempo pra ~10-15s total
+Migrar pra API REST do Gemini (10.1)
 
 Mover processamento pro frontend
 
-10.3 Botão WhatsApp no empreendimento
-Ideia futura: dentro do modal do empreendimento na vitrine do corretor, adicionar um botão "Enviar pro cliente" que abre o WhatsApp com mensagem pré-preenchida.
+10.3 Otimização do dashboard (feita em 2026-10-16)
+Antes: 7 chamadas em série no init() (~2s)
 
-10.4 Busca por texto no empreendimento
-Hoje só busca por nome/construtora. Futuro: busca full-text na descrição e comodidades.
+Depois: Promise.all com 3 chamadas em paralelo (renderizarSeletorCorretores + renderizarListas + initDashboardV2)
 
-10.5 Corretor não pode publicar
-Hoje só admin publica. Futuro: liberar permissão pra corretores específicos, se o cliente pedir.
+Onde: frontend/js/admin.js, função init()
+
+10.4 PDFs escaneados (feito em 2026-10-15)
+Backend detecta texto < 100 chars → devolve pdf_escaneado: true. Frontend abre modal em branco com capa + link do Drive. Admin preenche manualmente.
+
+10.5 Botão WhatsApp no empreendimento (futuro)
+Adicionar botão "Enviar pro cliente" no modal da vitrine, com mensagem pré-preenchida.
+
+10.6 Busca full-text no empreendimento (futuro)
+Hoje só busca por nome/construtora. Futuro: descrição e comodidades.
 
 11. Histórico de mudanças relevantes
-v1 (original): corretor.html fazia tudo — dashboard + prospecção + histórico + agendamentos
+v1 (original): corretor.html fazia tudo
 
 v2 (refatoração): separação em corretor.html + prospeccao.html
 
-v3: corrigido middleware routes/admin.js (estava apenasCorretor, mudou pra apenasAdmin)
+v3: corrigido middleware routes/admin.js
 
-v4: editor de tag inline (9 qualificações) em ambas as telas
+v4: editor de tag inline (9 qualificações)
 
-v5: correção das estatísticas — cada KPI pega só sua tag
+v5: correção das estatísticas (cada KPI pega só sua tag)
 
 v6: adicionado case 'retornar_depois' e case 'agendado' no /leads-por-status
 
@@ -500,10 +486,14 @@ v7: unificado avatar/dropdown no avatar.css
 
 v8: botão voltar no conta.html + prospeccao.html
 
-v9 (Fases 1-4): CRUD de empreendimentos + Google Drive API + extração de texto (pdf-parse 1.x)
+v9 (Fases 1-4): CRUD de empreendimentos + Google Drive API + extração de texto (pdf-parse@1.1.1)
 
-v10 (Fase 5): integração Gemini (iaService.js) — extração estruturada em JSON; descoberta dinâmica de modelos; extração de capa (pdfjs-dist + canvas); PDFs não sobem mais pro Cloudinary — guardamos só o link do Drive + capa; fixado pdf-parse@1.1.1
+v10 (Fase 5): integração Gemini (iaservice.js); descoberta dinâmica de modelos; extração de capa (pdfjs-dist + canvas); PDFs não sobem mais pro Cloudinary; detecção de PDFs escaneados
 
-v11 (Fase 6): vitrine de empreendimentos pro corretor (empreendimentos.html + .css + .js); botão "Publicar/Despublicar" no admin; item "Empreendimentos" no dropdown do avatar (só corretor/teste); botão "Abrir book" (link do Drive em nova aba); filtros de busca/construtora/cidade; modal de detalhes com capa, chips, localização, descrição e comodidades
+v11 (Fase 6): vitrine de empreendimentos pro corretor (empreendimentos.html + .css + .js); botão "Publicar/Despublicar" no admin; item "Empreendimentos" no dropdown do avatar (só corretor/teste); botão "Abrir book"; filtros de busca/construtora/cidade; modal de detalhes
+
+v12 (2026-10-15): fix no modal de empreendimentos (capa com onload/onerror, toast com z-index acima do modal, botão publicar sem duplicação de ícone, atualização do badge com status real do backend)
+
+v13 (2026-10-16): otimização do boot do dashboard (Promise.all no init()); adicionadas variáveis de ambiente no Vercel (GOOGLE_DRIVE_API_KEY, CLOUDINARY_URL, GEMINI_API_KEY)
 
 FIM DO CONTEXTO. Se você é uma LLM lendo isso, seja cuidadoso com as decisões já tomadas. O sistema está em produção e tem usuários ativos.
