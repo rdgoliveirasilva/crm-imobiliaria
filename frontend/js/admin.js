@@ -835,7 +835,7 @@ function limparFormularioEmp() {
 
     ['empNome', 'empConstrutora', 'empPrevisao', 'empEndereco',
      'empBairro', 'empCidade', 'empEstado', 'empDormitorios',
-     'empMetragens', 'empVagas', 'empComodidades', 'empDescricao'
+     'empMetragens', 'empVagas', 'empComodidades', 'empDescricao', 'empRendaPresumida'
     ].forEach(id => {
         const el = $(id);
         if (el) el.value = '';
@@ -904,6 +904,7 @@ function limparFormularioEmp() {
             $('empTipoImovel').value = empreendimento.tipo_imovel || '';
             $('empFase').value = empreendimento.fase || '';
             $('empPrevisao').value = empreendimento.previsao_entrega || '';
+            $('empRendaPresumida').value = empreendimento.renda_presumida || '';
             $('empEndereco').value = empreendimento.endereco || '';
             $('empBairro').value = empreendimento.bairro || '';
             $('empCidade').value = empreendimento.cidade || '';
@@ -1085,6 +1086,7 @@ function fecharModalEmpreendimento() {
                 tipo_imovel: $('empTipoImovel')?.value || null,
                 fase: $('empFase')?.value || null,
                 previsao_entrega: ($('empPrevisao')?.value || '').trim() || null,
+                renda_presumida: ($('empRendaPresumida')?.value || '').trim() || null,
                 endereco: ($('empEndereco')?.value || '').trim() || null,
                 bairro: ($('empBairro')?.value || '').trim() || null,
                 cidade: ($('empCidade')?.value || '').trim() || null,
@@ -1359,6 +1361,25 @@ function atualizarBotaoStatusEmp(status) {
             $('empPdfInfo').style.display = 'none';
             $('empPdfEmpty').style.display = 'flex';
         });
+
+        // 🔑 MÁSCARA DE MOEDA — Renda Presumida
+        const rendaInput = $('empRendaPresumida');
+        if (rendaInput) {
+            rendaInput.addEventListener('input', (e) => {
+                let value = e.target.value.replace(/\D/g, ''); // Remove tudo que não for número
+                
+                if (value) {
+                    // Formata como moeda (R$ 3.000,00)
+                    value = (Number(value) / 100).toLocaleString('pt-BR', {
+                        style: 'currency',
+                        currency: 'BRL'
+                    });
+                }
+                
+                e.target.value = value;
+            });
+        }
+
     }
 
 

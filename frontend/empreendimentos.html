@@ -84,7 +84,7 @@
                 <input
                     type="text"
                     id="empBusca"
-                    placeholder="Buscar por nome do empreendimento..."
+                    placeholder="Buscar por nome, construtora ou bairro..."
                     autocomplete="off"
                 >
             </div>
@@ -101,6 +101,28 @@
                     <i class="fas fa-map-marker-alt"></i>
                     <select id="empFiltroCidade">
                         <option value="">Todas as cidades</option>
+                    </select>
+                </div>
+
+                <!-- 🔑 NOVOS FILTROS -->
+                <div class="emp-filtro-select">
+                    <i class="fas fa-map-pin"></i>
+                    <select id="empFiltroBairro">
+                        <option value="">Todos os bairros</option>
+                    </select>
+                </div>
+
+                <div class="emp-filtro-select">
+                    <i class="fas fa-calendar-check"></i>
+                    <select id="empFiltroEntrega">
+                        <option value="">Qualquer entrega</option>
+                    </select>
+                </div>
+
+                <div class="emp-filtro-select">
+                    <i class="fas fa-money-bill-wave"></i>
+                    <select id="empFiltroRenda">
+                        <option value="">Qualquer renda</option>
                     </select>
                 </div>
 

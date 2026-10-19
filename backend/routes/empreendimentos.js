@@ -255,7 +255,7 @@ routerAdmin.post('/drive/importar', async (req, res) => {
                 tipo: pdf.tipo,
                 sucesso: false,
                 erro: null,
-                drive_url: null,           // 👈 NOVO — link do Drive
+                drive_url: null,
                 capa_url: null,
                 capa_public_id: null,
                 texto: '',
@@ -285,7 +285,6 @@ routerAdmin.post('/drive/importar', async (req, res) => {
                 resultado.num_paginas = numPaginas;
 
                 // 4. Extrai CAPA (primeira página do PDF) e sobe pro Cloudinary
-                //    Capa é pequena (~200KB), sempre passa no limite de 10MB
                 console.log(`[drive/importar] extraindo capa de ${pdf.nome}...`);
                 const capaBuffer = await extrairPrimeiraImagem(buffer);
 
@@ -402,6 +401,7 @@ routerAdmin.post('/', async (req, res) => {
             nome, construtora, endereco, bairro, cidade, estado,
             tipo_imovel, fase, previsao_entrega, dormitorios, metragens, vagas,
             comodidades, descricao, observacoes,
+            renda_presumida,  // 🔑 ADICIONADO AQUI
             capa_url, capa_public_id, pdf_url, pdf_public_id
         } = req.body || {};
 
@@ -414,14 +414,13 @@ routerAdmin.post('/', async (req, res) => {
                 (nome, construtora, endereco, bairro, cidade, estado,
                  tipo_imovel, fase, previsao_entrega, dormitorios, metragens, vagas,
                  comodidades, descricao, observacoes,
-                 capa_url, capa_public_id, pdf_url, pdf_public_id,
-                 criado_por)
+                 renda_presumida,
+                 capa_url, capa_public_id, pdf_url, pdf_public_id, criado_por)
             VALUES
-                ($1, $2, $3, $4, $5, $6,
-                 $7, $8, $9, $10, $11, $12,
-                 $13::jsonb, $14, $15,
-                 $16, $17, $18, $19,
-                 $20)
+                ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, 
+                 $13::jsonb, $14, $15, 
+                 $16,
+                 $17, $18, $19, $20, $21)
             RETURNING *
         `, [
             nome.trim(),
@@ -439,6 +438,7 @@ routerAdmin.post('/', async (req, res) => {
             JSON.stringify(comodidades || []),
             descricao || null,
             observacoes || null,
+            renda_presumida || null, // 🔑 ADICIONADO AQUI
             capa_url || null,
             capa_public_id || null,
             pdf_url || null,
@@ -468,7 +468,7 @@ routerAdmin.patch('/:id', async (req, res) => {
         const permitidos = [
             'nome', 'construtora', 'endereco', 'bairro', 'cidade', 'estado',
             'tipo_imovel', 'fase', 'previsao_entrega', 'dormitorios', 'metragens',
-            'vagas', 'comodidades', 'descricao', 'observacoes',
+            'vagas', 'comodidades', 'descricao', 'observacoes', 'renda_presumida', // 🔑 JÁ ESTAVA
             'capa_url', 'capa_public_id', 'pdf_url', 'pdf_public_id'
         ];
 
@@ -612,7 +612,7 @@ routerCorretor.get('/', async (req, res) => {
             SELECT
                 id, nome, construtora, endereco, bairro, cidade, estado,
                 tipo_imovel, fase, previsao_entrega, dormitorios, metragens, vagas,
-                comodidades, descricao,
+                comodidades, descricao, renda_presumida,
                 capa_url, pdf_url,
                 publicado_em
             FROM empreendimentos
