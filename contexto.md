@@ -213,11 +213,19 @@ Página empreendimentos.html — acessível apenas por corretor/teste
 
 Item no dropdown do avatar (só aparece pra esses 2 tipos)
 
-Filtros: busca por nome, construtora, cidade
+Layout: blocos horizontais agrupados por construtora. Cada construtora tem um cabeçalho e, se tiver mais de 4 empreendimentos, mostra apenas os 4 primeiros e um botão "Ver todos". Ao clicar, a lista se expande para todos os empreendimentos daquela construtora.
 
-Modal de detalhes com capa, chips, localização, descrição, comodidades
+Filtros Avançados:
 
-Botão "Abrir book" → abre pdf_url (link do Drive) em nova aba
+Custom Selects (estilo dark do admin) para Construtora, Cidade e Bairro.
+
+Máscara de moeda no filtro de Renda (R$ 3.000,00). O filtro retorna tudo que for menor ou igual ao valor digitado.
+
+Máscara de data MM/AAAA no filtro de Entrega. O filtro lê o texto e retorna tudo que for anterior ou igual à data digitada (ex: buscar 05/2028 retorna empreendimentos de 04/2028).
+
+Modal de detalhes: capa, chips, localização, descrição, comodidades
+
+Botão "Abrir book": abre pdf_url (link do Drive) em nova aba
 
 4. Sistema de qualificações (tags)
 Chave (backend)	Rótulo exibido	Classe CSS	KPI	Descarte?
@@ -364,7 +372,7 @@ lista_corretores — corretores por lista
 
 empreendimentos — empreendimentos
 
-Campos: nome, construtora, endereco, bairro, cidade, estado, tipo_imovel, fase, previsao_entrega, dormitorios, metragens, vagas, comodidades (jsonb), descricao, observacoes, capa_url, capa_public_id, pdf_url, pdf_public_id, drive_folder_id, status ('rascunho'/'publicado'/'arquivado'), importado_em, publicado_em, atualizado_em, criado_por
+Campos: nome, construtora, endereco, bairro, cidade, estado, tipo_imovel, fase, previsao_entrega, dormitorios, metragens, vagas, comodidades (jsonb), descricao, observacoes, renda_presumida, capa_url, capa_public_id, pdf_url, pdf_public_id, drive_folder_id, status ('rascunho'/'publicado'/'arquivado'), importado_em, publicado_em, atualizado_em, criado_por
 
 empreendimento_logs — log de ações
 
@@ -495,5 +503,7 @@ v11 (Fase 6): vitrine de empreendimentos pro corretor (empreendimentos.html + .c
 v12 (2026-10-15): fix no modal de empreendimentos (capa com onload/onerror, toast com z-index acima do modal, botão publicar sem duplicação de ícone, atualização do badge com status real do backend)
 
 v13 (2026-10-16): otimização do boot do dashboard (Promise.all no init()); adicionadas variáveis de ambiente no Vercel (GOOGLE_DRIVE_API_KEY, CLOUDINARY_URL, GEMINI_API_KEY)
+
+v14 (2026-10-19): adição do campo renda_presumida (Backend + Admin + Vitrine). Novo layout de vitrine: agrupamento visual por construtora com limite de 4 e botão "Ver todos". Filtros da vitrine agora usam Custom Selects (dark mode) para Construtora, Cidade e Bairro. Filtros de Renda e Entrega passaram a ser inputs com máscara. Filtro de Renda puxa tudo que for <= ao valor digitado. Filtro de Entrega lê MM/AAAA e puxa tudo que for <= à data digitada.
 
 FIM DO CONTEXTO. Se você é uma LLM lendo isso, seja cuidadoso com as decisões já tomadas. O sistema está em produção e tem usuários ativos.
