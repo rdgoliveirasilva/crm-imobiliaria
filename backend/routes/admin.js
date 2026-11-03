@@ -540,6 +540,24 @@ router.get('/listas/:id/contatos', async (req, res) => {
     try {
         const id = Number(req.params.id);
 
+        if (req.query.pagina !== undefined) {
+            const pagina = Number(req.query.pagina);
+            if (!Number.isSafeInteger(pagina) || pagina < 1) return res.status(400).json({ erro: 'Página inválida.' });
+            const busca = String(req.query.busca || '').trim();
+            const params = [id, busca];
+            const where = `l.lista_id = $1 AND ($2 = '' OR strpos(lower(l.nome), lower($2)) > 0 OR strpos(l.telefone, $2) > 0)`;
+            const contagem = await pool.query(`SELECT COUNT(*)::int AS total FROM leads l WHERE ${where}`, params);
+            const total = contagem.rows[0].total;
+            const paginas = Math.max(1, Math.ceil(total / 30));
+            const atual = Math.min(pagina, paginas);
+            const result = await pool.query(`
+                SELECT l.id, l.nome, l.telefone, l.status, l.resultado, u.nome AS corretor_nome
+                FROM leads l LEFT JOIN usuarios u ON u.id = l.corretor_id
+                WHERE ${where} ORDER BY l.id ASC LIMIT 30 OFFSET $3
+            `, [...params, (atual - 1) * 30]);
+            return res.json({ contatos: result.rows, total, pagina: atual, paginas });
+        }
+
         const result = await pool.query(`
             SELECT l.*, u.nome AS corretor_nome
             FROM leads l

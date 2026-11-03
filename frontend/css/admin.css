@@ -7380,3 +7380,11 @@
     outline: 3px solid #7fb3ff;
     outline-offset: 3px;
 }
+
+.contatos-paginacao { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; padding: 16px 0 4px; color: #64748b; font-size: .82rem; }
+.contatos-paginacao-acoes { display: flex; align-items: center; gap: 8px; }
+.contatos-paginacao strong { color: #002c61; padding: 0 8px; }
+.contatos-paginacao button { border: 1px solid #dbe4ef; border-radius: 10px; min-width: 36px; min-height: 36px; padding: 8px; background: #f1f5f9; color: #002c61; cursor: pointer; font: inherit; transition: background .15s; }
+.contatos-paginacao button:hover:not(:disabled) { background: #002c61; color: white; }
+.contatos-paginacao button:disabled { opacity: .35; cursor: default; }
+.contatos-paginacao button:focus-visible { outline: 2px solid #3b82f6; outline-offset: 2px; }

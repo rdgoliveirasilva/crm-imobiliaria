@@ -7,7 +7,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const $ = (id) => document.getElementById(id);
 
     let listaSelecionadaAtual = null;
-    let todosContatosDaLista = [];
+    let paginaContatos = 1;
+    let requisicaoContatos = 0;
+    let buscaContatosTimer;
     let confirmCallback = null;
     let toastTimer = null;
     let pollingTimer = null;
@@ -2957,7 +2959,7 @@ fecharCustomSelectLista();
             listasGrid.querySelectorAll('.lista-card').forEach(card => {
                 card.addEventListener('click', () => {
                     const id = Number(card.dataset.listaId);
-                    abrirModalLista(id);
+                    abrirModalLista(id, listas.find(l => l.id === id));
                 });
             });
 
@@ -2970,10 +2972,8 @@ fecharCustomSelectLista();
     /* =========================================================
        MODAL LISTA
        ========================================================= */
-    async function abrirModalLista(listaId) {
+    async function abrirModalLista(listaId, lista) {
         try {
-            const { listas } = await ApiClient.get('/api/admin/listas');
-            const lista = listas.find(l => l.id === listaId);
             if (!lista) return;
 
             listaSelecionadaAtual = lista;
@@ -2981,8 +2981,9 @@ fecharCustomSelectLista();
             modalListaNome.textContent = lista.nome;
             modalListaInfo.textContent = `${lista.total} contatos · subida em ${dataCurta(lista.criado_em)}`;
 
-            const { contatos } = await ApiClient.get(`/api/admin/listas/${listaId}/contatos`);
-            todosContatosDaLista = contatos;
+            clearTimeout(buscaContatosTimer);
+            requisicaoContatos++;
+            paginaContatos = 1;
 
             const modalBody = document.querySelector('#modalLista .modal-body');
             if (!modalBody) {
@@ -3007,6 +3008,7 @@ fecharCustomSelectLista();
                     </table>
                 </div>
 
+                <nav class="contatos-paginacao" id="contatosPaginacao" aria-label="Páginas de clientes"></nav>
                 <div class="empty-state small" id="contatosVazio" style="display: none;">
                     <i class="fas fa-search"></i>
                     <p>Nenhum contato encontrado.</p>
@@ -3019,7 +3021,7 @@ fecharCustomSelectLista();
                 return;
             }
 
-            renderizarContatosModal(contatos, tbody);
+
 
             if (btnDeletarLista)    btnDeletarLista.style.display    = '';
             if (modalSearchContato) {
@@ -3028,6 +3030,7 @@ fecharCustomSelectLista();
             }
 
             modalLista.style.display = 'flex';
+            await carregarPaginaContatos(1);
 
         } catch (err) {
             console.error('[modal-lista] erro:', err);
@@ -3100,9 +3103,7 @@ fecharCustomSelectLista();
                             await ApiClient.del(`/api/admin/leads/${contatoId}`);
                             mostrarToast('Contato removido.', 'success');
 
-                            const { contatos: atualizados } = await ApiClient.get(`/api/admin/listas/${listaSelecionadaAtual.id}/contatos`);
-                            todosContatosDaLista = atualizados;
-                            renderizarContatosModal(atualizados, tbody);
+                            await carregarPaginaContatos(paginaContatos);
                             renderizarListas();
                         } catch (err) {
                             mostrarToast('Erro ao remover contato.', 'error');
@@ -3113,22 +3114,44 @@ fecharCustomSelectLista();
         });
     }
 
+    async function carregarPaginaContatos(pagina) {
+        const lista = listaSelecionadaAtual;
+        const tbody = document.getElementById('contatosTableBody');
+        const nav = document.getElementById('contatosPaginacao');
+        if (!lista || !tbody || !nav) return;
+        const token = ++requisicaoContatos;
+        const busca = modalSearchContato.value.trim();
+        tbody.innerHTML = '<tr><td colspan="5" role="status">Carregando clientes…</td></tr>';
+        document.getElementById('contatosVazio').style.display = 'none';
+        nav.innerHTML = '';
+        try {
+            const dados = await ApiClient.get(`/api/admin/listas/${lista.id}/contatos?` + new URLSearchParams({ pagina, busca }));
+            if (token !== requisicaoContatos || listaSelecionadaAtual !== lista || !tbody.isConnected) return;
+            paginaContatos = dados.pagina;
+            renderizarContatosModal(dados.contatos, tbody);
+            const inicio = dados.total ? (dados.pagina - 1) * 30 + 1 : 0;
+            nav.innerHTML = `<span role="status">${inicio}–${Math.min(dados.pagina * 30, dados.total)} de ${dados.total} clientes</span>
+                <div class="contatos-paginacao-acoes">
+                    <button type="button" data-pagina="1" ${dados.pagina === 1 ? 'disabled' : ''} aria-label="Primeira página"><i class="fas fa-angles-left"></i></button>
+                    <button type="button" data-pagina="${dados.pagina - 1}" ${dados.pagina === 1 ? 'disabled' : ''} aria-label="Página anterior"><i class="fas fa-chevron-left"></i></button>
+                    <strong>${dados.pagina} / ${dados.paginas}</strong>
+                    <button type="button" data-pagina="${dados.pagina + 1}" ${dados.pagina === dados.paginas ? 'disabled' : ''} aria-label="Próxima página"><i class="fas fa-chevron-right"></i></button>
+                    <button type="button" data-pagina="${dados.paginas}" ${dados.pagina === dados.paginas ? 'disabled' : ''} aria-label="Última página"><i class="fas fa-angles-right"></i></button>
+                </div>`;
+            nav.querySelectorAll('button').forEach(btn => btn.addEventListener('click', () => carregarPaginaContatos(Number(btn.dataset.pagina))));
+        } catch (err) {
+            if (token !== requisicaoContatos || !tbody.isConnected) return;
+            tbody.innerHTML = '<tr><td colspan="5">Não foi possível carregar os clientes.</td></tr>';
+            nav.innerHTML = '<button type="button">Tentar novamente</button>';
+            nav.querySelector('button').onclick = () => carregarPaginaContatos(pagina);
+        }
+    }
+
     if (modalSearchContato) {
         modalSearchContato.addEventListener('input', () => {
-            const tbody = document.getElementById('contatosTableBody');
-            if (!tbody) return;
-
-            const termo = modalSearchContato.value.trim().toLowerCase();
-            if (!termo) {
-                renderizarContatosModal(todosContatosDaLista, tbody);
-                return;
-            }
-
-            const filtrados = todosContatosDaLista.filter(c =>
-                c.nome.toLowerCase().includes(termo) ||
-                String(c.telefone).includes(termo)
-            );
-            renderizarContatosModal(filtrados, tbody);
+            clearTimeout(buscaContatosTimer);
+            requisicaoContatos++;
+            buscaContatosTimer = setTimeout(() => carregarPaginaContatos(1), 250);
         });
     }
 
