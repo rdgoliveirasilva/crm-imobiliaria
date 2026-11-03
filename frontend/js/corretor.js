@@ -413,11 +413,11 @@ function labelTag(tag) {
             const inicio = total ? (atual - 1) * 30 + 1 : 0;
             nav.innerHTML = `<span role="status">${inicio}–${Math.min(atual * 30, total)} de ${total} clientes</span>
                 <div class="kpi-paginacao-acoes">
-                    <button type="button" data-pagina="1" ${atual === 1 ? 'disabled' : ''} aria-label="Primeira página">«</button>
-                    <button type="button" data-pagina="${atual - 1}" ${atual === 1 ? 'disabled' : ''} aria-label="Página anterior">‹</button>
+                    <button type="button" data-pagina="1" ${atual === 1 ? 'disabled' : ''} aria-label="Primeira página"><i class="fas fa-angles-left" aria-hidden="true"></i></button>
+                    <button type="button" data-pagina="${atual - 1}" ${atual === 1 ? 'disabled' : ''} aria-label="Página anterior"><i class="fas fa-chevron-left" aria-hidden="true"></i></button>
                     <strong>${atual} / ${paginas}</strong>
-                    <button type="button" data-pagina="${atual + 1}" ${atual === paginas ? 'disabled' : ''} aria-label="Próxima página">›</button>
-                    <button type="button" data-pagina="${paginas}" ${atual === paginas ? 'disabled' : ''} aria-label="Última página">»</button>
+                    <button type="button" data-pagina="${atual + 1}" ${atual === paginas ? 'disabled' : ''} aria-label="Próxima página"><i class="fas fa-chevron-right" aria-hidden="true"></i></button>
+                    <button type="button" data-pagina="${paginas}" ${atual === paginas ? 'disabled' : ''} aria-label="Última página"><i class="fas fa-angles-right" aria-hidden="true"></i></button>
                 </div>`;
             nav.querySelectorAll('button').forEach(btn => btn.onclick = () => carregarLeadsKpi(Number(btn.dataset.pagina)));
             listaEl.closest('.modal-body').scrollTop = 0;
