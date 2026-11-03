@@ -3311,3 +3311,18 @@ button.tag-editavel,
     #modalKpi .kpi-paginacao button { min-width: 44px; min-height: 44px; }
     #modalKpi .kpi-paginacao strong { padding: 0 4px; white-space: nowrap; }
 }
+
+/* Menus limitados à área visível, sem somar a rolagem da página. */
+#carteirasMenu { position: fixed; right: auto; min-width: 0; box-sizing: border-box; max-width: calc(100vw - 16px); z-index: 10000; }
+.tag-editor { display: flex !important; flex-direction: column; box-sizing: border-box; animation: none; }
+.tag-editor-header { flex-shrink: 0; }
+.tag-editor-list { min-height: 0; flex: 1; max-height: none !important; overscroll-behavior: contain; }
+#modalAgendamento { z-index: 100000; padding: 8px; }
+#modalAgendamento .modal-card { max-width: 440px; max-height: calc(100dvh - 16px); }
+#modalAgendamento .modal-body { padding: 20px; overflow-y: auto; }
+#modalAgendamento .form-group { display: flex; flex-direction: column; gap: 6px; margin-top: 16px; }
+#modalAgendamento input, #modalAgendamento textarea { box-sizing: border-box; width: 100%; min-width: 0; padding: 12px; font: inherit; border: 1px solid #dbe4ef; border-radius: 10px; }
+#modalAgendamento .form-error { display: block; color: #dc2626; font-size: .8rem; }
+#modalAgendamento .modal-actions-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; }
+#modalAgendamento .modal-actions-row button { flex: 1; padding: 12px; border: 0; border-radius: 10px; cursor: pointer; }
+#btnSalvarAgendamento { background: #002c61; color: white; }

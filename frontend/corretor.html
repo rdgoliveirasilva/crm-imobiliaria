@@ -316,6 +316,65 @@
     </div>
 </div>
 
+    <div class="modal-overlay" id="modalAgendamento" style="display: none;">
+        <div class="modal-card modal-small">
+            <header class="modal-header">
+                <div>
+                    <h2 id="agendamentoTitulo">
+                        <i class="fas fa-calendar-check"></i>
+                        Agendar
+                    </h2>
+                    <p id="agendamentoSubtitulo">Informe data, hora e local</p>
+                </div>
+                <button class="modal-close" id="btnFecharAgendamento" aria-label="Fechar">
+                    <i class="fas fa-times"></i>
+                </button>
+            </header>
+
+            <div class="modal-body">
+                <div class="agendamento-info" id="agendamentoLeadInfo">
+                    <strong id="agendamentoLeadNome">—</strong>
+                    <small id="agendamentoLeadTelefone">—</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="agendamentoData">Data <span class="required">*</span></label>
+                    <input type="date" id="agendamentoData">
+                    <span class="form-error" id="agendamentoDataError"></span>
+                </div>
+
+                <div class="form-group">
+                    <label for="agendamentoHora">Hora <span class="required">*</span></label>
+                    <input type="time" id="agendamentoHora">
+                    <span class="form-error" id="agendamentoHoraError"></span>
+                </div>
+
+                <div class="form-group">
+                    <label for="agendamentoLocal">
+                        Local / Observação do agendamento
+                        <small style="font-weight: 400; color: var(--gray-500);">(opcional)</small>
+                    </label>
+                    <textarea
+                        id="agendamentoLocal"
+                        rows="3"
+                        placeholder="Ex: Rua das Flores, 123 — apto 45. Levar documentos."
+                        maxlength="300"
+                    ></textarea>
+                </div>
+
+                <div class="modal-actions-row">
+                    <button class="btn-modal-cancel" id="btnCancelarAgendamento" type="button">
+                        Cancelar
+                    </button>
+                    <button class="btn-modal-confirm" id="btnSalvarAgendamento" type="button">
+                        <i class="fas fa-check"></i>
+                        <span id="btnSalvarAgendamentoTexto">Salvar agendamento</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div id="notifContainer"></div>
     <div class="toast" id="toast"></div>
 

@@ -536,6 +536,71 @@ function labelTag(tag) {
     /* =========================================================
        EDITOR DE TAG INLINE (9 tags)
        ========================================================= */
+    function posicionarMenu(menu, ancora) {
+        const viewport = window.visualViewport;
+        const x = viewport?.offsetLeft || 0, y = viewport?.offsetTop || 0;
+        const largura = viewport?.width || window.innerWidth;
+        const altura = viewport?.height || window.innerHeight;
+        const rect = ancora.getBoundingClientRect();
+        menu.style.maxHeight = Math.max(80, altura - 16) + 'px';
+        const width = Math.min(300, largura - 16);
+        menu.style.setProperty('width', width + 'px', 'important');
+        const height = Math.min(menu.scrollHeight, altura - 16);
+        const top = rect.bottom + 8 + height <= y + altura - 8 ? rect.bottom + 8 : Math.max(y + 8, rect.top - height - 8);
+        menu.style.left = Math.max(x + 8, Math.min(rect.right - width, x + largura - width - 8)) + 'px';
+        menu.style.top = Math.max(y + 8, Math.min(top, y + altura - height - 8)) + 'px';
+    }
+
+    function fecharMenusFlutuantes() {
+        document.querySelector('.tag-editor')?.remove();
+        dashSelectWrap?.classList.remove('open');
+    }
+    window.addEventListener('resize', fecharMenusFlutuantes);
+    window.visualViewport?.addEventListener('resize', fecharMenusFlutuantes);
+    document.addEventListener('scroll', e => {
+        if (!e.target.closest?.('.tag-editor, #carteirasMenu')) fecharMenusFlutuantes();
+    }, true);
+
+    let agendamentoEdicao = null;
+    function fecharAgendamentoCorretor() {
+        if ($('btnSalvarAgendamento').disabled) return;
+        $('modalAgendamento').style.display = 'none';
+        agendamentoEdicao = null;
+    }
+    function abrirAgendamentoCorretor(leadId, tag, btn) {
+        agendamentoEdicao = { leadId, tag };
+        $('agendamentoTitulo').textContent = tag === 'retornar_depois' ? 'Retornar depois' : 'Agendar';
+        $('agendamentoLeadNome').textContent = btn.closest('.historico-item')?.querySelector('.historico-item-nome')?.textContent || 'Cliente';
+        $('agendamentoLeadTelefone').textContent = '';
+        ['agendamentoData', 'agendamentoHora', 'agendamentoLocal'].forEach(id => $(id).value = '');
+        $('agendamentoDataError').textContent = '';
+        $('agendamentoHoraError').textContent = '';
+        $('modalAgendamento').style.display = 'flex';
+    }
+    $('btnFecharAgendamento').onclick = fecharAgendamentoCorretor;
+    $('btnCancelarAgendamento').onclick = fecharAgendamentoCorretor;
+    $('modalAgendamento').onclick = e => { if (e.target === $('modalAgendamento')) fecharAgendamentoCorretor(); };
+    $('btnSalvarAgendamento').onclick = async () => {
+        if (!agendamentoEdicao) return;
+        const data = $('agendamentoData').value, hora = $('agendamentoHora').value;
+        $('agendamentoDataError').textContent = data ? '' : 'Informe a data.';
+        $('agendamentoHoraError').textContent = hora ? '' : 'Informe a hora.';
+        if (!data || !hora) return;
+        const { leadId, tag } = agendamentoEdicao;
+        $('btnSalvarAgendamento').disabled = true;
+        try {
+            await ApiClient.patch(`/api/corretor/leads/${leadId}/qualificacao`, {
+                resultado: tag, agendamento_data: `${data} ${hora}:00-03:00`,
+                agendamento_local: $('agendamentoLocal').value.trim()
+            });
+            $('btnSalvarAgendamento').disabled = false;
+            fecharAgendamentoCorretor();
+            mostrarToast('Agendamento salvo.', 'success');
+            await Promise.all([carregarLeadsKpi(), carregarDashboard()]);
+        } catch (err) { mostrarToast(err.message || 'Erro ao salvar.', 'error'); }
+        finally { $('btnSalvarAgendamento').disabled = false; }
+    };
+
     function abrirSeletorTag(btn) {
         const leadId = Number(btn.dataset.leadId);
         const resultadoAtual = btn.dataset.resultado;
@@ -578,24 +643,7 @@ function labelTag(tag) {
 
         document.body.appendChild(editor);
 
-        const rect = btn.getBoundingClientRect();
-        const editorWidth = 260;
-        const margem = 8;
-
-        let left = rect.right - editorWidth;
-        let top = rect.bottom + margem;
-
-        if (left < margem) left = margem;
-        if (left + editorWidth > window.innerWidth - margem) {
-            left = window.innerWidth - editorWidth - margem;
-        }
-        if (top + 400 > window.innerHeight) {
-            top = rect.top - Math.min(400, window.innerHeight - rect.top) - margem;
-            if (top < margem) top = margem;
-        }
-
-        editor.style.left = `${left + window.scrollX}px`;
-        editor.style.top  = `${top + window.scrollY}px`;
+        posicionarMenu(editor, btn);
 
         editor.querySelector('.tag-editor-close').addEventListener('click', () => editor.remove());
 
@@ -612,6 +660,12 @@ function labelTag(tag) {
         editor.querySelectorAll('.tag-opcao').forEach(opc => {
             opc.addEventListener('click', async () => {
                 const novoResultado = opc.dataset.novoResultado;
+
+                if (['agendado', 'retornar_depois'].includes(novoResultado)) {
+                    editor.remove();
+                    abrirAgendamentoCorretor(leadId, novoResultado, btn);
+                    return;
+                }
 
                 if (novoResultado === resultadoAtual) {
                     editor.remove();
@@ -655,6 +709,11 @@ function labelTag(tag) {
         });
 
         document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && $('modalAgendamento').style.display === 'flex') {
+                fecharAgendamentoCorretor();
+                return;
+            }
+            if (e.key === 'Escape' && document.querySelector('.tag-editor')) { fecharMenusFlutuantes(); return; }
             if (e.key === 'Escape' && $('modalKpi')?.style.display === 'flex') {
                 fecharModalKpi();
             }
@@ -706,6 +765,7 @@ function labelTag(tag) {
         btnCarteiras.addEventListener('click', (e) => {
             e.stopPropagation();
             dashSelectWrap?.classList.toggle('open');
+            if (dashSelectWrap?.classList.contains('open')) posicionarMenu(carteirasMenu, btnCarteiras);
         });
 
         document.addEventListener('click', (e) => {
