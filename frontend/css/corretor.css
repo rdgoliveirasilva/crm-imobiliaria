@@ -3278,3 +3278,24 @@ button.tag-editavel,
 .tag-opcao:hover {
     transform: translateX(3px) !important;
 }
+/* Paginação compartilhada por todas as categorias da carteira. */
+#modalKpi .modal-body { min-height: 0; flex: 1; }
+.kpi-paginacao { flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; padding: 12px 20px; border-top: 1px solid #dbe4ef; background: #f8fbff; color: #64748b; font-size: .82rem; }
+.kpi-paginacao-acoes { display: flex; align-items: center; gap: 6px; }
+.kpi-paginacao strong { color: #002c61; padding: 0 4px; white-space: nowrap; }
+.kpi-paginacao button { min-width: 44px; min-height: 44px; border: 1px solid #dbe4ef; border-radius: 10px; background: #f1f5f9; color: #002c61; font: inherit; font-weight: 700; cursor: pointer; }
+.kpi-paginacao button:hover:not(:disabled) { background: #002c61; color: white; }
+.kpi-paginacao button:disabled { opacity: .35; cursor: default; }
+.kpi-paginacao button:focus-visible { outline: 2px solid #3b82f6; outline-offset: 2px; }
+@media (max-width: 600px) {
+    #modalKpi { padding: 8px; }
+    #modalKpi .modal-card { max-height: calc(100dvh - 16px); }
+    #modalKpi .modal-header, #modalKpi .modal-toolbar { flex-shrink: 0; }
+    #modalKpi .modal-body { padding: 12px; max-height: none; }
+    #modalKpiLista .historico-item { min-width: 0; }
+    #modalKpiLista .historico-item-top { flex-wrap: wrap; }
+    #modalKpiLista .historico-item-nome { white-space: normal; overflow-wrap: anywhere; min-width: 0; }
+    #modalKpiLista .historico-item-info { flex-wrap: wrap; overflow-wrap: anywhere; }
+    .kpi-paginacao { justify-content: center; padding: 10px; padding-bottom: max(10px, env(safe-area-inset-bottom)); }
+    .kpi-paginacao > span { width: 100%; text-align: center; }
+}

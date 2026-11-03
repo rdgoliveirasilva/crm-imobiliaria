@@ -368,7 +368,11 @@ function labelTag(tag) {
         });
     }
 
+    let kpiRequest = 0;
+    let kpiBuscaTimer;
+
     async function abrirModalKpi(status, titulo) {
+        clearTimeout(kpiBuscaTimer);
         const modal = $('modalKpi');
         if (!modal) return;
 
@@ -379,14 +383,17 @@ function labelTag(tag) {
         $('modalKpiBusca').value = '';
 
         modal.style.display = 'flex';
-        setTimeout(() => $('modalKpiBusca')?.focus(), 100);
+
 
         await carregarLeadsKpi();
     }
 
-    async function carregarLeadsKpi() {
+    async function carregarLeadsKpi(pagina = 1) {
         if (!kpiStatusAtual) return;
 
+        const token = ++kpiRequest;
+        const nav = $('kpiPaginacao');
+        nav.innerHTML = '';
         const listaEl = $('modalKpiLista');
         const loadingEl = $('modalKpiLoading');
         const vazioEl = $('modalKpiVazio');
@@ -399,9 +406,21 @@ function labelTag(tag) {
             const listaId = carteiraAtiva ? carteiraAtiva.id : null;
 
             const url = `/api/corretor/leads-por-status?status=${kpiStatusAtual}` +
-                (listaId ? `&lista_id=${listaId}` : '');
+                (listaId ? `&lista_id=${listaId}` : '') + '&' + new URLSearchParams({ pagina, busca: $('modalKpiBusca').value.trim() });
 
-            const { leads, total } = await ApiClient.get(url);
+            const { leads, total, pagina: atual, paginas } = await ApiClient.get(url);
+            if (token !== kpiRequest) return;
+            const inicio = total ? (atual - 1) * 30 + 1 : 0;
+            nav.innerHTML = `<span role="status">${inicio}–${Math.min(atual * 30, total)} de ${total} clientes</span>
+                <div class="kpi-paginacao-acoes">
+                    <button type="button" data-pagina="1" ${atual === 1 ? 'disabled' : ''} aria-label="Primeira página">«</button>
+                    <button type="button" data-pagina="${atual - 1}" ${atual === 1 ? 'disabled' : ''} aria-label="Página anterior">‹</button>
+                    <strong>${atual} / ${paginas}</strong>
+                    <button type="button" data-pagina="${atual + 1}" ${atual === paginas ? 'disabled' : ''} aria-label="Próxima página">›</button>
+                    <button type="button" data-pagina="${paginas}" ${atual === paginas ? 'disabled' : ''} aria-label="Última página">»</button>
+                </div>`;
+            nav.querySelectorAll('button').forEach(btn => btn.onclick = () => carregarLeadsKpi(Number(btn.dataset.pagina)));
+            listaEl.closest('.modal-body').scrollTop = 0;
 
             loadingEl.style.display = 'none';
             $('modalKpiInfo').textContent = `${total} cliente${total !== 1 ? 's' : ''}`;
@@ -423,6 +442,9 @@ function labelTag(tag) {
             });
 
         } catch (err) {
+            if (token !== kpiRequest) return;
+            nav.innerHTML = '<button type="button">Tentar novamente</button>';
+            nav.querySelector('button').onclick = () => carregarLeadsKpi(pagina);
             console.error('[corretor] erro KPI:', err);
             loadingEl.style.display = 'none';
             $('modalKpiInfo').textContent = 'Erro ao carregar';
@@ -638,20 +660,10 @@ function labelTag(tag) {
             }
         });
 
-        $('modalKpiBusca')?.addEventListener('input', (e) => {
-            const termo = e.target.value.toLowerCase().trim();
-            const cards = $('modalKpiLista').querySelectorAll('.historico-item');
-            let visiveis = 0;
-
-            cards.forEach(card => {
-                const texto = card.textContent.toLowerCase();
-                const mostrar = !termo || texto.includes(termo);
-                card.style.display = mostrar ? '' : 'none';
-                if (mostrar) visiveis++;
-            });
-
-            const temCards = cards.length > 0;
-            $('modalKpiVazio').style.display = (temCards && visiveis === 0) ? 'block' : 'none';
+        $('modalKpiBusca')?.addEventListener('input', () => {
+            clearTimeout(kpiBuscaTimer);
+            kpiRequest++;
+            kpiBuscaTimer = setTimeout(() => carregarLeadsKpi(1), 250);
         });
 
         // DELEGAÇÃO — clique nas tags do modal KPI
@@ -669,6 +681,8 @@ function labelTag(tag) {
     }
 
     function fecharModalKpi() {
+        kpiRequest++;
+        clearTimeout(kpiBuscaTimer);
         const modal = $('modalKpi');
         if (modal) modal.style.display = 'none';
         kpiStatusAtual = null;

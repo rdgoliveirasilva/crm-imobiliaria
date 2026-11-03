@@ -7388,3 +7388,68 @@
 .contatos-paginacao button:hover:not(:disabled) { background: #002c61; color: white; }
 .contatos-paginacao button:disabled { opacity: .35; cursor: default; }
 .contatos-paginacao button:focus-visible { outline: 2px solid #3b82f6; outline-offset: 2px; }
+
+/* Lista de clientes em telas pequenas: cartões e navegação sempre acessível. */
+@media (max-width: 600px) {
+    #modalLista { padding: 8px; }
+    #modalLista .modal-card { max-height: calc(100dvh - 16px); }
+    #modalLista .modal-header, #modalLista .modal-toolbar { flex-shrink: 0; }
+    #modalLista .modal-header > div { min-width: 0; }
+    #modalListaNome { overflow-wrap: anywhere; }
+    #modalLista .modal-body:has(#contatosPaginacao) {
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+        overflow: hidden;
+    }
+    #modalLista .contatos-table-wrapper { min-height: 0; overflow-y: auto; overflow-x: hidden; }
+    #modalLista .contatos-table { display: block; min-width: 0; width: 100%; }
+    #modalLista .contatos-table thead { display: none; }
+    #modalLista .contatos-table tbody { display: block; padding: 8px 12px; }
+    #modalLista .contatos-table tr {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 44px;
+        gap: 5px 8px;
+        margin-bottom: 10px;
+        padding: 12px;
+        border: 1px solid #dbe4ef;
+        border-radius: 12px;
+        background: #fff;
+    }
+    #modalLista .contatos-table td {
+        display: block;
+        grid-column: 1;
+        padding: 0;
+        border: 0;
+        min-width: 0;
+        max-width: none;
+        white-space: normal;
+        overflow-wrap: anywhere;
+    }
+    #modalLista .contatos-table td[data-label]::before {
+        content: attr(data-label) ': ';
+        font-size: .75rem;
+        color: #64748b;
+    }
+    #modalLista .contatos-table td:last-child:not([colspan]) {
+        grid-column: 2;
+        grid-row: 1 / span 4;
+        align-self: center;
+    }
+    #modalLista .contatos-table td[colspan] { grid-column: 1 / -1; }
+    #modalLista .tag-status { white-space: normal; }
+    #modalLista .btn-row-delete { width: 44px; height: 44px; }
+    #modalLista .contatos-paginacao {
+        flex: 0 0 auto;
+        justify-content: center;
+        gap: 8px;
+        padding: 12px;
+        padding-bottom: max(12px, env(safe-area-inset-bottom));
+        border-top: 1px solid #dbe4ef;
+        background: #f8fbff;
+    }
+    #modalLista .contatos-paginacao > span { width: 100%; text-align: center; }
+    #modalLista .contatos-paginacao-acoes { gap: 6px; }
+    #modalLista .contatos-paginacao button { min-width: 44px; min-height: 44px; }
+    #modalLista .contatos-paginacao strong { padding: 0 4px; white-space: nowrap; }
+}

@@ -3073,8 +3073,8 @@ fecharCustomSelectLista();
                 <tr>
                     <td class="col-name">${escapeHtml(c.nome)}</td>
                     <td class="col-phone">${escapeHtml(formatarTelefone(c.telefone))}</td>
-                    <td>${escapeHtml(nomeCorretor)}</td>
-                    <td>
+                    <td data-label="Corretor">${escapeHtml(nomeCorretor)}</td>
+                    <td data-label="Status">
                         <span class="tag-status ${classeTag}">
                             ${escapeHtml(labelTag)}
                         </span>

@@ -303,6 +303,23 @@ router.get('/leads-por-status', async (req, res) => {
             sql += ` AND l.lista_id = $${params.length}`;
         }
 
+        if (req.query.pagina !== undefined) {
+            const pagina = Number(req.query.pagina);
+            if (!Number.isSafeInteger(pagina) || pagina < 1) return res.status(400).json({ erro: 'Página inválida.' });
+            const busca = String(req.query.busca || '').trim();
+            if (busca) {
+                params.push(busca);
+                sql += ` AND (strpos(lower(l.nome), lower($${params.length})) > 0 OR strpos(l.telefone, $${params.length}) > 0)`;
+            }
+            const count = await pool.query(`SELECT COUNT(*)::int AS total FROM (${sql}) filtrados`, params);
+            const total = count.rows[0].total;
+            const paginas = Math.max(1, Math.ceil(total / 30));
+            const atual = Math.min(pagina, paginas);
+            params.push((atual - 1) * 30);
+            const result = await pool.query(sql + ` ORDER BY l.decidido_em DESC NULLS LAST, l.id DESC LIMIT 30 OFFSET $${params.length}`, params);
+            return res.json({ status, total, pagina: atual, paginas, leads: result.rows });
+        }
+
         sql += ` ORDER BY l.decidido_em DESC NULLS LAST, l.id DESC`;
 
         const result = await pool.query(sql, params);
