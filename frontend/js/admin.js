@@ -1004,7 +1004,7 @@ function fecharModalEmpreendimento() {
         const formData = new FormData();
         formData.append('capa', file);
 
-        const token = localStorage.getItem('sr_token');
+        const token = AuthSession.getItem('sr_token');
         const res = await fetch('/api/admin/empreendimentos/upload-capa', {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${token}` },
@@ -1023,7 +1023,7 @@ function fecharModalEmpreendimento() {
         const formData = new FormData();
         formData.append('pdf', file);
 
-        const token = localStorage.getItem('sr_token');
+        const token = AuthSession.getItem('sr_token');
         const res = await fetch('/api/admin/empreendimentos/upload-pdf', {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${token}` },
@@ -3649,7 +3649,7 @@ if (btnToggleTipo) {
        HEADER
        ========================================================= */
     if (headerUserName) {
-        const nome = localStorage.getItem('sr_usuario') || 'Administrador';
+        const nome = AuthSession.getItem('sr_usuario') || 'Administrador';
         headerUserName.textContent = nome.split(' ')[0];
     }
 

@@ -32,9 +32,9 @@
         /* 🛡️ Remove QUALQUER dropdown antigo (evita duplicação) */
         document.querySelectorAll('.dropdown-menu').forEach(el => el.remove());
 
-        const nome  = localStorage.getItem('sr_usuario') || '—';
-        const login = localStorage.getItem('sr_usuario_login') || '—';
-        const tipo  = localStorage.getItem('sr_tipo');   // 🔑 chave correta
+        const nome  = AuthSession.getItem('sr_usuario') || '—';
+        const login = AuthSession.getItem('sr_usuario_login') || '—';
+        const tipo  = AuthSession.getItem('sr_tipo');   // 🔑 chave correta
 
         btn.textContent = iniciais(nome);
 
@@ -95,7 +95,7 @@
                 if (typeof ApiClient !== 'undefined' && ApiClient.logout) {
                     ApiClient.logout();
                 } else {
-                    localStorage.clear();
+                    AuthSession.clear();
                     window.location.href = 'index.html';
                 }
             });

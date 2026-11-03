@@ -56,8 +56,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             // Salva no localStorage caso tenha mudado
-            localStorage.setItem('sr_usuario', usuario.nome);
-            localStorage.setItem('sr_tipo', usuario.tipo);
+            AuthSession.setItem('sr_usuario', usuario.nome);
+            AuthSession.setItem('sr_tipo', usuario.tipo);
 
         } catch (err) {
             console.error('[conta] erro ao carregar perfil:', err);
@@ -87,7 +87,7 @@ document.addEventListener('DOMContentLoaded', () => {
             await ApiClient.put('/api/me', { nome });
             mostrarToast('✅ Dados atualizados!', 'success');
 
-            localStorage.setItem('sr_usuario', nome);
+            AuthSession.setItem('sr_usuario', nome);
             headerUserName.textContent = nome.split(' ')[0];
 
         } catch (err) {

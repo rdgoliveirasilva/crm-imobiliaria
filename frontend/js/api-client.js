@@ -7,11 +7,11 @@
 const ApiClient = (() => {
 
     function getToken() {
-        return localStorage.getItem('sr_token');
+        return AuthSession.getItem('sr_token');
     }
 
     function logout() {
-        localStorage.clear();
+        AuthSession.clear();
         window.location.replace('index.html');
     }
 

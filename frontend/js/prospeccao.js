@@ -101,7 +101,7 @@ document.addEventListener('DOMContentLoaded', () => {
        INIT
        ========================================================= */
     async function init() {
-        const nome = localStorage.getItem('sr_usuario') || 'Corretor';
+        const nome = AuthSession.getItem('sr_usuario') || 'Corretor';
         if (headerUserName) headerUserName.textContent = nome.split(' ')[0];
 
         if (btnVerificar) btnVerificar.addEventListener('click', () => carregarCena());
@@ -537,7 +537,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (modalLigarNumero) modalLigarNumero.textContent = Acoes.formatarTelefone(leadAtual.telefone);
             if (btnModalWhatsApp) btnModalWhatsApp.href = Acoes.linkWhatsApp(
                 leadAtual,
-                localStorage.getItem('sr_usuario') || 'Corretor'
+                AuthSession.getItem('sr_usuario') || 'Corretor'
             );
             if (modalLigar) modalLigar.style.display = 'flex';
         }
@@ -552,7 +552,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function handleWhatsApp() {
         if (!leadAtual) return;
 
-        const nomeCorretor = localStorage.getItem('sr_usuario') || 'Corretor';
+        const nomeCorretor = AuthSession.getItem('sr_usuario') || 'Corretor';
         const res = Acoes.abrirWhatsApp(leadAtual, nomeCorretor);
 
         if (!res.ok) {

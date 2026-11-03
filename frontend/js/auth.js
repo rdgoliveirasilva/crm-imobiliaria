@@ -19,13 +19,23 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
     }
 
-    /* ---------- LIMPEZA DEFENSIVA ---------- */
-    // Sempre que a tela de login carrega, limpa sessões antigas
-    localStorage.removeItem('sr_token');
-    localStorage.removeItem('sr_usuario');
-    localStorage.removeItem('sr_usuario_login');
-    localStorage.removeItem('sr_usuario_id');
-    localStorage.removeItem('sr_tipo');
+    function destino(tipo) { return tipo === 'admin' ? 'admin.html' : 'corretor.html'; }
+
+    async function restaurarSessao() {
+        const token = AuthSession.getItem('sr_token');
+        if (!token) return;
+        btnLogin.disabled = true;
+        try {
+            const resposta = await fetch('/api/me', { headers: { Authorization: `Bearer ${token}` } });
+            if (resposta.status === 401) { AuthSession.clear(); return; }
+            if (!resposta.ok) return;
+            const dados = await resposta.json();
+            if (dados.usuario?.tipo) window.location.replace(destino(dados.usuario.tipo));
+        } catch (err) {
+            mostrarMensagem('Não foi possível verificar sua sessão. Tente entrar novamente.');
+        } finally { btnLogin.disabled = false; }
+    }
+    restaurarSessao();
 
     /* ---------- MOSTRAR / OCULTAR SENHA ---------- */
     toggleSenha.addEventListener('click', (e) => {
@@ -118,7 +128,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const dados = await resposta.json().catch(() => ({}));
 
-            console.log('[auth] resposta do /api/login:', dados);
+
 
             if (!resposta.ok) {
                 throw new Error(dados.erro || 'Usuário ou senha inválidos.');
@@ -128,14 +138,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 throw new Error('Resposta do servidor inválida.');
             }
 
-            // Salva sessão
-            localStorage.setItem('sr_token', dados.token);
-            localStorage.setItem('sr_usuario', dados.usuario.nome);
-            localStorage.setItem('sr_usuario_login', dados.usuario.usuario);
-            localStorage.setItem('sr_usuario_id', String(dados.usuario.id));
-            localStorage.setItem('sr_tipo', dados.usuario.tipo);
-
-            console.log('[auth] sessão salva. tipo:', dados.usuario.tipo);
+            AuthSession.save(dados, document.getElementById('remember').checked);
 
             mostrarMensagem(`Bem-vindo, ${dados.usuario.nome}! Redirecionando...`, 'success');
 
@@ -153,20 +156,6 @@ document.addEventListener('DOMContentLoaded', () => {
             btnLogin.classList.remove('loading');
             btnLogin.disabled = false;
         }
-
-        // Corretor OU teste tentando acessar área de admin? Volta pro login (limpa)
-if (pagina === 'corretor.html' && tipo !== 'corretor' && tipo !== 'teste') {
-    localStorage.clear();
-    window.location.replace('index.html');
-    return;
-}
-
-// 🔑 NOVO: ninguém sem ser corretor/teste entra na página de empreendimentos
-if (pagina === 'empreendimentos.html' && tipo !== 'corretor' && tipo !== 'teste') {
-    localStorage.clear();
-    window.location.replace('index.html');
-    return;
-}
 
     });
 

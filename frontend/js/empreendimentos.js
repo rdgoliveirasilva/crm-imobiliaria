@@ -78,7 +78,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (headerUserName) {
-        const nome = localStorage.getItem('sr_usuario') || 'Corretor';
+        const nome = AuthSession.getItem('sr_usuario') || 'Corretor';
         headerUserName.textContent = nome.split(' ')[0];
     }
 

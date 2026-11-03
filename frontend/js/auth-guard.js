@@ -7,8 +7,8 @@
    ========================================================= */
 
 (function () {
-    const token = localStorage.getItem('sr_token');
-    const tipo  = localStorage.getItem('sr_tipo');
+    const token = AuthSession.getItem('sr_token');
+    const tipo  = AuthSession.getItem('sr_tipo');
 
     // Se não tem token, volta pro login e PARA
     if (!token || !tipo) {
@@ -21,14 +21,14 @@
 
     // Admin tentando acessar área de corretor? Volta pro login (limpa)
     if (pagina === 'admin.html' && tipo !== 'admin') {
-        localStorage.clear();
+        AuthSession.clear();
         window.location.replace('index.html');
         return;
     }
 
     // Corretor OU teste tentando acessar área de admin? Volta pro login (limpa)
     if (pagina === 'corretor.html' && tipo !== 'corretor' && tipo !== 'teste') {
-        localStorage.clear();
+        AuthSession.clear();
         window.location.replace('index.html');
         return;
     }

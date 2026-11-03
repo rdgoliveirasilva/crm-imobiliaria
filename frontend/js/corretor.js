@@ -118,7 +118,7 @@ function labelTag(tag) {
         try {
             const { usuario } = await ApiClient.get('/api/me');
             if (headerUserName) headerUserName.textContent = usuario.nome.split(' ')[0];
-            localStorage.setItem('sr_usuario', usuario.nome);
+            AuthSession.setItem('sr_usuario', usuario.nome);
         } catch (err) {
             console.error('[corretor] erro ao carregar usuário:', err);
         }
