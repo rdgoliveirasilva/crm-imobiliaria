@@ -120,7 +120,18 @@
                 <header class="dash-card-head">
                     <div>
                         <span class="dash-eyebrow">VISÃO GERAL</span>
-                        <select id="filtroVisaoCarteira" aria-label="Carteira da visão geral"><option value="">Todas as carteiras</option></select>
+                        <!-- Filtro de Carteira -->
+                    <div class="dash-custom-select" id="customCarteiraDonut">
+                        <input type="hidden" id="filtroCarteiraDonut" value="">
+
+                        <button type="button" class="dash-custom-trigger" id="triggerCarteiraDonut">
+                            <i class="fas fa-folder-open dash-custom-icon"></i>
+                            <span class="dash-custom-text" id="textCarteiraDonut">Todas as carteiras</span>
+                            <i class="fas fa-chevron-down dash-custom-arrow"></i>
+                        </button>
+
+                        <div class="dash-custom-menu" id="menuCarteiraDonut"></div>
+                    </div>
                         <h3 class="dash-big-number">
                             <span id="dashTrabalhados">0</span>
                             <span class="dash-big-sep">/</span>
@@ -201,7 +212,7 @@
                         <i class="fas fa-chart-pie"></i>
                         Distribuição por qualificação
                     </h3>
-                    <small class="dash-sub-light">Filtre por corretor ou carteira pra refinar</small>
+                    <small class="dash-sub-light">A carteira acompanha a visão geral. Filtre por corretor para refinar.</small>
                 </div>
 
                 <div class="dash-tag-filters">
@@ -217,19 +228,6 @@
                         </button>
 
                         <div class="dash-custom-menu" id="menuCorretorDonut"></div>
-                    </div>
-
-                    <!-- Filtro de Carteira -->
-                    <div class="dash-custom-select" id="customCarteiraDonut">
-                        <input type="hidden" id="filtroCarteiraDonut" value="">
-
-                        <button type="button" class="dash-custom-trigger" id="triggerCarteiraDonut">
-                            <i class="fas fa-folder-open dash-custom-icon"></i>
-                            <span class="dash-custom-text" id="textCarteiraDonut">Todas as carteiras</span>
-                            <i class="fas fa-chevron-down dash-custom-arrow"></i>
-                        </button>
-
-                        <div class="dash-custom-menu" id="menuCarteiraDonut"></div>
                     </div>
 
                     <button class="dash-limpar-filtro" id="btnLimparFiltrosDonut" type="button" style="display:none;">

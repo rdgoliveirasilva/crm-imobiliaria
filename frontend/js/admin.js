@@ -4457,7 +4457,7 @@ statsListaAtual = {};
                 if (inputCarteira) inputCarteira.value = opc.dataset.value || '';
                 fecharCustomSelectsDonut();
                 popularFiltrosDonut();
-                recarregarDonutComFiltros();
+                inputCarteira?.dispatchEvent(new Event('change'));
             });
         });
     }
@@ -4493,7 +4493,7 @@ statsListaAtual = {};
         const listaId    = inputCarteira ? inputCarteira.value : '';
 
         if (btnLimpar) {
-            btnLimpar.style.display = (corretorId || listaId) ? 'inline-flex' : 'none';
+            btnLimpar.style.display = corretorId ? 'inline-flex' : 'none';
         }
 
         try {
@@ -4505,6 +4505,7 @@ statsListaAtual = {};
             const url = '/api/admin/dashboard/graficos' + (qs ? '?' + qs : '');
 
             const dados = await ApiClient.get(url);
+            if ((inputCorretor?.value || '') !== corretorId || (inputCarteira?.value || '') !== listaId) return;
             renderizarDonutDash(dados.donut);
 
         } catch (err) {
@@ -4518,7 +4519,7 @@ statsListaAtual = {};
     async function initDashboardV2() {
         try {
             // 1. KPIs + progresso
-            const filtroVisao = document.getElementById('filtroVisaoCarteira');
+            const filtroVisao = document.getElementById('filtroCarteiraDonut');
             const queryVisao = filtroVisao?.value ? '?lista_id=' + encodeURIComponent(filtroVisao.value) : '';
             const kpis = await ApiClient.get('/api/admin/dashboard' + queryVisao);
             renderizarKpisDash(kpis);
@@ -4526,16 +4527,13 @@ statsListaAtual = {};
             // 2. Gráficos (linha + donut)
             const graficos = await ApiClient.get('/api/admin/dashboard/graficos' + queryVisao);
             renderizarTrendDash(graficos.linha);
-            if (!queryVisao) renderizarDonutDash(graficos.donut);
+            await recarregarDonutComFiltros();
 
             // 3. Corretores + carteiras
             const { corretoresResumo, carteiras } = await ApiClient.get('/api/admin/dashboard/carteiras');
             corretoresResumoDash = corretoresResumo || [];
             carteirasDash = carteiras || [];
             if (filtroVisao) {
-                const selecionada = filtroVisao.value;
-                filtroVisao.replaceChildren(new Option('Todas as carteiras', ''), ...carteirasDash.map(c => new Option(c.nome, c.lista_id)));
-                filtroVisao.value = selecionada;
                 filtroVisao.onchange = async () => {
                     const valor = filtroVisao.value;
                     const query = valor ? '?lista_id=' + encodeURIComponent(valor) : '';
@@ -4544,6 +4542,7 @@ statsListaAtual = {};
                         if (filtroVisao.value !== valor) return;
                         renderizarKpisDash(resumo);
                         renderizarTrendDash(series.linha);
+                        await recarregarDonutComFiltros();
                     } catch (err) { mostrarToast('Erro ao carregar visão geral.', 'error'); }
                 };
             }
@@ -4685,7 +4684,7 @@ statsListaAtual = {};
                 const inputCorretor = document.getElementById('filtroCorretorDonut');
                 const inputCarteira = document.getElementById('filtroCarteiraDonut');
                 if (inputCorretor) inputCorretor.value = '';
-                if (inputCarteira) inputCarteira.value = '';
+
                 popularFiltrosDonut();
                 recarregarDonutComFiltros();
             });

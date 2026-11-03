@@ -7373,3 +7373,10 @@
     gap: 0.6rem;
     flex-shrink: 0;
 }
+/* Seletor compartilhado da visão geral e distribuição. */
+.dash-card-large:has(#customCarteiraDonut) { overflow: visible; }
+#customCarteiraDonut { margin: 0.65rem 0; max-width: 320px; }
+#customCarteiraDonut .dash-custom-trigger:focus-visible {
+    outline: 3px solid #7fb3ff;
+    outline-offset: 3px;
+}
