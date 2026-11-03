@@ -119,13 +119,14 @@
             <article class="dash-card dash-card-large">
                 <header class="dash-card-head">
                     <div>
-                        <span class="dash-eyebrow">PROSPECÇÃO</span>
+                        <span class="dash-eyebrow">VISÃO GERAL</span>
+                        <select id="filtroVisaoCarteira" aria-label="Carteira da visão geral"><option value="">Todas as carteiras</option></select>
                         <h3 class="dash-big-number">
                             <span id="dashTrabalhados">0</span>
                             <span class="dash-big-sep">/</span>
                             <span class="dash-big-total" id="dashBaseTotal">0</span>
                         </h3>
-                        <small class="dash-sub">clientes trabalhados na base</small>
+                        <small class="dash-sub">clientes com qualificação / total da base (sem corretores teste)</small>
                     </div>
                     <div class="dash-pct-wrap">
                         <strong class="dash-pct" id="dashPct">0%</strong>
@@ -148,12 +149,12 @@
                 <!-- Trend chart (linha) -->
                 <div class="dash-trend-head">
                     <div>
-                        <h4 class="dash-h4">Qualificados × Sem Interesse</h4>
+                        <h4 class="dash-h4">Primeiras qualificações e requalificações</h4>
                         <small class="dash-sub">últimos 30 dias</small>
                     </div>
                     <div class="dash-legend">
                         <span><i class="dash-dot green"></i> Qualificados</span>
-                        <span><i class="dash-dot red"></i> Descartados</span>
+                        <span><i class="dash-dot red"></i> Descartados</span><span><i class="dash-dot" style="background:#8b5cf6"></i> Requalificações</span>
                     </div>
                 </div>
 

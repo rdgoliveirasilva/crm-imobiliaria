@@ -584,14 +584,16 @@ router.delete('/leads/:id', async (req, res) => {
 
 router.get('/dashboard', async (req, res) => {
     try {
+        const listaId = req.query.lista_id ? Number(req.query.lista_id) : null;
+        if (listaId !== null && (!Number.isInteger(listaId) || listaId < 1)) return res.status(400).json({ erro: 'Carteira inválida.' });
         const totais = await pool.query(`
             SELECT
                 (SELECT COUNT(*) FROM listas) AS total_listas,
-                (SELECT COUNT(*) FROM leads l WHERE 1=1 ${naoTeste('l')}) AS total_contatos,
-                (SELECT COUNT(*) FROM leads l WHERE l.status IN ('qualificado', 'descartado') ${naoTeste('l')}) AS qualificados,
-                (SELECT COUNT(*) FROM leads l WHERE l.status = 'descartado' ${naoTeste('l')})  AS descartados,
-                (SELECT COUNT(*) FROM leads l WHERE l.status = 'novo' ${naoTeste('l')})        AS aguardando
-        `);
+                (SELECT COUNT(*) FROM leads l WHERE 1=1 ${naoTeste('l')} AND ($1::int IS NULL OR l.lista_id = $1)) AS total_contatos,
+                (SELECT COUNT(*) FROM leads l WHERE l.resultado IS NOT NULL ${naoTeste('l')} AND ($1::int IS NULL OR l.lista_id = $1)) AS qualificados,
+                (SELECT COUNT(*) FROM leads l WHERE l.status = 'descartado' ${naoTeste('l')} AND ($1::int IS NULL OR l.lista_id = $1))  AS descartados,
+                (SELECT COUNT(*) FROM leads l WHERE l.status = 'novo' ${naoTeste('l')} AND ($1::int IS NULL OR l.lista_id = $1))        AS aguardando
+        `, [listaId]);
 
         const t = totais.rows[0];
 
@@ -655,31 +657,24 @@ router.get('/dashboard/graficos', async (req, res) => {
            1. LINHA (30 dias) — global
            ===================== */
         const linhaResult = await pool.query(`
-            WITH dias AS (
-                SELECT generate_series(
-                    CURRENT_DATE - INTERVAL '29 days',
-                    CURRENT_DATE,
-                    INTERVAL '1 day'
-                )::date AS dia
+            WITH eventos AS (
+                SELECT h.*, ROW_NUMBER() OVER (PARTITION BY h.lead_id ORDER BY h.criado_em, h.id) AS ordem
+                FROM historico h
+                WHERE h.acao IN ('agendado', 'em_atendimento', 'mensagem_enviada',
+                    'retornar_depois', 'follow_up', 'vendido', 'sem_interesse', 'telefone_invalido', 'sem_resposta')
+            ), dias AS (
+                SELECT generate_series(CURRENT_DATE - INTERVAL '29 days', CURRENT_DATE, INTERVAL '1 day')::date AS dia
             )
-            SELECT
-                d.dia,
-                COALESCE(COUNT(h.id) FILTER (
-                    WHERE h.acao IN ('agendado', 'em_atendimento', 'mensagem_enviada',
-                                     'retornar_depois', 'follow_up', 'vendido')
-                ), 0) AS qualificados,
-                COALESCE(COUNT(h.id) FILTER (
-                    WHERE h.acao IN ('sem_interesse', 'telefone_invalido', 'sem_resposta')
-                ), 0) AS descartados
+            SELECT d.dia,
+                COUNT(h.id) FILTER (WHERE h.ordem = 1 AND h.acao NOT IN ('sem_interesse', 'telefone_invalido', 'sem_resposta')) AS qualificados,
+                COUNT(h.id) FILTER (WHERE h.ordem = 1 AND h.acao IN ('sem_interesse', 'telefone_invalido', 'sem_resposta')) AS descartados,
+                COUNT(h.id) FILTER (WHERE h.ordem > 1) AS requalificados
             FROM dias d
-            LEFT JOIN historico h
+            LEFT JOIN (eventos h INNER JOIN leads l ON l.id = h.lead_id
+                AND ($1::int IS NULL OR l.lista_id = $1) ${naoTeste('l')})
                 ON h.criado_em::date = d.dia
-                AND (h.corretor_id IS NULL OR h.corretor_id NOT IN (
-                    SELECT id FROM usuarios WHERE tipo = 'teste'
-                ))
-            GROUP BY d.dia
-            ORDER BY d.dia ASC
-        `);
+            GROUP BY d.dia ORDER BY d.dia
+        `, [filtroListaId]);
 
         const linhaLabels = linhaResult.rows.map(r => {
             const d = new Date(r.dia);
@@ -694,7 +689,7 @@ router.get('/dashboard/graficos', async (req, res) => {
            2. DONUT — com filtros opcionais
            ===================== */
         const donutParams = [];
-        let donutWhere = 'WHERE l.resultado IS NOT NULL ' + naoTeste('l');
+        let donutWhere = 'WHERE 1=1 ' + naoTeste('l');
 
         if (filtroCorretorId) {
             donutParams.push(filtroCorretorId);
@@ -707,7 +702,7 @@ router.get('/dashboard/graficos', async (req, res) => {
         }
 
         const donutResult = await pool.query(`
-            SELECT l.resultado, COUNT(*) AS count
+            SELECT COALESCE(l.resultado, 'sem_qualificacao') AS resultado, COUNT(*) AS count
             FROM leads l
             ${donutWhere}
             GROUP BY l.resultado
@@ -715,6 +710,7 @@ router.get('/dashboard/graficos', async (req, res) => {
         `, donutParams);
 
         const mapaTags = {
+            sem_qualificacao: 'Sem qualificação',
             agendado:          'Agendado',
             em_atendimento:    'Em atendimento',
             vendido:           'Vendido',
@@ -806,7 +802,8 @@ router.get('/dashboard/graficos', async (req, res) => {
             linha: {
                 labels: linhaLabels,
                 qualificados: linhaQualificados,
-                descartados: linhaDescartados
+                descartados: linhaDescartados,
+                requalificados: linhaResult.rows.map(r => Number(r.requalificados))
             },
             donut: {
                 labels: donutLabels,
@@ -861,7 +858,7 @@ router.get('/dashboard/tag/:tag', async (req, res) => {
                 u.usuario AS corretor_usuario
             FROM leads l
             LEFT JOIN usuarios u ON u.id = l.corretor_id
-            WHERE l.resultado = $1
+            WHERE (l.resultado = $1 OR ($1 = 'sem_qualificacao' AND l.resultado IS NULL))
               AND (l.corretor_id IS NULL OR l.corretor_id NOT IN (
                   SELECT id FROM usuarios WHERE tipo = 'teste'
               ))
@@ -955,7 +952,7 @@ router.get('/dashboard/carteiras', async (req, res) => {
         });
 
         const listasResult = await pool.query(`
-            SELECT id, nome, total, criado_em
+            SELECT id, nome, (SELECT COUNT(*) FROM leads l WHERE l.lista_id = listas.id ${naoTeste('l')}) AS total, criado_em
             FROM listas
             ORDER BY criado_em DESC
         `);
@@ -974,7 +971,7 @@ router.get('/dashboard/carteiras', async (req, res) => {
                     COUNT(l.id) FILTER (WHERE l.status = 'descartado')  AS descartou
                 FROM usuarios u
                 INNER JOIN leads l ON l.corretor_id = u.id
-                WHERE l.lista_id = $1
+                WHERE l.lista_id = $1 ${naoTeste('l')}
                 GROUP BY u.id
                 ORDER BY u.nome ASC
             `, [lista.id]);

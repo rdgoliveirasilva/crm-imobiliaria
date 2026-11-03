@@ -1715,7 +1715,7 @@ function renderizarCorretoresResumo(corretores) {
                 labels: dados.labels,
                 datasets: [
                     {
-                        label: 'Qualificados',
+                        label: 'Primeira qualificação',
                         data: dados.qualificados,
                         borderColor: '#16a34a',
                         backgroundColor: gradQualif,
@@ -3853,7 +3853,7 @@ statsListaAtual = {};
        KPIs + Progresso da base
        ========================================================= */
     function renderizarKpisDash(kpis) {
-        const trabalhados = (kpis.qualificados || 0) + (kpis.descartados || 0);
+        const trabalhados = (kpis.qualificados || 0);
         const total = kpis.totalContatos || 0;
         const pct = total > 0 ? Math.round((trabalhados / total) * 100) : 0;
 
@@ -3867,7 +3867,7 @@ statsListaAtual = {};
         if (elBase) elBase.textContent = total.toLocaleString('pt-BR');
         if (elPct)  elPct.textContent  = pct + '%';
         if (elFill) elFill.style.width = pct + '%';
-        if (elRest) elRest.textContent = (total - trabalhados).toLocaleString('pt-BR') + ' restantes';
+        if (elRest) elRest.textContent = Math.max(0, total - trabalhados).toLocaleString('pt-BR') + ' restantes';
     }
 
     /* =========================================================
@@ -3892,9 +3892,9 @@ statsListaAtual = {};
             type: 'line',
             data: {
                 labels: dados.labels,
-                datasets: [
+                datasets: [{ label: 'Requalificações', data: dados.requalificados || [], borderColor: '#8b5cf6', tension: 0.4, borderWidth: 2.5, pointRadius: 0, fill: false },
                     {
-                        label: 'Qualificados',
+                        label: 'Primeira qualificação',
                         data: dados.qualificados,
                         borderColor: '#22c55e',
                         backgroundColor: gradGreen,
@@ -3984,6 +3984,7 @@ statsListaAtual = {};
     };
 
     const LABELS_TAGS = {
+        sem_qualificacao: 'Sem qualificação',
         mensagem_enviada:  'Mensagem Enviada',
         follow_up:         'Follow Up',
         em_atendimento:    'Em Atendimento',
@@ -4517,18 +4518,35 @@ statsListaAtual = {};
     async function initDashboardV2() {
         try {
             // 1. KPIs + progresso
-            const kpis = await ApiClient.get('/api/admin/dashboard');
+            const filtroVisao = document.getElementById('filtroVisaoCarteira');
+            const queryVisao = filtroVisao?.value ? '?lista_id=' + encodeURIComponent(filtroVisao.value) : '';
+            const kpis = await ApiClient.get('/api/admin/dashboard' + queryVisao);
             renderizarKpisDash(kpis);
 
             // 2. Gráficos (linha + donut)
-            const graficos = await ApiClient.get('/api/admin/dashboard/graficos');
+            const graficos = await ApiClient.get('/api/admin/dashboard/graficos' + queryVisao);
             renderizarTrendDash(graficos.linha);
-            renderizarDonutDash(graficos.donut);
+            if (!queryVisao) renderizarDonutDash(graficos.donut);
 
             // 3. Corretores + carteiras
             const { corretoresResumo, carteiras } = await ApiClient.get('/api/admin/dashboard/carteiras');
             corretoresResumoDash = corretoresResumo || [];
             carteirasDash = carteiras || [];
+            if (filtroVisao) {
+                const selecionada = filtroVisao.value;
+                filtroVisao.replaceChildren(new Option('Todas as carteiras', ''), ...carteirasDash.map(c => new Option(c.nome, c.lista_id)));
+                filtroVisao.value = selecionada;
+                filtroVisao.onchange = async () => {
+                    const valor = filtroVisao.value;
+                    const query = valor ? '?lista_id=' + encodeURIComponent(valor) : '';
+                    try {
+                        const [resumo, series] = await Promise.all([ApiClient.get('/api/admin/dashboard' + query), ApiClient.get('/api/admin/dashboard/graficos' + query)]);
+                        if (filtroVisao.value !== valor) return;
+                        renderizarKpisDash(resumo);
+                        renderizarTrendDash(series.linha);
+                    } catch (err) { mostrarToast('Erro ao carregar visão geral.', 'error'); }
+                };
+            }
 
             renderizarCorretoresDash(corretoresResumoDash, filtroStatusCorretores);
             renderizarCarteirasDash(carteirasDash);
