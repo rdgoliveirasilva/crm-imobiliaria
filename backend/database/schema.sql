@@ -185,3 +185,5 @@ CREATE TABLE IF NOT EXISTS empreendimento_logs (
 );
 
 CREATE INDEX IF NOT EXISTS idx_emp_logs_emp ON empreendimento_logs(empreendimento_id);
+-- Classificação das carteiras, sem inferir categorias de listas existentes.
+ALTER TABLE listas ADD COLUMN IF NOT EXISTS categoria VARCHAR(80) NOT NULL DEFAULT 'Sem categoria';

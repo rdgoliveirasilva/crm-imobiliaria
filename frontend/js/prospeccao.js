@@ -14,6 +14,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let processando = false;
     let toastTimer = null;
     let carteiraAtiva = null;
+    let visaoGeral = !new URLSearchParams(window.location.search).has('lista');
     let minhasCarteiras = [];
     let agendamentoPendente = null;
     let leadsDaCarteiraAtual = [];
@@ -196,8 +197,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (listaUrl) {
             carteiraAtiva = minhasCarteiras.find(c => c.id === listaUrl) || null;
         }
-        if (!carteiraAtiva) {
-            carteiraAtiva = escolherCarteiraAtiva();
+        if (listaUrl && !carteiraAtiva) {
+            mostrarToast('Carteira indisponível para este corretor.', 'error');
+            return;
         }
         if (carteiraAtiva) {
             salvarCarteiraAtivaLocalStorage(carteiraAtiva.id);
@@ -281,8 +283,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!carteiraNome || !carteiraBadge) return;
 
         if (!carteiraAtiva) {
-            carteiraNome.textContent = 'Sem carteira ativa';
-            carteiraBadge.textContent = '0';
+            carteiraNome.textContent = 'Todas as carteiras';
+            carteiraBadge.textContent = minhasCarteiras.reduce((total, c) => total + Number(c.restantes || 0), 0);
             if (headerCarteiraNome) headerCarteiraNome.textContent = 'Prospecção ativa';
             return;
         }
@@ -304,7 +306,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        carteiraMenu.innerHTML = minhasCarteiras.map(c => {
+        carteiraMenu.innerHTML = `<button type="button" class="carteira-opcao ${visaoGeral ? 'atual' : ''}" data-lista-id="">Todas as carteiras</button>` + CarteiraCategorias.renderizar(minhasCarteiras, c => {
             const atual = carteiraAtiva && c.id === carteiraAtiva.id;
             const concluida = c.restantes === 0;
 
@@ -326,7 +328,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <span class="opt-status">${status}</span>
                 </button>
             `;
-        }).join('');
+        });
 
         carteiraMenu.querySelectorAll('.carteira-opcao:not(.concluida)').forEach(opc => {
             opc.addEventListener('click', async () => {
@@ -337,8 +339,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function trocarCarteira(listaId) {
-        const nova = minhasCarteiras.find(c => c.id === listaId);
-        if (!nova) return;
+        const nova = minhasCarteiras.find(c => c.id === listaId) || null;
+        if (listaId && !nova) return;
+        visaoGeral = !listaId;
 
         carteiraAtiva = nova;
         salvarCarteiraAtivaLocalStorage(listaId);
@@ -346,7 +349,7 @@ document.addEventListener('DOMContentLoaded', () => {
         renderizarMenuCarteiras();
         fecharMenuCarteiras();
 
-        mostrarToast('Trocando para: ' + nova.nome, 'info');
+        mostrarToast('Trocando para: ' + (nova ? nova.nome : 'Todas as carteiras'), 'info');
 
         await carregarProximoLead();
         await atualizarEstatisticas();
@@ -371,16 +374,6 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             removerBadgeAgendamento();
 
-            if (!carteiraAtiva) {
-                await carregarMinhasCarteiras();
-                carteiraAtiva = escolherCarteiraAtiva();
-                if (carteiraAtiva) {
-                    salvarCarteiraAtivaLocalStorage(carteiraAtiva.id);
-                    atualizarBotaoCarteira();
-                    renderizarMenuCarteiras();
-                }
-            }
-
             let url = '/api/corretor/proximo-lead';
             if (carteiraAtiva && carteiraAtiva.id) {
                 url += '?lista_id=' + carteiraAtiva.id;
@@ -390,28 +383,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (!lead) {
                 await carregarMinhasCarteiras();
-                const comFila = minhasCarteiras.filter(c => c.restantes > 0);
-
-                if (comFila.length) {
-                    const proxima = comFila[0];
-
-                    if (!carteiraAtiva || proxima.id !== carteiraAtiva.id) {
-                        if (carteiraAtiva) {
-                            mostrarToast('Você concluiu sua lista! Sua próxima lista começou imediatamente!', 'success');
-                        }
-
-                        carteiraAtiva = proxima;
-                        salvarCarteiraAtivaLocalStorage(proxima.id);
-                        atualizarBotaoCarteira();
-                        renderizarMenuCarteiras();
-
-                        return carregarProximoLead();
-                    }
-                }
-
                 leadAtual = null;
                 if (carteiraAtiva) {
-                    mostrarToast('Você concluiu TODAS as suas carteiras! 🎉', 'success');
+                    mostrarToast('Você concluiu a carteira selecionada! 🎉', 'success');
                 }
 
                 await mostrarTelaEsperaInteligente();
@@ -794,16 +768,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (historicoResumo) historicoResumo.textContent = 'Carregando...';
 
         try {
-            if (!carteiraAtiva) {
-                historicoLista.innerHTML = '';
-                if (historicoVazio) historicoVazio.style.display = 'block';
-                if (historicoResumo) historicoResumo.textContent = 'Nenhuma carteira ativa.';
-                return;
-            }
-
-            const { lista, leads } = await ApiClient.get(
-                `/api/corretor/historico/carteiras/${carteiraAtiva.id}`
-            );
+            const dados = await ApiClient.get(carteiraAtiva
+                ? `/api/corretor/historico/carteiras/${carteiraAtiva.id}`
+                : '/api/corretor/leads-por-status?status=trabalhados');
+            const leads = dados.leads || [];
+            const lista = dados.lista || { nome: 'Todas as carteiras' };
 
             leadsDaCarteiraAtual = leads || [];
 

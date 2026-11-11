@@ -2621,6 +2621,7 @@ async function handleMudancaAtualizacao() {
         nomeListaInput.disabled = true;
     }
     if (mensagemWhatsappInput) {
+        $('categoriaLista').value = lista.categoria || 'Sem categoria';
         mensagemWhatsappInput.value = lista.mensagem_whatsapp || '';
         mensagemWhatsappInput.disabled = true;
     }
@@ -2854,7 +2855,8 @@ if (modoUpload === 'atualizar' && !listaAtualizacaoSelecionada) {
                 nome,
                 contatos,
                 corretoresIds: marcados,
-                mensagemWhatsapp: mensagemWhatsapp || null
+                mensagemWhatsapp: mensagemWhatsapp || null,
+                categoria: $('categoriaLista').value.trim() || 'Sem categoria'
             };
 
             if (emModoAtualizacao) {
@@ -2920,6 +2922,7 @@ fecharCustomSelectLista();
     async function renderizarListas() {
         try {
             const { listas } = await ApiClient.get('/api/admin/listas');
+            $('categoriasCarteiras').replaceChildren(...[...new Set(['Mensal', 'Campanhas', 'Sem categoria', ...listas.map(l => l.categoria).filter(Boolean)])].map(c => new Option(c, c)));
 
             badgeTotalListas.textContent = listas.length;
 
@@ -2939,7 +2942,7 @@ fecharCustomSelectLista();
                         </div>
                         <div class="lista-card-data">${dataCurta(lista.criado_em)}</div>
                     </div>
-                    <div class="lista-card-nome">${escapeHtml(lista.nome)}</div>
+                    <div class="lista-card-nome">${escapeHtml(lista.nome)}</div><small class="lista-categoria">${escapeHtml(lista.categoria || 'Sem categoria')}</small>
                     <div class="lista-card-stats">
                         <div class="lista-card-stat">
                             <strong>${lista.total}</strong>
@@ -3217,6 +3220,7 @@ fecharCustomSelectLista();
 
             gerenciarListaNome.textContent = `${lista.nome} · escolha quem participa`;
 
+            $('gerenciarCategoria').value = lista.categoria || 'Sem categoria';
             if (gerenciarMensagem) {
                 gerenciarMensagem.value = lista.mensagem_whatsapp || '';
             }
@@ -3297,6 +3301,22 @@ fecharCustomSelectLista();
             btnSalvarGerenciarTexto.textContent = 'Salvar alterações';
         }
     }
+
+    $('btnSalvarCategoria')?.addEventListener('click', async () => {
+        if (!listaSelecionadaAtual) return;
+        const btn = $('btnSalvarCategoria');
+        btn.disabled = true;
+        try {
+            const { lista } = await ApiClient.patch(`/api/admin/listas/${listaSelecionadaAtual.id}/categoria`, {
+                categoria: $('gerenciarCategoria').value.trim()
+            });
+            listaSelecionadaAtual.categoria = lista.categoria;
+            $('gerenciarCategoria').value = lista.categoria;
+            await renderizarListas();
+            mostrarToast('Categoria salva.', 'success');
+        } catch (err) { mostrarToast(err.message || 'Erro ao salvar categoria.', 'error'); }
+        finally { btn.disabled = false; }
+    });
 
     async function salvarMensagemWhatsApp() {
         if (!listaSelecionadaAtual) return;
@@ -3842,6 +3862,8 @@ if (btnToggleTipo) {
             grupoSelecionarLista.style.display = 'none';
             grupoNomeLista.style.display = 'flex';
         }
+
+        $('categoriaLista').value = 'Sem categoria';
 
         // Reseta a seleção de lista e os campos relacionados
         if (selectListaAtualizar) selectListaAtualizar.value = '';

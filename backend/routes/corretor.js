@@ -535,13 +535,15 @@ router.get('/minhas-carteiras', async (req, res) => {
             SELECT
                 li.id,
                 li.nome,
+                li.categoria,
                 li.criado_em,
                 COUNT(l.id) AS total,
                 COUNT(l.id) FILTER (WHERE l.status != 'novo') AS trabalhados,
                 COUNT(l.id) FILTER (WHERE l.status = 'novo')  AS restantes
             FROM listas li
-            INNER JOIN leads l ON l.lista_id = li.id AND l.corretor_id = $1
-            GROUP BY li.id, li.nome, li.criado_em
+            LEFT JOIN leads l ON l.lista_id = li.id AND l.corretor_id = $1
+            WHERE EXISTS (SELECT 1 FROM lista_corretores lc WHERE lc.lista_id = li.id AND lc.corretor_id = $1)
+            GROUP BY li.id, li.nome, li.categoria, li.criado_em
             ORDER BY li.criado_em ASC
         `, [corretorId]);
 
@@ -553,6 +555,7 @@ router.get('/minhas-carteiras', async (req, res) => {
             return {
                 id: c.id,
                 nome: c.nome,
+                categoria: c.categoria,
                 criado_em: c.criado_em,
                 total,
                 trabalhados,
@@ -798,7 +801,7 @@ router.get('/agendamentos', async (req, res) => {
 
         const result = await pool.query(`
             SELECT
-                id, nome, telefone, resultado,
+                id, lista_id, nome, telefone, resultado,
                 agendamento_data, agendamento_local, observacao
             FROM leads
             WHERE corretor_id = $1

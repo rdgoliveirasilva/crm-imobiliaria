@@ -8,6 +8,13 @@ const { pool } = require('../config/db');
 const { autenticar, apenasAdmin } = require('../middlewares/auth');
 
 const { alterarAtividade, validarCorretoresAtivos } = require('../services/corretorAtividade');
+function categoriaLista(valor) {
+    if (valor === undefined || valor === null || String(valor).trim() === '') return 'Sem categoria';
+    if (typeof valor !== 'string' || valor.trim().length > 80) { const e = new Error('Categoria deve ter até 80 caracteres.'); e.status = 400; throw e; }
+    const nome = valor.trim().replace(/\s+/g, ' ');
+    const padrao = { mensal: 'Mensal', campanhas: 'Campanhas', 'sem categoria': 'Sem categoria' };
+    return padrao[nome.toLocaleLowerCase('pt-BR')] || nome;
+}
 const router = express.Router();
 
 router.use(autenticar, apenasAdmin);
@@ -368,7 +375,7 @@ router.post('/listas', async (req, res) => {
             contatos,
             corretoresIds,
             mensagemWhatsapp,
-            listaIdExistente
+            listaIdExistente, categoria
         } = req.body || {};
 
         if (!nome || !Array.isArray(contatos) || !contatos.length) {
@@ -417,6 +424,8 @@ router.post('/listas', async (req, res) => {
 
             await client.query('BEGIN');
             await validarCorretoresAtivos(client, corretoresIds);
+
+            if (categoria !== undefined) await client.query('UPDATE listas SET categoria = $2 WHERE id = $1', [listaIdExistente, categoriaLista(categoria)]);
 
             // 1) Sincroniza lista_corretores com o que foi marcado
             //    (adiciona novos + remove os que não estão mais marcados)
@@ -490,8 +499,8 @@ router.post('/listas', async (req, res) => {
         await validarCorretoresAtivos(client, corretoresIds);
 
         const listaResult = await client.query(
-            'INSERT INTO listas (nome, total, mensagem_whatsapp) VALUES ($1, $2, $3) RETURNING id',
-            [nome.trim(), contatosNovos.length, mensagemWhatsapp || null]
+            'INSERT INTO listas (nome, total, mensagem_whatsapp, categoria) VALUES ($1, $2, $3, $4) RETURNING id',
+            [nome.trim(), contatosNovos.length, mensagemWhatsapp || null, categoriaLista(categoria)]
         );
         const listaId = listaResult.rows[0].id;
 
@@ -544,6 +553,15 @@ router.post('/listas/preview-dedupe', async (req, res) => {
         console.error('[admin/listas preview-dedupe] erro:', err);
         res.status(500).json({ erro: 'Erro ao verificar duplicados.' });
     }
+});
+
+router.patch('/listas/:id/categoria', async (req, res) => {
+    try {
+        const categoria = categoriaLista(req.body?.categoria);
+        const result = await pool.query('UPDATE listas SET categoria = $2 WHERE id = $1 RETURNING id, categoria', [Number(req.params.id), categoria]);
+        if (!result.rows.length) return res.status(404).json({ erro: 'Lista não encontrada.' });
+        res.json({ lista: result.rows[0] });
+    } catch (err) { res.status(err.status || 500).json({ erro: err.status ? err.message : 'Erro ao salvar categoria.' }); }
 });
 
 router.get('/listas/:id/contatos', async (req, res) => {
@@ -1037,7 +1055,7 @@ router.get('/listas/:id/corretores', async (req, res) => {
     try {
         const listaId = Number(req.params.id);
 
-        const lista = await pool.query('SELECT id, nome, mensagem_whatsapp FROM listas WHERE id = $1', [listaId]);
+        const lista = await pool.query('SELECT id, nome, mensagem_whatsapp, categoria FROM listas WHERE id = $1', [listaId]);
         if (!lista.rows.length) {
             return res.status(404).json({ erro: 'Lista não encontrada.' });
         }

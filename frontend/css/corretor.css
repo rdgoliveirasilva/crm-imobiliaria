@@ -3326,3 +3326,7 @@ button.tag-editavel,
 #modalAgendamento .modal-actions-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; }
 #modalAgendamento .modal-actions-row button { flex: 1; padding: 12px; border: 0; border-radius: 10px; cursor: pointer; }
 #btnSalvarAgendamento { background: #002c61; color: white; }
+
+.carteira-categoria-titulo { padding: 10px 12px 6px; font-size: .72rem; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: #64748b; background: #f1f5f9; border-top: 1px solid #dbe4ef; }
+.carteira-categoria .dash-select-item, .carteira-categoria .carteira-opcao { width: 100%; min-width: 0; }
+.carteira-categoria .dash-select-item > span:not(.badge-mini) { min-width: 0; overflow-wrap: anywhere; }

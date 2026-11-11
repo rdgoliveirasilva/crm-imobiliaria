@@ -342,6 +342,12 @@
                     <span class="form-error" id="nomeListaError"></span>
                 </div>
 
+                <div class="form-group">
+                    <label for="categoriaLista">Categoria da carteira</label>
+                    <input id="categoriaLista" list="categoriasCarteiras" maxlength="80" placeholder="Escolha ou digite uma categoria" value="Sem categoria">
+                    <datalist id="categoriasCarteiras"><option value="Mensal"><option value="Campanhas"><option value="Sem categoria"></datalist>
+                </div>
+
                 <!-- ============================== -->
                 <!-- CONTATOS -->
                 <!-- ============================== -->
@@ -1022,6 +1028,11 @@
                 <!-- =====================================================
                      MENSAGEM DO WHATSAPP DA LISTA
                      ===================================================== -->
+                <div class="form-group categoria-edicao">
+                    <label for="gerenciarCategoria">Categoria da carteira</label>
+                    <input id="gerenciarCategoria" list="categoriasCarteiras" maxlength="80">
+                    <button type="button" class="btn-modal-manage" id="btnSalvarCategoria">Salvar categoria</button>
+                </div>
                 <div class="gerenciar-mensagem">
                     <div class="gerenciar-mensagem-header">
                         <i class="fab fa-whatsapp"></i>

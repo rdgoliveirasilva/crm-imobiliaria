@@ -7458,3 +7458,7 @@
 .btn-corretor-ativo:hover { background: #dbeafe; }
 .badge-inativo { display: inline-block; padding: 3px 7px; border-radius: 8px; background: #fee2e2; color: #991b1b; font-size: .7rem; }
 @media (max-width: 600px) { .corretor-item:has(.btn-corretor-ativo) { flex-wrap: wrap; } }
+
+.categoria-edicao { padding: 16px; }
+.categoria-edicao input, #categoriaLista { box-sizing: border-box; width: 100%; padding: 12px; border: 1px solid #dbe4ef; border-radius: 10px; font: inherit; }
+.lista-categoria { color: #64748b; font-size: .75rem; }

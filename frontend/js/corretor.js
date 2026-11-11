@@ -132,11 +132,10 @@ function labelTag(tag) {
             const { carteiras: lista } = await ApiClient.get('/api/corretor/minhas-carteiras');
             carteiras = lista || [];
 
-            const comFila = carteiras.find(c => c.restantes > 0);
-            carteiraAtiva = comFila || carteiras[0] || null;
+            carteiraAtiva = carteiraAtiva ? carteiras.find(c => c.id === carteiraAtiva.id) || null : null;
 
             if (carteiraNomeTop) {
-                carteiraNomeTop.textContent = carteiraAtiva ? carteiraAtiva.nome : 'Carteiras';
+                carteiraNomeTop.textContent = carteiraAtiva ? carteiraAtiva.nome : 'Todas as carteiras';
             }
 
             renderizarMenuCarteiras();
@@ -157,7 +156,7 @@ function labelTag(tag) {
             return;
         }
 
-        carteirasMenu.innerHTML = carteiras.map(c => {
+        carteirasMenu.innerHTML = `<button type="button" class="dash-select-item ${!carteiraAtiva ? 'active' : ''}" data-id="">Todas as carteiras</button>` + CarteiraCategorias.renderizar(carteiras, c => {
             const isAtual = carteiraAtiva && c.id === carteiraAtiva.id;
             return `
                 <button class="dash-select-item ${isAtual ? 'active' : ''}"
@@ -167,16 +166,17 @@ function labelTag(tag) {
                     <span class="badge-mini">${c.restantes}</span>
                 </button>
             `;
-        }).join('');
+        });
 
         carteirasMenu.querySelectorAll('.dash-select-item').forEach(btn => {
             btn.addEventListener('click', async () => {
                 const id = Number(btn.dataset.id);
                 carteiraAtiva = carteiras.find(c => c.id === id) || null;
                 if (carteiraNomeTop) {
-                    carteiraNomeTop.textContent = carteiraAtiva ? carteiraAtiva.nome : 'Carteiras';
+                    carteiraNomeTop.textContent = carteiraAtiva ? carteiraAtiva.nome : 'Todas as carteiras';
                 }
                 dashSelectWrap?.classList.remove('open');
+                renderizarMenuCarteiras();
                 await carregarDashboard();
             });
         });
@@ -185,13 +185,17 @@ function labelTag(tag) {
     /* =========================================================
        DASHBOARD — KPIs
        ========================================================= */
+    let dashboardRequest = 0;
     async function carregarDashboard() {
+        const request = ++dashboardRequest;
         try {
             const url = carteiraAtiva
                 ? `/api/corretor/estatisticas?lista_id=${carteiraAtiva.id}`
                 : '/api/corretor/estatisticas';
 
-            stats = await ApiClient.get(url);
+            const resposta = await ApiClient.get(url);
+            if (request !== dashboardRequest) return;
+            stats = resposta;
 
             if (kpiTrabalhados)   kpiTrabalhados.textContent   = stats.trabalhados || 0;
             if (kpiEmAtendimento) kpiEmAtendimento.textContent = stats.em_atendimento || 0;
@@ -225,14 +229,16 @@ function labelTag(tag) {
        ========================================================= */
     async function carregarListasAgendamentos() {
         try {
+            const filtro = carteiraAtiva?.id || null;
             const { agendamentos } = await ApiClient.get('/api/corretor/agendamentos');
+            if (filtro !== (carteiraAtiva?.id || null)) return;
 
             const retornar = (agendamentos || [])
-                .filter(a => a.resultado === 'retornar_depois')
+                .filter(a => a.resultado === 'retornar_depois' && (!carteiraAtiva || Number(a.lista_id) === carteiraAtiva.id))
                 .slice(0, 3);
 
             const ags = (agendamentos || [])
-                .filter(a => a.resultado === 'agendado')
+                .filter(a => a.resultado === 'agendado' && (!carteiraAtiva || Number(a.lista_id) === carteiraAtiva.id))
                 .slice(0, 3);
 
             renderizarLista(listaRetornar, retornar, 'retornar');
@@ -325,7 +331,7 @@ function labelTag(tag) {
         const listaId = carteiraAtiva ? carteiraAtiva.id : '';
         const url = listaId
             ? `prospeccao.html?lista=${listaId}`
-            : 'prospeccao.html';
+            : 'prospeccao.html?visao=geral';
         window.location.href = url;
     }
 
