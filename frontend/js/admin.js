@@ -2919,10 +2919,57 @@ fecharCustomSelectLista();
     /* =========================================================
        LISTAS
        ========================================================= */
+    async function carregarCategorias() {
+        try {
+            const { categorias } = await ApiClient.get('/api/admin/categorias');
+            for (const id of ['categoriaLista', 'gerenciarCategoria']) {
+                const select = $(id), anterior = select.value;
+                select.replaceChildren(...categorias.map(c => new Option(c.nome, c.nome)));
+                select.value = categorias.some(c => c.nome === anterior) ? anterior : 'Sem categoria';
+            }
+            $('categoriasAviso').textContent = '';
+            $('categoriasLista').innerHTML = categorias.map(c => {
+                const reservada = ['Mensal', 'Sem categoria'].includes(c.nome);
+                return `<div class="categoria-item" data-id="${c.id}">
+                    <div><strong>${escapeHtml(c.nome)}</strong><small>${c.total_listas} carteira(s)${reservada ? ' · Categoria do sistema' : ''}</small></div>
+                    ${reservada ? '' : `<form class="categoria-renomear"><input aria-label="Novo nome de ${escapeHtml(c.nome)}" maxlength="80" required value="${escapeHtml(c.nome)}"><button type="submit">Renomear</button></form><button type="button" class="categoria-excluir" ${c.total_listas ? 'disabled title="Reclassifique as carteiras antes de excluir"' : ''}>Excluir</button>`}
+                </div>`;
+            }).join('');
+            $('categoriasLista').querySelectorAll('.categoria-renomear').forEach(form => form.onsubmit = async e => {
+                e.preventDefault();
+                const btn = form.querySelector('button'); btn.disabled = true;
+                try {
+                    await ApiClient.patch(`/api/admin/categorias/${form.closest('[data-id]').dataset.id}`, { nome: form.querySelector('input').value });
+                    await renderizarListas();
+                    mostrarToast('Categoria renomeada nas carteiras.', 'success');
+                } catch (err) { mostrarToast(err.message, 'error'); }
+                finally { btn.disabled = false; }
+            });
+            $('categoriasLista').querySelectorAll('.categoria-excluir').forEach(btn => btn.onclick = () => {
+                abrirConfirm('Excluir categoria?', 'A categoria será removida do cadastro.', async () => {
+                    try { await ApiClient.del(`/api/admin/categorias/${btn.closest('[data-id]').dataset.id}`); await carregarCategorias(); }
+                    catch (err) { mostrarToast(err.message, 'error'); }
+                });
+            });
+        } catch (err) { $('categoriasAviso').textContent = 'Não foi possível carregar as categorias. Reabra esta aba para tentar novamente.'; }
+    }
+    document.querySelector('[data-tab="categorias"]').addEventListener('click', carregarCategorias);
+    $('formCategoria').addEventListener('submit', async e => {
+        e.preventDefault();
+        $('btnCriarCategoria').disabled = true;
+        try {
+            await ApiClient.post('/api/admin/categorias', { nome: $('novaCategoria').value });
+            $('novaCategoria').value = '';
+            await carregarCategorias();
+            mostrarToast('Categoria criada.', 'success');
+        } catch (err) { mostrarToast(err.message, 'error'); }
+        finally { $('btnCriarCategoria').disabled = false; }
+    });
+
     async function renderizarListas() {
         try {
             const { listas } = await ApiClient.get('/api/admin/listas');
-            $('categoriasCarteiras').replaceChildren(...[...new Set(['Mensal', 'Campanhas', 'Sem categoria', ...listas.map(l => l.categoria).filter(Boolean)])].map(c => new Option(c, c)));
+            await carregarCategorias();
 
             badgeTotalListas.textContent = listas.length;
 
@@ -3220,6 +3267,7 @@ fecharCustomSelectLista();
 
             gerenciarListaNome.textContent = `${lista.nome} · escolha quem participa`;
 
+            await carregarCategorias();
             $('gerenciarCategoria').value = lista.categoria || 'Sem categoria';
             if (gerenciarMensagem) {
                 gerenciarMensagem.value = lista.mensagem_whatsapp || '';

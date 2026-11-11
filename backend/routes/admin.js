@@ -13,11 +13,58 @@ function categoriaLista(valor) {
     if (typeof valor !== 'string' || valor.trim().length > 80) { const e = new Error('Categoria deve ter até 80 caracteres.'); e.status = 400; throw e; }
     const nome = valor.trim().replace(/\s+/g, ' ');
     const padrao = { mensal: 'Mensal', campanhas: 'Campanhas', 'sem categoria': 'Sem categoria' };
-    return padrao[nome.toLocaleLowerCase('pt-BR')] || nome;
+    const chave = nome.toLocaleLowerCase('pt-BR');
+    return Object.hasOwn(padrao, chave) ? padrao[chave] : nome;
+}
+async function categoriaCadastrada(client, valor) {
+    const nome = categoriaLista(valor);
+    const result = await client.query('SELECT nome FROM categorias_carteiras WHERE nome = $1', [nome]);
+    if (!result.rows.length) { const e = new Error('Cadastre a categoria na aba Categorias antes de usá-la.'); e.status = 400; throw e; }
+    return result.rows[0].nome;
 }
 const router = express.Router();
 
 router.use(autenticar, apenasAdmin);
+
+router.get('/categorias', async (req, res) => {
+    try {
+        const result = await pool.query(`SELECT c.id, c.nome, COUNT(l.id)::int AS total_listas
+            FROM categorias_carteiras c LEFT JOIN listas l ON l.categoria = c.nome
+            GROUP BY c.id ORDER BY CASE WHEN c.nome = 'Mensal' THEN 0 ELSE 1 END, c.nome`);
+        res.json({ categorias: result.rows });
+    } catch (err) { res.status(500).json({ erro: 'Erro ao carregar categorias.' }); }
+});
+
+function erroCategoria(res, err) {
+    if (err.code === '23505') return res.status(409).json({ erro: 'Já existe uma categoria com esse nome.' });
+    if (err.code === '23503') return res.status(409).json({ erro: 'Reclassifique as carteiras antes de excluir esta categoria.' });
+    return res.status(err.status || 500).json({ erro: err.status ? err.message : 'Erro ao salvar categoria.' });
+}
+
+router.post('/categorias', async (req, res) => {
+    try {
+        if (typeof req.body?.nome !== 'string' || !req.body.nome.trim()) return res.status(400).json({ erro: 'Informe o nome da categoria.' });
+        const nome = categoriaLista(req.body.nome);
+        const result = await pool.query('INSERT INTO categorias_carteiras (nome) VALUES ($1) RETURNING id, nome', [nome]);
+        res.status(201).json({ categoria: result.rows[0] });
+    } catch (err) { erroCategoria(res, err); }
+});
+router.patch('/categorias/:id', async (req, res) => {
+    try {
+        if (typeof req.body?.nome !== 'string' || !req.body.nome.trim()) return res.status(400).json({ erro: 'Informe o nome da categoria.' });
+        const nome = categoriaLista(req.body.nome);
+        const result = await pool.query("UPDATE categorias_carteiras SET nome = $2 WHERE id = $1 AND nome NOT IN ('Mensal', 'Sem categoria') RETURNING id, nome", [Number(req.params.id), nome]);
+        if (!result.rows.length) return res.status(400).json({ erro: 'Categoria não encontrada ou reservada pelo sistema.' });
+        res.json({ categoria: result.rows[0] });
+    } catch (err) { erroCategoria(res, err); }
+});
+router.delete('/categorias/:id', async (req, res) => {
+    try {
+        const result = await pool.query("DELETE FROM categorias_carteiras WHERE id = $1 AND nome NOT IN ('Mensal', 'Sem categoria') RETURNING id", [Number(req.params.id)]);
+        if (!result.rows.length) return res.status(400).json({ erro: 'Categoria não encontrada ou reservada pelo sistema.' });
+        res.json({ ok: true });
+    } catch (err) { erroCategoria(res, err); }
+});
 
 /* =========================================================
    HELPERS
@@ -425,7 +472,7 @@ router.post('/listas', async (req, res) => {
             await client.query('BEGIN');
             await validarCorretoresAtivos(client, corretoresIds);
 
-            if (categoria !== undefined) await client.query('UPDATE listas SET categoria = $2 WHERE id = $1', [listaIdExistente, categoriaLista(categoria)]);
+            if (categoria !== undefined) await client.query('UPDATE listas SET categoria = $2 WHERE id = $1', [listaIdExistente, await categoriaCadastrada(client, categoria)]);
 
             // 1) Sincroniza lista_corretores com o que foi marcado
             //    (adiciona novos + remove os que não estão mais marcados)
@@ -500,7 +547,7 @@ router.post('/listas', async (req, res) => {
 
         const listaResult = await client.query(
             'INSERT INTO listas (nome, total, mensagem_whatsapp, categoria) VALUES ($1, $2, $3, $4) RETURNING id',
-            [nome.trim(), contatosNovos.length, mensagemWhatsapp || null, categoriaLista(categoria)]
+            [nome.trim(), contatosNovos.length, mensagemWhatsapp || null, await categoriaCadastrada(client, categoria)]
         );
         const listaId = listaResult.rows[0].id;
 
@@ -557,7 +604,7 @@ router.post('/listas/preview-dedupe', async (req, res) => {
 
 router.patch('/listas/:id/categoria', async (req, res) => {
     try {
-        const categoria = categoriaLista(req.body?.categoria);
+        const categoria = await categoriaCadastrada(pool, req.body?.categoria);
         const result = await pool.query('UPDATE listas SET categoria = $2 WHERE id = $1 RETURNING id, categoria', [Number(req.params.id), categoria]);
         if (!result.rows.length) return res.status(404).json({ erro: 'Lista não encontrada.' });
         res.json({ lista: result.rows[0] });

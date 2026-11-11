@@ -7462,3 +7462,14 @@
 .categoria-edicao { padding: 16px; }
 .categoria-edicao input, #categoriaLista { box-sizing: border-box; width: 100%; padding: 12px; border: 1px solid #dbe4ef; border-radius: 10px; font: inherit; }
 .lista-categoria { color: #64748b; font-size: .75rem; }
+
+.categoria-cadastro, .categoria-item, .categoria-renomear { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.categoria-cadastro { margin: 24px 0; }
+.categoria-item { background: white; padding: 16px; border: 1px solid #dbe4ef; border-radius: 14px; margin-bottom: 12px; }
+.categoria-item > div { flex: 1; min-width: 150px; }
+.categoria-item small { display: block; margin-top: 5px; color: #64748b; }
+.categoria-item input, #novaCategoria, #categoriaLista, #gerenciarCategoria { padding: 12px; border: 1px solid #dbe4ef; border-radius: 10px; font: inherit; max-width: 100%; box-sizing: border-box; }
+.categoria-item button { padding: 10px 14px; min-height: 44px; border: 0; border-radius: 10px; background: #e8f0fb; color: #002c61; cursor: pointer; }
+.categoria-item button:disabled { opacity: .4; cursor: default; }
+.categoria-excluir { color: #991b1b !important; background: #fee2e2 !important; }
+@media(max-width:600px) { .categoria-renomear { width: 100%; } .categoria-renomear input { flex: 1; min-width: 0; } }

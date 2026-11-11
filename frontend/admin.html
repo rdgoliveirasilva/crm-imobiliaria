@@ -91,6 +91,7 @@
                 <i class="fas fa-cloud-upload-alt"></i>
                 <span>Subir Carteiras</span>
             </button>
+            <button class="nav-tab" data-tab="categorias"><i class="fas fa-tags"></i><span>Categorias</span></button>
             <button class="nav-tab" data-tab="listas">
                 <i class="fas fa-folder-open"></i>
                 <span>Carteiras</span>
@@ -344,8 +345,7 @@
 
                 <div class="form-group">
                     <label for="categoriaLista">Categoria da carteira</label>
-                    <input id="categoriaLista" list="categoriasCarteiras" maxlength="80" placeholder="Escolha ou digite uma categoria" value="Sem categoria">
-                    <datalist id="categoriasCarteiras"><option value="Mensal"><option value="Campanhas"><option value="Sem categoria"></datalist>
+                    <select id="categoriaLista"><option value="Sem categoria">Sem categoria</option></select>
                 </div>
 
                 <!-- ============================== -->
@@ -526,6 +526,18 @@
         <!-- ================================================
              ABA 3 — LISTAS
              ================================================ -->
+        <section class="tab-panel" id="tab-categorias">
+            <h2>Categorias de carteiras</h2>
+            <p>Organize suas listas. Mensal aparece primeiro nos seletores dos corretores.</p>
+            <form id="formCategoria" class="categoria-cadastro">
+                <div class="form-group"><label for="novaCategoria">Nome da categoria</label>
+                <input id="novaCategoria" maxlength="80" required placeholder="Ex.: Campanhas, Indicações"></div>
+                <button type="submit" class="btn-modal-confirm" id="btnCriarCategoria">Criar categoria</button>
+            </form>
+            <p id="categoriasAviso" role="status"></p>
+            <div id="categoriasLista" class="categorias-lista"></div>
+        </section>
+
         <section class="tab-panel" id="tab-listas">
 
             <div class="listas-header">
@@ -1030,7 +1042,7 @@
                      ===================================================== -->
                 <div class="form-group categoria-edicao">
                     <label for="gerenciarCategoria">Categoria da carteira</label>
-                    <input id="gerenciarCategoria" list="categoriasCarteiras" maxlength="80">
+                    <select id="gerenciarCategoria"><option value="Sem categoria">Sem categoria</option></select>
                     <button type="button" class="btn-modal-manage" id="btnSalvarCategoria">Salvar categoria</button>
                 </div>
                 <div class="gerenciar-mensagem">

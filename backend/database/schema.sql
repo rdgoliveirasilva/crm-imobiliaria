@@ -187,3 +187,20 @@ CREATE TABLE IF NOT EXISTS empreendimento_logs (
 CREATE INDEX IF NOT EXISTS idx_emp_logs_emp ON empreendimento_logs(empreendimento_id);
 -- Classificação das carteiras, sem inferir categorias de listas existentes.
 ALTER TABLE listas ADD COLUMN IF NOT EXISTS categoria VARCHAR(80) NOT NULL DEFAULT 'Sem categoria';
+
+-- Cadastro central de categorias. Executado uma única vez para preservar exclusões.
+DO $$
+BEGIN
+    IF to_regclass('categorias_carteiras') IS NULL THEN
+        CREATE TABLE categorias_carteiras (
+            id SERIAL PRIMARY KEY,
+            nome VARCHAR(80) NOT NULL UNIQUE CHECK (length(trim(nome)) > 0)
+        );
+        INSERT INTO categorias_carteiras (nome)
+            SELECT DISTINCT categoria FROM listas
+            UNION SELECT 'Mensal' UNION SELECT 'Campanhas' UNION SELECT 'Sem categoria';
+        ALTER TABLE listas ADD CONSTRAINT listas_categoria_fk
+            FOREIGN KEY (categoria) REFERENCES categorias_carteiras(nome)
+            ON UPDATE CASCADE ON DELETE RESTRICT;
+    END IF;
+END $$;
