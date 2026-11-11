@@ -7,29 +7,20 @@ const jwt = require('jsonwebtoken');
 const { pool } = require('../config/db');
 require('dotenv').config();
 
-function autenticar(req, res, next) {
-    const authHeader = req.headers.authorization;
-
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        return res.status(401).json({ erro: 'Token não fornecido.' });
-    }
-
-    const token = authHeader.substring(7);
-
+async function autenticar(req, res, next) {
+    const header = req.headers.authorization;
+    if (!header?.startsWith('Bearer ')) return res.status(401).json({ erro: 'Token não fornecido.' });
+    let payload;
+    try { payload = jwt.verify(header.substring(7), process.env.JWT_SECRET); }
+    catch { return res.status(401).json({ erro: 'Token inválido ou expirado.' }); }
     try {
-        const payload = jwt.verify(token, process.env.JWT_SECRET);
-        req.usuario = payload;
-
-        pool.query(
-            'UPDATE usuarios SET ultimo_acesso = NOW() WHERE id = $1',
-            [payload.id]
-        ).catch(err => {
-            console.error('[auth] erro ao atualizar ultimo_acesso:', err.message);
-        });
-
+        const result = await pool.query('UPDATE usuarios SET ultimo_acesso = NOW() WHERE id = $1 AND ativo = TRUE RETURNING id, nome, usuario, tipo', [payload.id]);
+        if (!result.rows.length) return res.status(401).json({ erro: 'Usuário inativo ou não encontrado.' });
+        req.usuario = result.rows[0];
         next();
     } catch (err) {
-        return res.status(401).json({ erro: 'Token inválido ou expirado.' });
+        console.error('[auth]', err.message);
+        res.status(503).json({ erro: 'Não foi possível validar a sessão.' });
     }
 }
 

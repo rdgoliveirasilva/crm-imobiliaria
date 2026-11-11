@@ -7,6 +7,7 @@ const bcrypt = require('bcryptjs');
 const { pool } = require('../config/db');
 const { autenticar, apenasAdmin } = require('../middlewares/auth');
 
+const { alterarAtividade, validarCorretoresAtivos } = require('../services/corretorAtividade');
 const router = express.Router();
 
 router.use(autenticar, apenasAdmin);
@@ -117,7 +118,7 @@ async function inserirLeadsEmMassa(client, listaId, contatos, idsValidos) {
 router.get('/corretores', async (req, res) => {
     try {
         const result = await pool.query(`
-            SELECT u.id, u.nome, u.usuario, u.tipo, u.criado_em,
+            SELECT u.id, u.nome, u.usuario, u.tipo, u.ativo, u.criado_em,
                    (SELECT COUNT(*) FROM leads WHERE corretor_id = u.id) AS total_leads
             FROM usuarios u
             WHERE u.tipo IN ('corretor', 'teste')
@@ -135,6 +136,13 @@ router.get('/corretores', async (req, res) => {
         console.error('[admin/corretores] erro:', err);
         res.status(500).json({ erro: 'Erro ao listar corretores.' });
     }
+});
+
+router.patch('/corretores/:id/ativo', async (req, res) => {
+    const id = Number(req.params.id);
+    if (!Number.isSafeInteger(id) || id < 1 || typeof req.body?.ativo !== 'boolean') return res.status(400).json({ erro: 'Informe um corretor e atividade válidos.' });
+    try { res.json(await alterarAtividade(id, req.body.ativo)); }
+    catch (err) { console.error('[corretor/ativo]', err.message); res.status(err.status || 500).json({ erro: err.status ? err.message : 'Erro ao alterar atividade.' }); }
 });
 
 router.post('/corretores', async (req, res) => {
@@ -397,7 +405,7 @@ router.post('/listas', async (req, res) => {
 
             const placeholders = corretoresIds.map((_, i) => `$${i + 1}`).join(',');
             const corretoresValidos = await client.query(
-                `SELECT id FROM usuarios WHERE id IN (${placeholders}) AND tipo IN ('corretor', 'teste')`,
+                `SELECT id FROM usuarios WHERE id IN (${placeholders}) AND tipo IN ('corretor', 'teste') AND ativo = TRUE`,
                 corretoresIds
             );
 
@@ -408,6 +416,7 @@ router.post('/listas', async (req, res) => {
             const idsValidos = corretoresValidos.rows.map(c => c.id);
 
             await client.query('BEGIN');
+            await validarCorretoresAtivos(client, corretoresIds);
 
             // 1) Sincroniza lista_corretores com o que foi marcado
             //    (adiciona novos + remove os que não estão mais marcados)
@@ -467,7 +476,7 @@ router.post('/listas', async (req, res) => {
 
         const placeholders = corretoresIds.map((_, i) => `$${i + 1}`).join(',');
         const corretoresValidos = await client.query(
-            `SELECT id FROM usuarios WHERE id IN (${placeholders}) AND tipo IN ('corretor', 'teste')`,
+            `SELECT id FROM usuarios WHERE id IN (${placeholders}) AND tipo IN ('corretor', 'teste') AND ativo = TRUE`,
             corretoresIds
         );
 
@@ -478,6 +487,7 @@ router.post('/listas', async (req, res) => {
         const idsValidos = corretoresValidos.rows.map(c => c.id);
 
         await client.query('BEGIN');
+        await validarCorretoresAtivos(client, corretoresIds);
 
         const listaResult = await client.query(
             'INSERT INTO listas (nome, total, mensagem_whatsapp) VALUES ($1, $2, $3) RETURNING id',
@@ -508,7 +518,7 @@ router.post('/listas', async (req, res) => {
     } catch (err) {
         await client.query('ROLLBACK');
         console.error('[admin/listas POST] erro:', err);
-        res.status(500).json({ erro: 'Erro ao subir lista.' });
+        res.status(err.status || 500).json({ erro: err.status ? err.message : 'Erro ao subir lista.' });
     } finally {
         client.release();
     }
@@ -937,7 +947,7 @@ router.get('/dashboard/carteiras', async (req, res) => {
                 COUNT(l.id) AS total_carteira
             FROM usuarios u
             LEFT JOIN leads l ON l.corretor_id = u.id
-            WHERE u.tipo IN ('corretor', 'teste')
+            WHERE u.tipo IN ('corretor', 'teste') AND u.ativo = TRUE
             GROUP BY u.id
             ORDER BY u.nome ASC
         `);
@@ -1047,7 +1057,7 @@ router.get('/listas/:id/corretores', async (req, res) => {
                 COUNT(l.id) FILTER (WHERE l.lista_id = $1) AS total_na_lista
             FROM usuarios u
             LEFT JOIN leads l ON l.corretor_id = u.id
-            WHERE u.tipo IN ('corretor', 'teste')
+            WHERE u.tipo IN ('corretor', 'teste') AND u.ativo = TRUE
             GROUP BY u.id
             ORDER BY u.nome ASC
         `, [listaId]);
@@ -1091,7 +1101,7 @@ router.patch('/listas/:id/corretores', async (req, res) => {
 
         const placeholders = corretoresIds.map((_, i) => `$${i + 1}`).join(',');
         const corretoresValidos = await client.query(
-            `SELECT id FROM usuarios WHERE id IN (${placeholders}) AND tipo IN ('corretor', 'teste')`,
+            `SELECT id FROM usuarios WHERE id IN (${placeholders}) AND tipo IN ('corretor', 'teste') AND ativo = TRUE`,
             corretoresIds
         );
 
@@ -1111,6 +1121,7 @@ router.patch('/listas/:id/corretores', async (req, res) => {
         const idsRemovidos  = idsAntigos.filter(id => !idsNovos.includes(id));
 
         await client.query('BEGIN');
+        await validarCorretoresAtivos(client, corretoresIds);
 
         for (const id of idsRemovidos) {
             await client.query(
@@ -1210,7 +1221,7 @@ router.patch('/listas/:id/corretores', async (req, res) => {
     } catch (err) {
         await client.query('ROLLBACK');
         console.error('[admin/listas/corretores PATCH] erro:', err);
-        res.status(500).json({ erro: 'Erro ao gerenciar corretores da lista.' });
+        res.status(err.status || 500).json({ erro: err.status ? err.message : 'Erro ao gerenciar corretores da lista.' });
     } finally {
         client.release();
     }

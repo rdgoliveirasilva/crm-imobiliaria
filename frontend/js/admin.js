@@ -2641,7 +2641,8 @@ async function handleMudancaAtualizacao() {
        ========================================================= */
     async function renderizarSeletorCorretores() {
         try {
-            const { corretores } = await ApiClient.get('/api/admin/corretores');
+            const { corretores: todos } = await ApiClient.get('/api/admin/corretores');
+            const corretores = todos.filter(c => c.ativo !== false);
 
             if (!corretores.length) {
                 corretoresSelector.innerHTML = `
@@ -3367,12 +3368,13 @@ fecharCustomSelectLista();
                 <div class="corretor-item ${ehTeste ? 'is-teste' : ''}" data-corretor-id="${c.id}" style="cursor: pointer;">
                     <div class="corretor-avatar">${iniciais(c.nome)}</div>
                     <div class="corretor-info">
-                        <strong>${escapeHtml(c.nome)}${badge}</strong>
+                        <strong>${escapeHtml(c.nome)}${badge}${c.ativo === false ? ' <span class="badge-inativo">Inativo</span>' : ''}</strong>
                         <small>
                             <i class="fas fa-at"></i> ${escapeHtml(c.usuario)}
                             · ${total} ${total === 1 ? 'contato' : 'contatos'}
                         </small>
                     </div>
+                    <button type="button" class="btn-corretor-ativo" data-id="${c.id}" data-ativo="${c.ativo !== false}">${c.ativo === false ? 'Ativar' : 'Inativar'}</button>
                     <button class="btn-corretor-delete" data-corretor-id="${c.id}" title="Excluir corretor">
                         <i class="fas fa-trash"></i>
                     </button>
@@ -3382,12 +3384,28 @@ fecharCustomSelectLista();
 
         corretoresList.querySelectorAll('.corretor-item').forEach(item => {
             item.addEventListener('click', (e) => {
-                if (e.target.closest('.btn-corretor-delete')) return;
+                if (e.target.closest('.btn-corretor-delete, .btn-corretor-ativo')) return;
 
                 const id = Number(item.dataset.corretorId);
                 const corretor = corretores.find(c => c.id === id);
                 if (corretor) abrirEditarCorretor(corretor);
             });
+        });
+
+        corretoresList.querySelectorAll('.btn-corretor-ativo').forEach(btn => {
+            btn.onclick = e => {
+                e.stopPropagation();
+                const ativo = btn.dataset.ativo !== 'true';
+                abrirConfirm(ativo ? 'Ativar corretor?' : 'Inativar corretor?', ativo
+                    ? 'O acesso será liberado. Ele não recuperará clientes nem participação nas listas; inclua-o novamente quando necessário.'
+                    : 'O acesso será bloqueado e ele sairá de todas as listas. Sem interesse e Sem resposta permanecem com ele. Os demais clientes vão para os corretores ativos da mesma lista, ou ficam órfãos.', async () => {
+                    try {
+                        const result = await ApiClient.patch(`/api/admin/corretores/${btn.dataset.id}/ativo`, { ativo });
+                        mostrarToast(ativo ? 'Corretor ativado.' : `Corretor inativado. ${result.redistribuidos} redistribuídos e ${result.orfaos} órfãos.`, 'success');
+                        await Promise.all([renderizarCorretores(), renderizarSeletorCorretores(), renderizarListas(), initDashboardV2()]);
+                    } catch (err) { mostrarToast(err.message || 'Erro ao alterar atividade.', 'error'); }
+                });
+            };
         });
 
         corretoresList.querySelectorAll('.btn-corretor-delete').forEach(btn => {

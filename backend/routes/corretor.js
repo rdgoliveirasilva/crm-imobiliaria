@@ -50,26 +50,30 @@ const DIAS_REENVIO = 15;
    ========================================================= */
 
 async function reprocessarSemResposta() {
+    const client = await pool.connect();
     try {
-        const prontos = await pool.query(`
+        await client.query('BEGIN');
+        await client.query('LOCK TABLE usuarios IN SHARE ROW EXCLUSIVE MODE');
+        const prontos = await client.query(`
             SELECT id, corretor_id
             FROM leads
             WHERE status = 'sem_resposta'
               AND data_reenvio IS NOT NULL
               AND data_reenvio <= NOW()
+              AND EXISTS (SELECT 1 FROM usuarios u WHERE u.id = leads.corretor_id AND u.ativo = TRUE)
         `);
 
-        if (!prontos.rows.length) return;
+        if (!prontos.rows.length) { await client.query('COMMIT'); return; }
 
         for (const lead of prontos.rows) {
-            const tentativas = await pool.query(
+            const tentativas = await client.query(
                 'SELECT corretor_id FROM tentativas_corretores WHERE lead_id = $1',
                 [lead.id]
             );
             const jaTentaram = new Set(tentativas.rows.map(r => r.corretor_id));
             jaTentaram.add(lead.corretor_id);
 
-            const candidatos = await pool.query(`
+            const candidatos = await client.query(`
                 SELECT u.id,
                        COUNT(l.id) FILTER (WHERE l.status = 'novo') AS pendentes
                 FROM usuarios u
@@ -82,13 +86,13 @@ async function reprocessarSemResposta() {
             const elegiveis = candidatos.rows.filter(c => !jaTentaram.has(c.id));
 
             if (!elegiveis.length) {
-                await pool.query(`
+                await client.query(`
                     UPDATE leads
                     SET status = 'descartado',
                         resultado = 'sem_sucesso',
                         decidido_em = NOW(),
                         data_reenvio = NULL
-                    WHERE id = $1
+                    WHERE id = $1 AND data_reenvio IS NOT NULL
                 `, [lead.id]);
                 console.log(`[lazy-check] lead ${lead.id} → descartado`);
                 continue;
@@ -96,13 +100,13 @@ async function reprocessarSemResposta() {
 
             const novoCorretor = elegiveis[0].id;
 
-            await pool.query(`
+            await client.query(`
                 INSERT INTO tentativas_corretores (lead_id, corretor_id)
                 VALUES ($1, $2)
                 ON CONFLICT (lead_id, corretor_id) DO NOTHING
             `, [lead.id, lead.corretor_id]);
 
-            await pool.query(`
+            await client.query(`
                 UPDATE leads
                 SET status = 'novo',
                     corretor_id = $1,
@@ -110,15 +114,19 @@ async function reprocessarSemResposta() {
                     decidido_em = NULL,
                     data_reenvio = NULL,
                     distribuido_em = NOW()
-                WHERE id = $2
+                WHERE id = $2 AND data_reenvio IS NOT NULL
+                  AND EXISTS (SELECT 1 FROM usuarios u WHERE u.id = leads.corretor_id AND u.ativo = TRUE)
+                  AND EXISTS (SELECT 1 FROM usuarios u WHERE u.id = $1 AND u.ativo = TRUE)
             `, [novoCorretor, lead.id]);
 
             console.log(`[lazy-check] lead ${lead.id} → redistribuído`);
         }
 
+        await client.query('COMMIT');
     } catch (err) {
+        await client.query('ROLLBACK');
         console.error('[lazy-check] erro:', err.message);
-    }
+    } finally { client.release(); }
 }
 
 /* =========================================================
@@ -130,7 +138,7 @@ router.get('/proximo-lead', async (req, res) => {
         const corretorId = req.usuario.id;
         const listaId = req.query.lista_id ? Number(req.query.lista_id) : null;
 
-        reprocessarSemResposta();
+        reprocessarSemResposta().catch(err => console.error('[lazy-check]', err.message));
 
         let query, params;
 
