@@ -9,6 +9,7 @@
     <meta name="theme-color" content="#002c61">
     <meta name="apple-mobile-web-app-title" content="Prospect">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <script src="js/corretor-theme.js"></script>
     <title>Prospect - Minha Carteira</title>
 
     <!-- Open Graph -->
@@ -42,6 +43,7 @@
 <link rel="stylesheet" href="css/corretor.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link rel="stylesheet" href="css/corretor-mobile.css">
+    <link rel="stylesheet" href="css/corretor-theme.css">
 </head>
 <body class="corretor-page mobile-premium">
 
@@ -70,6 +72,14 @@
                 <div class="user-info">
                     <span class="user-greeting">Bem vindo,</span>
                     <strong id="headerUserName">Corretor</strong>
+                </div>
+                <div class="mobile-only theme-control" id="themeControl">
+                    <button type="button" class="theme-toggle" id="themeToggle" aria-label="Escolher tema" aria-expanded="false" aria-controls="themeOptions"><i class="fas fa-circle-half-stroke" aria-hidden="true"></i></button>
+                    <div id="themeOptions" class="theme-options" role="group" aria-label="Tema da interface" hidden>
+                        <button type="button" data-theme-choice="auto" aria-pressed="true"><i class="fas fa-clock" aria-hidden="true"></i> Automático <small>Claro 6h–18h · escuro à noite</small></button>
+                        <button type="button" data-theme-choice="light" aria-pressed="false"><i class="fas fa-sun" aria-hidden="true"></i> Claro</button>
+                        <button type="button" data-theme-choice="dark" aria-pressed="false"><i class="fas fa-moon" aria-hidden="true"></i> Escuro</button>
+                    </div>
                 </div>
                 <button class="btn-avatar" id="btnAvatar" title="Menu">
                     <i class="fas fa-user"></i>
@@ -294,10 +304,10 @@
          MODAL — HISTÓRICO DE QUALIFICADOS
          ===================================================== -->
     <div class="modal-overlay" id="modalHistorico" style="display: none;">
-        <div class="modal-card">
+        <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="historicoTitulo" tabindex="-1">
             <header class="modal-header">
                 <div>
-                    <h2><i class="fas fa-history"></i> Meus clientes qualificados</h2>
+                    <h2 id="historicoTitulo"><i class="fas fa-history"></i> Histórico do cliente</h2>
                     <p id="historicoResumo">0 clientes</p>
                 </div>
                 <button class="modal-close" id="btnFecharHistorico" aria-label="Fechar">

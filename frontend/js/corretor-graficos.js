@@ -2,7 +2,7 @@
 (() => {
     const mobile = window.matchMedia('(max-width: 600px)');
     let carteira = null, request = 0, iniciado = false, biblioteca;
-    let trend, spark;
+    let trend, spark, ultimosDados;
     const $ = id => document.getElementById(id);
 
     function carregarBiblioteca() {
@@ -22,13 +22,16 @@
     }
 
     function renderizar(dados) {
+        const tokens = getComputedStyle(document.documentElement);
+        const cor = (token, fallback) => tokens.getPropertyValue(token).trim() || fallback;
+        const texto = cor('--theme-muted', '#94a9c8');
         const reduzMovimento = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         const canvas = $('mobileTrendChart');
         const ctx = canvas.getContext('2d');
         const series = [
-            ['Primeira qualificação', dados.qualificados, '#13dfa1'],
-            ['Descartados', dados.descartados, '#fb7185'],
-            ['Requalificações', dados.requalificados, '#a78bfa']
+            ['Primeira qualificação', dados.qualificados, cor('--theme-chart-green', '#13dfa1')],
+            ['Descartados', dados.descartados, cor('--theme-chart-red', '#fb7185')],
+            ['Requalificações', dados.requalificados, cor('--theme-chart-purple', '#a78bfa')]
         ];
         trend = new Chart(ctx, {
             type: 'line',
@@ -42,8 +45,8 @@
                 interaction: { mode: 'index', intersect: false },
                 plugins: { legend: { display: false }, tooltip: { backgroundColor: '#061126' } },
                 scales: {
-                    x: { grid: { display: false }, ticks: { color: '#94a9c8', maxRotation: 0, maxTicksLimit: 5, font: { size: 10 } } },
-                    y: { beginAtZero: true, ticks: { color: '#94a9c8', precision: 0, font: { size: 10 } }, grid: { color: '#94a9c818' } }
+                    x: { grid: { display: false }, ticks: { color: texto, maxRotation: 0, maxTicksLimit: 5, font: { size: 10 } } },
+                    y: { beginAtZero: true, ticks: { color: texto, precision: 0, font: { size: 10 } }, grid: { color: cor('--theme-chart-grid', '#94a9c818') } }
                 }
             }
         });
@@ -53,7 +56,7 @@
         spark = new Chart(sparkCtx, {
             type: 'line',
             data: { labels: dados.labels.slice(-7), datasets: [{ data: dados.mensagens.slice(-7),
-                borderColor: '#20b8ff', backgroundColor: sombra, fill: true, tension: .35, borderWidth: 2, pointRadius: 0 }] },
+                borderColor: cor('--theme-accent', '#20b8ff'), backgroundColor: sombra, fill: true, tension: .35, borderWidth: 2, pointRadius: 0 }] },
             options: { responsive: true, maintainAspectRatio: false, animation: false, events: [],
                 plugins: { legend: { display: false }, tooltip: { enabled: false } },
                 scales: { x: { display: false }, y: { display: false, beginAtZero: true } } }
@@ -63,6 +66,7 @@
     async function carregar(listaId) {
         carteira = listaId; iniciado = true;
         const atual = ++request;
+        ultimosDados = null;
         limpar();
         if (!mobile.matches) return;
         const comparacao = $('mensagensComparacao');
@@ -73,6 +77,7 @@
         try {
             const dados = await ApiClient.get('/api/corretor/evolucao' + (listaId ? `?lista_id=${encodeURIComponent(listaId)}` : ''));
             if (atual !== request) return;
+            ultimosDados = dados;
             const { hoje, ontem, diferenca, percentual } = dados.comparacao;
             const numero = n => n.toLocaleString('pt-BR');
             const variacao = diferenca > 0 ? `${numero(diferenca)} a mais` : diferenca < 0 ? `${numero(-diferenca)} a menos` : 'mesma quantidade';
@@ -96,5 +101,8 @@
     }
 
     mobile.addEventListener('change', () => { if (iniciado) carregar(carteira); });
+    window.addEventListener('prospect:themechange', () => {
+        if (mobile.matches && ultimosDados && window.Chart) { limpar(); renderizar(ultimosDados); }
+    });
     window.CorretorGraficos = { carregar };
 })();

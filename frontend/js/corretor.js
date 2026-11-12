@@ -525,6 +525,16 @@ function labelTag(tag) {
     /* =========================================================
        HISTÓRICO INDIVIDUAL DO LEAD
        ========================================================= */
+    let historicoFocoAnterior;
+    function fecharHistoricoLead() {
+        $('modalHistorico').style.display = 'none';
+        historicoFocoAnterior?.focus();
+    }
+    $('btnFecharHistorico').addEventListener('click', fecharHistoricoLead);
+    $('modalHistorico').addEventListener('click', event => { if (event.target === $('modalHistorico')) fecharHistoricoLead(); });
+    $('modalHistorico').addEventListener('keydown', event => {
+        if (event.key === 'Tab') { event.preventDefault(); $('btnFecharHistorico').focus(); }
+    });
     async function abrirHistoricoLead(leadId) {
         try {
             const { historico } = await ApiClient.get(`/api/corretor/lead/${leadId}/historico`);
@@ -541,7 +551,15 @@ function labelTag(tag) {
                 return `• ${data} → ${tag}${obs}`;
             }).join('\n');
 
-            alert(`Histórico do lead:\n\n${linhas}`);
+            if (window.matchMedia('(max-width: 600px)').matches) {
+                historicoFocoAnterior = document.activeElement;
+                $('historicoLista').innerHTML = historico.map(h => `<article class="historico-evento"><time>${escapeHtml(formatarDataCurta(h.criado_em))}</time><strong>${escapeHtml(labelTag(h.acao))}</strong>${h.observacao ? `<p>${escapeHtml(h.observacao)}</p>` : ''}</article>`).join('');
+                $('historicoResumo').textContent = `${historico.length} registros`;
+                $('modalHistorico').style.display = 'flex';
+                $('btnFecharHistorico').focus();
+            } else {
+                alert(`Histórico do lead:\n\n${linhas}`);
+            }
 
         } catch (err) {
             console.error('[corretor] erro histórico lead:', err);
@@ -725,6 +743,7 @@ function labelTag(tag) {
         });
 
         document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && $('modalHistorico').style.display === 'flex') { fecharHistoricoLead(); return; }
             if (e.key === 'Escape' && $('modalAgendamento').style.display === 'flex') {
                 fecharAgendamentoCorretor();
                 return;

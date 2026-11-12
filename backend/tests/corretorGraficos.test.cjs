@@ -50,9 +50,9 @@ test('gráficos não buscam dados no desktop e ignoram resposta de carteira ante
         return elementos.get(id);
     };
     function Chart(ctx, config) { charts.push(config); this.destroy = () => {}; }
-    const window = { Chart, matchMedia: () => media };
+    const window = { Chart, matchMedia: () => media, addEventListener() {} };
     vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../../frontend/js/corretor-graficos.js'), 'utf8'), {
-        window, Chart, document: { getElementById: get }, ApiClient: { get: url => new Promise(resolve => pending.push({ url, resolve })) }
+        window, Chart, getComputedStyle: () => ({ getPropertyValue: () => '' }), document: { getElementById: get }, ApiClient: { get: url => new Promise(resolve => pending.push({ url, resolve })) }
     });
     await window.CorretorGraficos.carregar(null);
     assert.equal(pending.length, 0);
