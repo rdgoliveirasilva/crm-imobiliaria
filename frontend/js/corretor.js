@@ -551,7 +551,7 @@ function labelTag(tag) {
                 return `• ${data} → ${tag}${obs}`;
             }).join('\n');
 
-            if (window.matchMedia('(max-width: 600px)').matches) {
+            if (window.matchMedia('(max-width: 1024px)').matches) {
                 historicoFocoAnterior = document.activeElement;
                 $('historicoLista').innerHTML = historico.map(h => `<article class="historico-evento"><time>${escapeHtml(formatarDataCurta(h.criado_em))}</time><strong>${escapeHtml(labelTag(h.acao))}</strong>${h.observacao ? `<p>${escapeHtml(h.observacao)}</p>` : ''}</article>`).join('');
                 $('historicoResumo').textContent = `${historico.length} registros`;

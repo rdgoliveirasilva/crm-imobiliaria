@@ -1,6 +1,6 @@
 /* Gráficos exclusivos do mobile; usa a mesma versão do Chart.js do admin. */
 (() => {
-    const mobile = window.matchMedia('(max-width: 600px)');
+    const mobile = window.matchMedia('(max-width: 1024px)');
     let carteira = null, request = 0, iniciado = false, biblioteca;
     let trend, spark, ultimosDados;
     const $ = id => document.getElementById(id);

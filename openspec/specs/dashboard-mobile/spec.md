@@ -6,7 +6,7 @@ Aplicar a identidade Dark Premium Tech à visão inicial do corretor, preservand
 ## Requirements
 
 ### Requirement: Escopo visual
-O tema SHALL ser restrito à página do corretor até 600px. O desktop SHALL manter os estilos existentes. A navegação fixa SHALL respeitar safe areas e reservar espaço no conteúdo. Animações SHALL respeitar prefers-reduced-motion.
+O tema SHALL ser restrito à página do corretor até 1024px. Acima de 1024px, o desktop SHALL manter os estilos existentes. A navegação fixa SHALL respeitar safe areas e reservar espaço no conteúdo. Animações SHALL respeitar prefers-reduced-motion.
 
 ### Requirement: Indicadores reais
 Mensagens Enviadas SHALL usar estatisticas.mensagens_enviadas, nunca trabalhados. Agendados SHALL usar estatisticas.porTag.agendado. Os indicadores e drill-downs SHALL manter o filtro de carteira existente. Após o card maior de mensagens, os mini-cards SHALL seguir a ordem Clientes Trabalhados, Em Atendimento, Follow Up, Na Fila, Agendados e Retornar Depois. Não SHALL haver botões duplicados de trabalhados/retornos.
@@ -36,3 +36,6 @@ Início, Prospecção e Empreendimentos SHALL usar as rotas existentes. Esteira 
 
 ## Verificação
 Testes Node cobrem contagem distinta de mensagens, agendados, comparação percentual, parâmetros da rota autenticada, respostas fora de ordem, horário automático, preferência persistida, armazenamento indisponível e contraste das paletas. Não há scripts de lint/build ou TypeScript no projeto. Prévia local isolada conferida no navegador em larguras de 320, 375 e 430px, incluindo busca, paginação, seleção de tema e agendamento claro/escuro; dados de exemplo existem somente na prévia de teste. Não houve teste em aparelho físico.
+
+### Requirement: Tablet
+Entre 601 e 1024px, o dashboard SHALL usar três colunas nos indicadores, conteúdo limitado a 820px, gráfico mais alto e navegação inferior centralizada. Tema, gráficos e histórico SHALL usar o mesmo limite de 1024px. Prospecção, Empreendimentos e Minha Conta SHALL compartilhar essa adaptação sem alterar regras de negócio.

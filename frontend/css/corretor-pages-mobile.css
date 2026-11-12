@@ -1,5 +1,5 @@
 /* Prospecção e catálogo compartilham os tokens do dashboard, sem alterar desktop. */
-@media (max-width: 600px) {
+@media (max-width: 1024px) {
     body.mobile-inner-page { background: radial-gradient(ellipse at 90% 0%, var(--theme-glow), transparent 45%), var(--theme-page); color: var(--theme-text); min-height: 100dvh; }
     .mobile-inner-page::before, .mobile-inner-page .app-header::before, .mobile-inner-page .logo-mark::before { display: none; }
     .mobile-inner-page .mobile-only { display: block; }
@@ -98,7 +98,7 @@
     .conta-page.mobile-inner-page .toast { bottom: calc(20px + env(safe-area-inset-bottom)); }
 }
 
-@media (max-width: 600px) {
+@media (max-width: 1024px) {
     .mobile-premium .mobile-bottom-nav { display: grid; grid-template-columns: 1fr 1fr 1.12fr 1fr 1.25fr; position: fixed; z-index: 80; bottom: 0; left: 0; right: 0; gap: 0; padding: 12px 7px calc(12px + env(safe-area-inset-bottom)); border: 1px solid var(--theme-border); border-bottom: 0; border-radius: 24px 24px 0 0; background: var(--theme-nav); backdrop-filter: blur(12px); box-shadow: 0 -8px 30px #00000030; }
     .mobile-bottom-nav > a, .mobile-bottom-nav > button { border: 0; background: none; color: var(--theme-muted); text-decoration: none; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 7px; min-width: 0; min-height: 48px; padding: 0 1px; font: inherit; font-size: 9px; line-height: 1.2; text-align: center; }
     .mobile-bottom-nav i { font-size: 19px; }
@@ -110,6 +110,6 @@
     .mobile-bottom-nav button:not(:disabled):active { transform: scale(.96); }
     .mobile-premium :is(button, a):focus-visible { outline: 2px solid var(--theme-accent); outline-offset: 3px; }
 }
-@media (max-width: 600px) and (prefers-reduced-motion: reduce) {
+@media (max-width: 1024px) and (prefers-reduced-motion: reduce) {
  .mobile-inner-page *, .mobile-inner-page *::before, .mobile-inner-page *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 }

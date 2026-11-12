@@ -1,6 +1,6 @@
 /* Mobile dashboard only. Shared/desktop styles stay in corretor.css. */
 .mobile-premium .mobile-only { display: none; }
-@media (max-width: 600px) {
+@media (max-width: 1024px) {
     body.mobile-premium { --mobile-muted: var(--theme-muted); background: radial-gradient(ellipse at 90% 8%, var(--theme-glow) 0, transparent 40%), var(--theme-page); color: var(--theme-text); min-height: 100dvh; }
     .mobile-premium::before { display: none; }
     .mobile-premium .mobile-only { display: block; }
@@ -105,6 +105,6 @@
     .mobile-premium .modal-search::placeholder { color: var(--theme-muted); }
     .mobile-premium .toast { bottom: calc(112px + env(safe-area-inset-bottom)); }
 }
-@media (max-width: 600px) and (prefers-reduced-motion: reduce) {
+@media (max-width: 1024px) and (prefers-reduced-motion: reduce) {
     .mobile-premium *, .mobile-premium *::before, .mobile-premium *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 }

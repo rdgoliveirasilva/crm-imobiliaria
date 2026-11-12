@@ -2,7 +2,7 @@
 (() => {
     const key = 'prospect-theme';
     const root = document.documentElement;
-    const mobile = window.matchMedia('(max-width: 600px)');
+    const mobile = window.matchMedia('(max-width: 1024px)');
     const valid = value => ['auto', 'light', 'dark'].includes(value) ? value : 'auto';
     let preference = 'auto', timer;
     try { preference = valid(localStorage.getItem(key)); } catch { /* Armazenamento indisponível: mantém escolha nesta aba. */ }
