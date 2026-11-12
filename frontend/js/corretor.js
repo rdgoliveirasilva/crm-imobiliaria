@@ -118,6 +118,7 @@ function labelTag(tag) {
         try {
             const { usuario } = await ApiClient.get('/api/me');
             if (headerUserName) headerUserName.textContent = usuario.nome.split(' ')[0];
+            if ($('mobileUserName')) $('mobileUserName').textContent = usuario.nome.split(' ')[0];
             AuthSession.setItem('sr_usuario', usuario.nome);
         } catch (err) {
             console.error('[corretor] erro ao carregar usuário:', err);
@@ -196,6 +197,9 @@ function labelTag(tag) {
             const resposta = await ApiClient.get(url);
             if (request !== dashboardRequest) return;
             stats = resposta;
+            if ($('kpiAgendadosMobile')) $('kpiAgendadosMobile').textContent = stats.porTag?.agendado || 0;
+            const hora = Number(new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', hour: 'numeric', hourCycle: 'h23' }).format(new Date()));
+            if ($('mobileGreeting')) $('mobileGreeting').textContent = hora < 12 ? 'Bom dia,' : hora < 18 ? 'Boa tarde,' : 'Boa noite,';
 
             if (kpiTrabalhados)   kpiTrabalhados.textContent   = stats.trabalhados || 0;
             if (kpiEmAtendimento) kpiEmAtendimento.textContent = stats.em_atendimento || 0;
@@ -327,6 +331,10 @@ function labelTag(tag) {
     /* =========================================================
        INICIAR PROSPECÇÃO
        ========================================================= */
+    $('mobileIniciarProspeccao')?.addEventListener('click', iniciarProspeccao);
+    $('mobileTrabalhados')?.addEventListener('click', () => abrirModalKpi('trabalhados', 'Clientes Trabalhados'));
+    $('mobileRetornos')?.addEventListener('click', () => abrirModalKpi('retornar_depois', 'Retornar Depois'));
+
     function iniciarProspeccao() {
         const listaId = carteiraAtiva ? carteiraAtiva.id : '';
         const url = listaId
@@ -339,6 +347,7 @@ function labelTag(tag) {
        MODAL DOS KPIs
        ========================================================= */
     const MAPA_KPIS = {
+        kpiAgendadosMobile: { status: 'agendado', titulo: 'Agendados' },
         kpiTrabalhados:   { status: 'trabalhados',        titulo: 'Clientes Trabalhados' },
         kpiEmAtendimento: { status: 'em_atendimento',     titulo: 'Em Atendimento' },
         kpiFollowUp:      { status: 'follow_up',          titulo: 'Follow Up' },
