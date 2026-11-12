@@ -5,6 +5,7 @@
 const express = require('express');
 const { pool } = require('../config/db');
 const { autenticar, apenasCorretor } = require('../middlewares/auth');
+const { carregarEvolucao } = require('../services/corretorGraficos');
 
 const router = express.Router();
 
@@ -582,6 +583,19 @@ router.get('/minhas-carteiras', async (req, res) => {
    - mensagens_enviadas = resultado = 'mensagem_enviada'
    - retornar_depois    = resultado = 'retornar_depois'
    ========================================================= */
+
+router.get('/evolucao', async (req, res) => {
+    const listaId = req.query.lista_id === undefined ? null : Number(req.query.lista_id);
+    if (listaId !== null && (!Number.isSafeInteger(listaId) || listaId <= 0)) {
+        return res.status(400).json({ erro: 'Carteira inválida.' });
+    }
+    try {
+        res.json(await carregarEvolucao(pool, req.usuario.id, listaId));
+    } catch (err) {
+        console.error('[corretor/evolucao] erro:', err);
+        res.status(500).json({ erro: 'Erro ao carregar evolução diária.' });
+    }
+});
 
 router.get('/estatisticas', async (req, res) => {
     try {

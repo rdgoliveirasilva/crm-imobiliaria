@@ -189,6 +189,7 @@ function labelTag(tag) {
     let dashboardRequest = 0;
     async function carregarDashboard() {
         const request = ++dashboardRequest;
+        globalThis.CorretorGraficos?.carregar(carteiraAtiva?.id ?? null);
         try {
             const url = carteiraAtiva
                 ? `/api/corretor/estatisticas?lista_id=${carteiraAtiva.id}`
@@ -198,6 +199,7 @@ function labelTag(tag) {
             if (request !== dashboardRequest) return;
             stats = resposta;
             if ($('kpiAgendadosMobile')) $('kpiAgendadosMobile').textContent = stats.porTag?.agendado || 0;
+            if ($('kpiRetornosMobile')) $('kpiRetornosMobile').textContent = stats.retornar_depois || 0;
             const hora = Number(new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', hour: 'numeric', hourCycle: 'h23' }).format(new Date()));
             if ($('mobileGreeting')) $('mobileGreeting').textContent = hora < 12 ? 'Bom dia,' : hora < 18 ? 'Boa tarde,' : 'Boa noite,';
 
@@ -332,8 +334,6 @@ function labelTag(tag) {
        INICIAR PROSPECÇÃO
        ========================================================= */
     $('mobileIniciarProspeccao')?.addEventListener('click', iniciarProspeccao);
-    $('mobileTrabalhados')?.addEventListener('click', () => abrirModalKpi('trabalhados', 'Clientes Trabalhados'));
-    $('mobileRetornos')?.addEventListener('click', () => abrirModalKpi('retornar_depois', 'Retornar Depois'));
 
     function iniciarProspeccao() {
         const listaId = carteiraAtiva ? carteiraAtiva.id : '';
@@ -347,6 +347,7 @@ function labelTag(tag) {
        MODAL DOS KPIs
        ========================================================= */
     const MAPA_KPIS = {
+        kpiRetornosMobile: { status: 'retornar_depois', titulo: 'Retornar Depois' },
         kpiAgendadosMobile: { status: 'agendado', titulo: 'Agendados' },
         kpiTrabalhados:   { status: 'trabalhados',        titulo: 'Clientes Trabalhados' },
         kpiEmAtendimento: { status: 'em_atendimento',     titulo: 'Em Atendimento' },

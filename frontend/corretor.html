@@ -173,6 +173,10 @@
                 <header class="kpi-head"><div><strong class="kpi-label">Agendados</strong></div><span class="kpi-icon"><i class="far fa-calendar-check"></i></span></header>
                 <div class="kpi-value" id="kpiAgendadosMobile">—</div><div class="kpi-foot"><span>clientes agendados</span></div>
             </article>
+            <article class="kpi-card mobile-only mobile-retornos">
+                <header class="kpi-head"><div><strong class="kpi-label">Retornar Depois</strong></div><span class="kpi-icon"><i class="fas fa-clock-rotate-left"></i></span></header>
+                <div class="kpi-value" id="kpiRetornosMobile">—</div><div class="kpi-foot"><span>retorno combinado</span></div>
+            </article>
         </section>
 
         <!-- Linha 2: Mensagens + Tempo médio -->
@@ -188,6 +192,11 @@
                 <div class="kpi-value-row">
                     <div class="kpi-value" id="kpiMensagens">0</div>
                     <span class="badge-engajamento"><i class="fas fa-arrow-up"></i> engajamento</span>
+                </div>
+                <div class="mobile-only mensagens-evolucao">
+                    <p id="mensagensComparacao" aria-live="polite">Carregando evolução diária…</p>
+                    <small>Contatos com mensagem registrada hoje até agora × ontem inteiro</small>
+                    <div class="mensagens-sparkline"><canvas id="mensagensSparkline" role="img" aria-label="Contatos com mensagem registrada por dia, últimos sete dias"></canvas></div>
                 </div>
                 <div class="progress-mini">
                     <div class="progress-mini-fill" id="progressMensagens" style="width: 0%;"></div>
@@ -265,10 +274,13 @@
                 <span class="commercial-icon"><i class="fas fa-chart-line"></i></span><div><h2>Histórico de Vendas e Comissões</h2><p>Suas vendas, comissões e recebimentos.</p><small>Em breve · Área ainda não disponível</small></div><i class="fas fa-chart-column commercial-art" aria-hidden="true"></i>
             </div>
         </section>
-        <div class="mobile-only mobile-quick" aria-label="Outros indicadores">
-            <button type="button" id="mobileTrabalhados"><i class="fas fa-briefcase"></i> Clientes trabalhados</button>
-            <button type="button" id="mobileRetornos"><i class="fas fa-clock-rotate-left"></i> Retornos</button>
-        </div>
+        <section class="mobile-only mobile-trend" aria-labelledby="mobileTrendTitle">
+            <h2 id="mobileTrendTitle">Minha evolução diária</h2>
+            <p>Últimos 30 dias · suas qualificações</p>
+            <div class="mobile-trend-legenda"><span>Primeira qualificação</span><span>Descartados</span><span>Requalificações</span></div>
+            <div class="mobile-trend-canvas"><canvas id="mobileTrendChart" role="img" aria-label="Evolução diária das qualificações do corretor"></canvas></div>
+            <p id="mobileTrendResumo" role="status">Carregando histórico…</p>
+        </section>
     </main>
     <nav class="mobile-only mobile-bottom-nav" aria-label="Navegação principal">
         <a href="corretor.html" aria-current="page"><i class="fas fa-house"></i><span>Início</span></a>
@@ -416,6 +428,7 @@
     <script src="js/avatar.js"></script>
     <script src="js/acoes.js"></script>
     <script src="js/carteira-categorias.js"></script>
+    <script src="js/corretor-graficos.js"></script>
     <script src="js/corretor.js"></script>
 </body>
 </html>

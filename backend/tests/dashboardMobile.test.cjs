@@ -27,12 +27,13 @@ test('dashboard mantém mensagens classificadas distintas dos trabalhados e filt
     const urls = [];
     const { ctx, element } = harness({ id: 42 }, async url => {
         urls.push(url);
-        return { trabalhados: 500, mensagens_enviadas: 12, porTag: { agendado: 3 } };
+        return { trabalhados: 500, mensagens_enviadas: 12, retornar_depois: 8, porTag: { agendado: 3 } };
     });
     await ctx.carregarDashboard();
     assert.equal(urls[0], '/api/corretor/estatisticas?lista_id=42');
     assert.equal(element('kpiMensagens').textContent, 12);
     assert.equal(element('kpiAgendadosMobile').textContent, 3);
+    assert.equal(element('kpiRetornosMobile').textContent, 8);
 });
 
 test('resposta antiga não substitui os indicadores após trocar a carteira', async () => {
