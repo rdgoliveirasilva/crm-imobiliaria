@@ -7,7 +7,8 @@
     <link rel="apple-touch-icon" sizes="180x180" href="/assets/icons/apple-touch-icon.png?v=2">
     <meta name="theme-color" content="#002c61">
     <meta name="apple-mobile-web-app-title" content="Prospect">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <script src="js/corretor-theme.js"></script>
     <title>Prospect SR Lançamentos</title>
 
     <link rel="icon" type="image/png" href="assets/img/logo.png">
@@ -20,10 +21,12 @@
 <link rel="stylesheet" href="css/style.css">
 <link rel="stylesheet" href="css/avatar.css">
 <link rel="stylesheet" href="css/conta.css">
+<link rel="stylesheet" href="css/corretor-theme.css">
+<link rel="stylesheet" href="css/corretor-pages-mobile.css">
 
     <script src="js/auth-guard.js"></script>
 </head>
-<body class="conta-page">
+<body class="conta-page mobile-premium mobile-inner-page">
 
 <!-- =====================================================
      HEADER (mesmo estilo do corretor/admin + botão voltar)
@@ -35,12 +38,12 @@
                 <i class="fas fa-arrow-left"></i>
             </a>
             <div class="logo-mark">
-                <img src="assets/img/logo2.png" alt="SR Lançamentos"
+                <img class="desktop-brand" src="assets/img/logo2.png" alt="SR Lançamentos"
                     onerror="this.style.display='none'; this.parentElement.classList.add('fallback');">
-                <i class="fas fa-building logo-fallback"></i>
+                <img class="mobile-only" src="assets/img/logo.png" alt="Prospect"><i class="fas fa-building logo-fallback"></i>
             </div>
             <div class="header-brand-text">
-                <h1>SR <span>Lançamentos</span></h1>
+                <h1 class="desktop-brand">SR <span>Lançamentos</span></h1><strong class="mobile-only mobile-brand">Prospect</strong>
                 <p>Minha Conta</p>
             </div>
         </div>
@@ -50,6 +53,14 @@
                 <span class="user-greeting">Olá,</span>
                 <strong id="headerUserName">—</strong>
             </div>
+                <div class="mobile-only theme-control" id="themeControl">
+                    <button type="button" class="theme-toggle" id="themeToggle" aria-label="Escolher tema" aria-expanded="false" aria-controls="themeOptions"><i class="fas fa-circle-half-stroke" aria-hidden="true"></i></button>
+                    <div id="themeOptions" class="theme-options" role="group" aria-label="Tema da interface" hidden>
+                        <button type="button" data-theme-choice="auto" aria-pressed="true"><i class="fas fa-clock" aria-hidden="true"></i> Automático <small>Claro 6h–18h · escuro à noite</small></button>
+                        <button type="button" data-theme-choice="light" aria-pressed="false"><i class="fas fa-sun" aria-hidden="true"></i> Claro</button>
+                        <button type="button" data-theme-choice="dark" aria-pressed="false"><i class="fas fa-moon" aria-hidden="true"></i> Escuro</button>
+                    </div>
+                </div>
             <button class="btn-avatar" id="btnAvatar" title="Menu">
                 <i class="fas fa-user"></i>
             </button>

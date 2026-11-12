@@ -12,7 +12,7 @@
     .mobile-inner-page .mobile-brand { color: var(--theme-text); font-size: 18px; }
     .mobile-inner-page .header-brand-text p { color: var(--theme-muted); font-size: 10px; letter-spacing: 0; overflow-wrap: anywhere; }
     .mobile-inner-page .btn-avatar { width: 40px; height: 40px; background: var(--theme-control); color: var(--theme-text); border-color: var(--theme-border); }
-    .mobile-inner-page .app-main { width: 100%; min-width: 0; box-sizing: border-box; padding: 16px 16px calc(118px + env(safe-area-inset-bottom)); }
+    body.mobile-inner-page .app-main { width: 100%; min-width: 0; box-sizing: border-box; padding: 16px 16px calc(118px + env(safe-area-inset-bottom)); }
     .mobile-inner-page :is(button,a,input,textarea):focus-visible { outline: 2px solid var(--theme-accent); outline-offset: 3px; }
     .mobile-inner-page .toast { bottom: calc(110px + env(safe-area-inset-bottom)); }
     .mobile-inner-page .mobile-bottom-nav > a:last-child span { font-size: 8px; white-space: nowrap; }
@@ -51,6 +51,9 @@
     .mobile-inner-page .btn-primary-action.call { background: #135eab; color: #fff; }
     .mobile-inner-page .btn-primary-action.whatsapp { background: #086b48; color: #fff; }
     .mobile-inner-page .btn-historico { background: var(--theme-control); color: var(--theme-accent); border-color: var(--theme-border); }
+    .mobile-inner-page .historico-bar { scroll-margin-bottom: calc(118px + env(safe-area-inset-bottom)); }
+    .mobile-inner-page .btn-historico > span:not(.historico-count) { min-width: 0; white-space: normal; overflow-wrap: anywhere; }
+    .mobile-inner-page .btn-historico > i, .mobile-inner-page .historico-count { flex-shrink: 0; }
     .mobile-inner-page .historico-count { background: var(--theme-surface); color: var(--theme-text); }
     .mobile-inner-page :is(.phone-display,.btn-modal-copy) { background: var(--theme-control); color: var(--theme-text); border-color: var(--theme-border); }
     .mobile-inner-page .phone-hint { color: var(--theme-muted); }
@@ -75,6 +78,24 @@
     .mobile-inner-page .emp-detalhe-actions .btn-modal-cancel { background: var(--theme-control); color: var(--theme-text); border: 1px solid var(--theme-border); border-radius: 12px; padding: 12px; min-height: 44px; }
     .mobile-inner-page .btn-abrir-book { background: #135eab; color: #fff; }
     .mobile-inner-page .emp-vitrine-card:hover .emp-vitrine-book { background: var(--theme-control); color: var(--theme-accent); }
+    /* Minha conta usa os mesmos tokens, mantendo seus formulários e navegação. */
+    body.conta-page.mobile-inner-page .app-main { padding-bottom: calc(24px + env(safe-area-inset-bottom)); }
+    .mobile-inner-page .conta-card { background: linear-gradient(135deg,var(--theme-card),var(--theme-surface)); border-color: var(--theme-border); border-radius: 20px; box-shadow: 0 8px 24px #0002; }
+    .mobile-inner-page .conta-header { padding: 18px 16px; border-color: var(--theme-border); gap: 12px; }
+    .mobile-inner-page .conta-header h2 { color: var(--theme-text); }
+    .mobile-inner-page :is(.conta-header p,.conta-body .form-hint) { color: var(--theme-muted); }
+    .mobile-inner-page .conta-icon { background: var(--theme-control); color: var(--theme-accent); box-shadow: none; }
+    .mobile-inner-page .conta-body { padding: 18px 16px; }
+    .mobile-inner-page .conta-body label { color: var(--theme-text); }
+    .mobile-inner-page .conta-body input { background: var(--theme-page); color: var(--theme-text); border-color: var(--theme-border); font-size: 16px; }
+    .mobile-inner-page .conta-body input:focus:not(:disabled), .mobile-inner-page .conta-body input:hover:not(:disabled) { background: var(--theme-page); color: var(--theme-text); border-color: var(--theme-accent); }
+    .mobile-inner-page .conta-body input:disabled { background: var(--theme-control); color: var(--theme-muted); opacity: 1; }
+    .mobile-inner-page .conta-body input::placeholder { color: var(--theme-muted); }
+    .mobile-inner-page .conta-body input.error { background: var(--theme-danger-bg); border-color: var(--theme-danger); }
+    .mobile-inner-page .conta-body .form-error { color: var(--theme-danger); }
+    .mobile-inner-page .conta-body .btn-primary, .mobile-inner-page .conta-body .btn-primary::before { background: #135eab; color: #fff; min-height: 44px; }
+    .mobile-inner-page .conta-footer .btn-voltar { background: var(--theme-control); color: var(--theme-accent); border-color: var(--theme-border); min-height: 44px; }
+    .conta-page.mobile-inner-page .toast { bottom: calc(20px + env(safe-area-inset-bottom)); }
 }
 
 @media (max-width: 600px) {

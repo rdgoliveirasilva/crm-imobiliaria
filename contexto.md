@@ -1,8 +1,10 @@
 # CONTEXTO DO PROJETO — CRM SR Lançamentos
 
-> **Última atualização:** Outubro/2026
-> **Último merge:** `refatoracao` → `main`
+> **Última atualização:** 06/11/2026
+> **Revisão de código usada nesta atualização:** `fedd84b` (`main`)
 > **Status:** Em produção (Vercel + Neon)
+
+Nome canônico no repositório: `contexto.md` (não há `context.md`).
 
 Este arquivo é um **handoff** para qualquer LLM ou desenvolvedor que pegar este projeto no futuro. Leia até o fim antes de fazer qualquer alteração estrutural.
 
@@ -27,11 +29,14 @@ CRM de prospecção imobiliária da **SR Lançamentos** (Sônia e Ramalho). O si
 ---
 
 ## 2. Estrutura de arquivos
+
+```text
 crm-imobiliaria/
-├── CONTEXTO.md ← este arquivo
+├── contexto.md ← este arquivo
 ├── README.md
 ├── package.json
 ├── vercel.json
+├── scripts/generate-pwa-icons.cjs ← gera ícones a partir da imagem exclusiva do PWA
 ├── backend/
 │ ├── server.js
 │ ├── seed.js
@@ -54,6 +59,8 @@ crm-imobiliaria/
 │ ├── pdfService.js ← extração de texto + capa
 │ └── iaservice.js ← Gemini (⚠️ NOME MINÚSCULO)
 └── frontend/
+├── manifest.webmanifest
+├── assets/icons/ ← fonte e PNGs gerados do PWA
 ├── index.html
 ├── admin.html
 ├── corretor.html
@@ -72,6 +79,7 @@ crm-imobiliaria/
 └── js/
 ├── api-client.js
 ├── auth.js
+├── auth-session.js ← armazenamento de sessão compartilhado
 ├── auth-guard.js
 ├── avatar.js
 ├── acoes.js
@@ -81,7 +89,7 @@ crm-imobiliaria/
 ├── conta.js
 └── empreendimentos.js ← [FASE 6]
 
-text
+```
 
 ⚠️ **Case-sensitive:** `iaservice.js` está em **minúsculo**. Se renomear, ajustar o `require` em `routes/empreendimentos.js`.
 
@@ -119,6 +127,8 @@ Header é **compacto (820px) e centralizado** em TODAS as páginas (dashboard, p
 <link rel="stylesheet" href="css/corretor.css">       <!-- ou conta.css -->
 <link rel="stylesheet" href="css/prospeccao.css">     <!-- SÓ na prospeccao.html -->
 <link rel="stylesheet" href="css/empreendimentos.css"><!-- SÓ na empreendimentos.html -->
+```
+
 avatar.css DEVE vir antes de corretor.css/conta.css.
 
 3.4 Editor de tag inline
@@ -140,32 +150,20 @@ Sempre formatar com timeZone: 'America/Sao_Paulo'
 
 ⚠️ Se ver datas deslocadas 3h, é problema de timezone. Não mexer sem entender as duas pontas.
 
-3.7 Autenticação
-JWT salvo em localStorage com chave sr_token
+### 3.7 Autenticação e “Lembrar de mim”
 
-sr_tipo guarda o tipo (admin, corretor ou teste)
-
-api-client.js injeta o token e faz logout automático em 401
-
-auth-guard.js roda no <head> de todas as páginas internas
-
-⚠️ Atenção: o auth.js salva o tipo com chave sr_tipo (não sr_usuario_tipo).
-
-Backends:
-
-routes/auth.js → login/me/senha (liberado)
-
-routes/admin.js → router.use(autenticar, apenasAdmin) ⚠️ NUNCA trocar
-
-routes/corretor.js → router.use(autenticar, apenasCorretor)
-
-routes/empreendimentos.js → 2 routers:
-
-routerAdmin → router.use(autenticar, apenasAdmin)
-
-routerCorretor → router.use(autenticar, apenasCorretor)
-
-Middleware apenasCorretor: aceita tipo === 'corretor' e tipo === 'teste'.
+- `frontend/js/auth-session.js` centraliza as chaves `sr_token`, `sr_usuario`, `sr_usuario_login`, `sr_usuario_id` e `sr_tipo`.
+- Com “Lembrar de mim”: usa `localStorage`. Sem marcar: usa `sessionStorage`, com duração vinculada à sessão da aba (a restauração depende do navegador).
+- `AuthSession.save()` limpa a sessão anterior nos dois armazenamentos. `AuthSession.clear()` remove apenas as chaves de autenticação e o marcador do guard.
+- A tela de login consulta `GET /api/me` quando há token; uma sessão válida redireciona conforme o tipo. Um retorno 401 limpa a sessão; uma falha de rede não a apaga automaticamente.
+- O backend continua emitindo JWT com `JWT_EXPIRES_IN` ou `7d` por padrão. “Lembrar de mim” não renova nem estende o JWT.
+- `api-client.js` usa `AuthSession`, envia Bearer token e encerra a sessão em 401.
+- `auth-session.js` deve carregar antes de `auth-guard.js` e dos demais consumidores. Não voltar a ler o token diretamente de `localStorage`.
+- `auth-guard.js` faz a proteção de navegação; a autorização efetiva é do backend.
+- `POST /api/login` é público. `/api/me` e alteração de senha exigem autenticação.
+- `routes/admin.js`: `router.use(autenticar, apenasAdmin)`.
+- `routes/corretor.js`: `router.use(autenticar, apenasCorretor)`; corretor e teste são aceitos.
+- Empreendimentos mantêm routers separados para admin e corretor.
 
 3.8 Dropdown do avatar
 avatar.js remove qualquer .dropdown-menu existente antes de criar o novo. O item "Empreendimentos" só aparece se sr_tipo for corretor ou teste.
@@ -294,7 +292,7 @@ GET /minhas-carteiras
 
 GET /estatisticas?lista_id=X
 
-GET /leads-por-status?status=XXX&lista_id=Y
+GET /leads-por-status?status=XXX&lista_id=Y&pagina=1&busca=texto (paginação detalhada na seção 12)
 
 GET /historico/carteiras, GET /historico/carteiras/:listaId
 
@@ -385,18 +383,16 @@ cd backend
 node server.js
 Servidor em http://localhost:3000.
 
-8.2 Branches
-main → produção (Vercel auto-deploy)
+### 8.2 Git e publicação
 
-refatoracao → trabalho em andamento
+A branch usada nas alterações recentes é `main`; `refatoracao` é uma referência histórica, não uma instrução para trocar de branch.
 
-Merge na main: git merge --squash refatoracao ou merge normal.
+Implementar uma tarefa não autoriza criar/trocar branch, pull, commit, push, PR, merge, tag ou deploy. Exigir autorização explícita para essas ações. Comandos Git somente de leitura podem ser usados para investigação.
 
-8.3 Deploy
-powershell
-git add .
-git commit -m "feat: descrição"
-git push origin main
+Antes de um commit autorizado, conferir identidade local/global e autores recentes. Não inventar identidade, alterar configuração global ou acrescentar autoria de IA. Depois, verificar Author e Committer com `git show -s --format=fuller HEAD`.
+
+O projeto usa Vercel; o histórico relata publicação automática por push em `main`, mas a configuração atual do painel e o resultado de cada deploy precisam de confirmação externa. Push concluído não comprova deploy concluído.
+
 8.4 Variáveis de ambiente
 Local: backend/.env
 Vercel: Settings → Environment Variables + Redeploy após adicionar
@@ -506,4 +502,83 @@ v13 (2026-10-16): otimização do boot do dashboard (Promise.all no init()); adi
 
 v14 (2026-10-19): adição do campo renda_presumida (Backend + Admin + Vitrine). Novo layout de vitrine: agrupamento visual por construtora com limite de 4 e botão "Ver todos". Filtros da vitrine agora usam Custom Selects (dark mode) para Construtora, Cidade e Bairro. Filtros de Renda e Entrega passaram a ser inputs com máscara. Filtro de Renda puxa tudo que for <= ao valor digitado. Filtro de Entrega lê MM/AAAA e puxa tudo que for <= à data digitada.
 
-FIM DO CONTEXTO. Se você é uma LLM lendo isso, seja cuidadoso com as decisões já tomadas. O sistema está em produção e tem usuários ativos.
+## 12. Mudanças implementadas em novembro/2026
+
+### 12.1 Dashboard administrativo
+
+- “Visão geral” mostra clientes com qualificação / total da base, excluindo clientes atualmente atribuídos a usuários do tipo `teste`.
+- O seletor de carteira da visão geral também filtra a distribuição por qualificação. Esta mantém apenas o filtro por corretor; limpar esse filtro preserva a carteira.
+- O total trabalhado não soma novamente os descartados. Restantes usa limite mínimo de zero.
+- O gráfico de 30 dias classifica a primeira ação de qualificação registrada por lead, ordenada por `criado_em` e `id`; separa primeiro resultado positivo, primeiro descarte e eventos posteriores de requalificação. A ordem é calculada antes do recorte diário, considerando o histórico disponível.
+- A pizza conta a qualificação atual dos leads e inclui `sem_qualificacao` quando `resultado` é nulo. O drill-down aceita essa categoria.
+- Carteiras ativas contam os leads atuais, excluindo corretores teste, em vez de depender apenas do total salvo na importação.
+- Números consultados em 03/11/2026 eram um retrato daquele momento, não valores fixos: base 2.071, com qualificação 1.690; Lista Outubro 1.424, com qualificação 1.247 e sem qualificação 177. Reconsultar para responder totais atuais.
+
+### 12.2 Paginação e mobile
+
+- Admin: `GET /api/admin/listas/:id/contatos?pagina=1&busca=texto` retorna `contatos`, `total`, `pagina`, `paginas`.
+- Corretor: `GET /api/corretor/leads-por-status?status=...&lista_id=...&pagina=1&busca=texto` retorna `status`, `leads`, `total`, `pagina`, `paginas`.
+- Ao informar `pagina`, os dois endpoints limitam a resposta a 30 clientes. A página deve ser um inteiro positivo; páginas além do limite são ajustadas à última. Uma busca vazia retorna a base do filtro. Sem `pagina`, permanece o comportamento legado sem paginação.
+- A busca por nome/telefone ocorre no banco sobre toda a seleção, não só sobre os 30 itens visíveis. O frontend aguarda 250 ms após digitação e ignora respostas obsoletas.
+- O modal do admin abre antes da busca, sem recarregar todas as listas; após excluir um cliente, recarrega a página atual.
+- Categorias do corretor: trabalhados, em atendimento, follow up, na fila e mensagens enviadas compartilham o modal paginado. Retornos/agendamentos que usam o mesmo modal também recebem paginação.
+- Até 600 px, os contatos do admin aparecem em cartões. Paginação fica acessível no rodapé; botões têm área mínima de 44 px. Corretor usa os mesmos ícones, cores e espaçamentos de navegação.
+- CSS de paginação ainda é mantido separadamente em `admin.css` e `corretor.css`; alterações visuais devem conferir os dois.
+
+### 12.3 Menus e requalificação do corretor
+
+- `posicionarMenu()` limita os menus ao viewport visível. Não somar `scrollX`/`scrollY` a coordenadas de elementos com `position: fixed`.
+- Menus de carteira e qualificação fecham ao redimensionar ou rolar fora deles. A lista de opções tem rolagem interna.
+- “Retornar depois” e “Agendado” abrem o formulário de data, hora e local também na requalificação, inclusive ao selecionar a mesma tag atual.
+- O PATCH de qualificação requer `agendamento_data` para essas duas tags. O frontend envia `AAAA-MM-DD HH:mm:00-03:00`; o backend usa sua rotina de tratamento de timezone.
+- O formulário foi incorporado à página do corretor a partir da estrutura da prospecção; os handlers ainda são separados. Não pressupor um componente compartilhado.
+
+### 12.4 Ícones e manifesto do PWA
+
+- `frontend/manifest.webmanifest`: nome `Prospect SR Lançamentos`, nome curto `Prospect`, `id` e escopo `/`, início `/index.html`, `display: standalone`, tema `#002c61`.
+- Fonte exclusiva dos ícones: `frontend/assets/icons/prospect-source.png`, imagem enviada pelo usuário em 06/11/2026. Não substituir a logo do site em `frontend/assets/img/logo.png`.
+- Ícones gerados: `prospect-192.png`, `prospect-512.png`, `prospect-maskable-512.png` e `apple-touch-icon.png` (180 × 180).
+- O adaptativo usa escala 0,70 e fundo `#00244d` para preservar o desenho nos recortes do sistema. Os demais usam a imagem completa.
+- Regerar da raiz com `node scripts/generate-pwa-icons.cjs`; requer a dependência `canvas` instalada em `backend/node_modules`.
+- Os PNGs e a fonte estão versionados. Todas as seis páginas HTML referenciam manifesto e ícone Apple. URLs dos ícones usam `?v=2`; atualizar a versão ao trocar a arte.
+- Não há service worker nem implementação de modo offline nesta entrega. Não confundir personalização de instalação com suporte offline.
+
+### 12.5 Histórico recente por commit
+
+| Commit | Mudança |
+|---|---|
+| `9d319e9` | Contagens e gráfico de qualificações do dashboard |
+| `e8e63d4` | Filtro compartilhado de carteira e seletor estilizado |
+| `04cbb0c` | Paginação das listas do admin |
+| `79fe992` | Paginação do corretor e adaptação mobile dos modais |
+| `10b9f83` | Aparência da paginação do corretor igual à do admin |
+| `ce8cc67` | Menus e formulário de agendamento na requalificação |
+| `9aaacd8` | “Lembrar de mim” e restauração de sessão |
+| `5957409` | Manifesto e ícones iniciais do PWA |
+| `fedd84b` | Imagem exclusiva enviada pelo usuário para o PWA |
+
+## 13. Verificação e limitações conhecidas
+
+- Nas entregas recentes foram executadas verificações de sintaxe JavaScript, `git diff --check` e verificações pontuais com Node.
+- Paginação: verificações com banco simulado para limites, busca parametrizada, base vazia e filtros. Não equivalem a testes de integração com PostgreSQL.
+- Sessão: verificações com armazenamento simulado para persistência, troca de opção e logout; não houve teste completo de login em navegador.
+- Menus: cálculos de posição verificados em tamanhos de desktop/mobile; não houve validação visual automatizada em navegador.
+- PWA: dimensões e referências validadas; ícones inspecionados visualmente. A entrega inicial também verificou HTTP e MIME com Express local. Instalação real em Android/iOS/desktop não foi testada.
+- Não há scripts `test`, `lint` ou `build` definidos nos package.json atuais. As verificações pontuais anteriores não constituem uma suíte de regressão versionada.
+- Iniciar `backend/server.js` chama `inicializarSchema()` e pode aplicar o schema no banco configurado. Não tratar a inicialização como uma verificação somente de leitura.
+- Afirmações antigas deste documento sobre limites comerciais de Vercel/Cloudinary, modelos Gemini, latências e soluções propostas são contexto histórico. Confirmar documentação oficial atual antes de depender delas; não foram revalidadas nesta atualização.
+
+## 14. Orientações de trabalho adotadas
+
+O usuário forneceu o documento “AI ENGINEERING REPOSITORY BOOTSTRAP V6.1” e pediu conformidade nas próximas tarefas.
+
+- Investigar código, configuração, histórico e instruções existentes antes de modificar; separar fatos verificados, inferências e desconhecidos.
+- Descobrir Skills aprovadas no repositório, consultar especificações/design pertinentes e documentação oficial atual quando houver dependência de comportamento externo.
+- O documento aponta OpenSpec como destino para contratos comportamentais relevantes. Ainda não há OpenSpec, AGENTS.md, CLAUDE.md, DESIGN.md ou estrutura `.ai` versionados neste repositório; o bootstrap foi lido, não executado. Não alegar instalação ou validação desses mecanismos.
+- Fazer a menor alteração completa, preservar trabalho alheio e evitar refatorações ou dependências sem relação com a tarefa.
+- Identificar falhas reais antes de escolher testes. Não usar quantidade de testes ou cobertura como prova de qualidade.
+- Relatar o que foi e não foi validado; conferir mobile e desktop quando a mudança envolver interface.
+- Git e publicação seguem a autorização explícita descrita na seção 8.2. Não adicionar atribuição promocional ou autoria de IA.
+- Manter conhecimento durável neste arquivo sem copiar integralmente o bootstrap nem criar documentação duplicada.
+
+FIM DO CONTEXTO. Conferir o código atual antes de alterar comportamentos: este documento é um mapa do projeto, não substitui evidência do runtime.

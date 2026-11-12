@@ -18,6 +18,8 @@ Modais de clientes, histórico, requalificação e agendamento/retorno, busca, p
 
 Prospecção e Empreendimentos SHALL reutilizar a mesma preferência persistida, controle de tema, paleta de modais e navegação mobile. Filtros, seleção de carteira, qualificação e acesso ao book SHALL preservar suas funções existentes. Na prospecção, o item ativo da navegação SHALL manter a carteira em andamento. Um focusout sem destino (toque no Safari) não SHALL ocultar as opções antes do click que escolhe o tema.
 
+Minha Conta SHALL compartilhar o tema e seletor existentes, preservando os formulários de perfil e senha e seu comportamento desktop. A ilustração do dashboard SHALL ocupar espaço no fluxo do cabeçalho, sem corte quando a largura cresce. O conteúdo da Prospecção SHALL reservar espaço inferior suficiente para que o botão de histórico fique acima da navegação fixa no fim da rolagem. Conferido em prévia local 464×951; Minha Conta também conferida em 320px nos temas claro/escuro, sem envio de formulários.
+
 ### Requirement: Evolução individual
 No mobile, o tempo médio SHALL ser substituído por um gráfico de 30 dias com primeira qualificação, descartados e requalificações, conforme as classificações do admin. GET /api/corretor/evolucao SHALL usar exclusivamente o usuário autenticado, sua base atual e a carteira selecionada. A ordenação dos eventos SHALL ocorrer antes de filtrar o autor e o período para não transformar requalificações em primeiras qualificações. Datas SHALL seguir o calendário do relatório admin existente (CURRENT_DATE e criado_em::date).
 
