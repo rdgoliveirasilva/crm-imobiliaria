@@ -8,7 +8,8 @@
     <link rel="apple-touch-icon" sizes="180x180" href="/assets/icons/apple-touch-icon.png?v=2">
     <meta name="theme-color" content="#002c61">
     <meta name="apple-mobile-web-app-title" content="Prospect">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <script src="js/corretor-theme.js"></script>
     <title>Prospect - Prospecção Ativa</title>
 
     <meta property="og:type" content="website">
@@ -26,8 +27,10 @@
 <link rel="stylesheet" href="css/corretor.css">
 <link rel="stylesheet" href="css/prospeccao.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="css/corretor-theme.css">
+    <link rel="stylesheet" href="css/corretor-pages-mobile.css">
 </head>
-<body class="corretor-page prospeccao-page">
+<body class="corretor-page prospeccao-page mobile-premium mobile-inner-page">
 
     <!-- =====================================================
          HEADER
@@ -39,15 +42,15 @@
                     <i class="fas fa-arrow-left"></i>
                 </a>
                 <div class="logo-mark">
-                    <img
+                    <img class="desktop-brand"
                         src="assets/img/logo2.png"
                         alt="SR Lançamentos"
                         onerror="this.style.display='none'; this.parentElement.classList.add('fallback');"
                     >
-                    <i class="fas fa-building logo-fallback"></i>
+                    <img class="mobile-only" src="assets/img/logo.png" alt="Prospect"><i class="fas fa-building logo-fallback"></i>
                 </div>
                 <div class="header-brand-text">
-                    <h1>SR <span>Lançamentos</span></h1>
+                    <h1 class="desktop-brand">SR <span>Lançamentos</span></h1><strong class="mobile-only mobile-brand">Prospect</strong>
                     <p id="headerCarteiraNome">Prospecção ativa</p>
                 </div>
             </div>
@@ -56,6 +59,14 @@
                 <div class="user-info">
                     <span class="user-greeting">Bem vindo,</span>
                     <strong id="headerUserName">Corretor</strong>
+                </div>
+                <div class="mobile-only theme-control" id="themeControl">
+                    <button type="button" class="theme-toggle" id="themeToggle" aria-label="Escolher tema" aria-expanded="false" aria-controls="themeOptions"><i class="fas fa-circle-half-stroke" aria-hidden="true"></i></button>
+                    <div id="themeOptions" class="theme-options" role="group" aria-label="Tema da interface" hidden>
+                        <button type="button" data-theme-choice="auto" aria-pressed="true"><i class="fas fa-clock" aria-hidden="true"></i> Automático <small>Claro 6h–18h · escuro à noite</small></button>
+                        <button type="button" data-theme-choice="light" aria-pressed="false"><i class="fas fa-sun" aria-hidden="true"></i> Claro</button>
+                        <button type="button" data-theme-choice="dark" aria-pressed="false"><i class="fas fa-moon" aria-hidden="true"></i> Escuro</button>
+                    </div>
                 </div>
                 <button class="btn-avatar" id="btnAvatar" title="Menu">
                     <i class="fas fa-user"></i>
@@ -227,6 +238,13 @@
         </section>
 
     </main>
+    <nav class="mobile-only mobile-bottom-nav" aria-label="Navegação principal">
+        <a href="corretor.html"><i class="fas fa-house"></i><span>Início</span></a>
+        <button type="button" disabled aria-label="Esteira, em breve"><i class="fas fa-layer-group"></i><span>Esteira <small>em breve</small></span></button>
+        <a aria-current="page" href="#progressBar" class="mobile-prospect"><i class="fas fa-bolt"></i><span>Prospecção</span></a>
+        <button type="button" disabled aria-label="Vendas, em breve"><i class="fas fa-chart-simple"></i><span>Vendas <small>em breve</small></span></button>
+        <a href="empreendimentos.html"><i class="far fa-building"></i><span>Empreendimentos</span></a>
+    </nav>
 
     <!-- =====================================================
          MODAL — HISTÓRICO DE QUALIFICADOS

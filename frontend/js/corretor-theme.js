@@ -61,6 +61,8 @@
         options.querySelectorAll('[data-theme-choice]').forEach(button => button.addEventListener('click', () => { choose(button.dataset.themeChoice); close(true); }));
         control.addEventListener('keydown', event => { if (event.key === 'Escape') { close(true); event.stopPropagation(); } });
         document.addEventListener('click', event => { if (!control.contains(event.target)) close(); });
-        control.addEventListener('focusout', event => { if (!control.contains(event.relatedTarget)) close(); });
+        // Safari pode emitir focusout com relatedTarget nulo antes do click de toque.
+        // Não esconda as opções nessa fase: o click externo já fecha o menu.
+        control.addEventListener('focusout', event => { if (event.relatedTarget && !control.contains(event.relatedTarget)) close(); });
     });
 })();

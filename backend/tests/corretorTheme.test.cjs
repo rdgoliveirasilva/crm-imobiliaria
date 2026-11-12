@@ -10,7 +10,7 @@ function fixture(hour, stored = null, storageBlocked = false) {
     const events = {}, dataset = {}, buttons = {}, meta = {};
     const options = { hidden: true, querySelectorAll: () => Object.values(buttons), querySelector: () => Object.values(buttons).find(b => b.pressed === 'true') };
     const toggle = { setAttribute() {}, querySelector: () => ({}), focus() {}, addEventListener: (type, fn) => { events['toggle:' + type] = fn; } };
-    const control = { contains: () => true, addEventListener() {} };
+    const control = { contains: target => target === toggle || Object.values(buttons).includes(target), addEventListener: (name, fn) => { events['control:' + name] = fn; } };
     for (const choice of ['auto', 'light', 'dark']) buttons[choice] = { dataset: { themeChoice: choice }, setAttribute(k,v) { this.pressed = v; }, focus() {}, addEventListener: (type, fn) => { events[choice + ':' + type] = fn; } };
     const document = { documentElement: { dataset }, querySelector: () => meta, querySelectorAll: () => Object.values(buttons),
         getElementById: id => ({ themeToggle: toggle, themeControl: control, themeOptions: options })[id], addEventListener: (name, fn) => { events[name] = fn; } };
@@ -19,7 +19,7 @@ function fixture(hour, stored = null, storageBlocked = false) {
     let timer;
     vm.runInNewContext(source, { document, window, localStorage, CustomEvent: function() {}, Date: class extends Date { constructor(value) { super(value ?? now.getTime()); } }, clearTimeout() {}, setTimeout(fn, delay) { timer = { fn, delay }; } });
     events.DOMContentLoaded();
-    return { dataset, events, get stored() { return stored; }, get timer() { return timer; }, setHour(hour) { now.setHours(hour); } };
+    return { dataset, events, options, get stored() { return stored; }, get timer() { return timer; }, setHour(hour) { now.setHours(hour); } };
 }
 
 test('automático usa claro entre 6h e 18h e agenda a próxima transição', () => {
@@ -42,6 +42,18 @@ test('escolha manual persiste e não é substituída ao mudar o horário', () =>
     f.events['auto:click']();
     assert.equal(f.stored, 'auto');
     assert.equal(f.dataset.theme, 'light');
+});
+
+test('toque com focusout nulo não fecha opções antes de selecionar escuro', () => {
+    const f = fixture(12);
+    f.events['toggle:click']();
+    f.events['control:focusout']({ relatedTarget: null });
+    assert.equal(f.options.hidden, false);
+    f.events['dark:click']();
+    assert.equal(f.dataset.themePreference, 'dark');
+    assert.equal(f.dataset.theme, 'dark');
+    assert.equal(f.stored, 'dark');
+    assert.equal(f.options.hidden, true);
 });
 
 test('tema funciona com armazenamento bloqueado e sincroniza outras abas', () => {

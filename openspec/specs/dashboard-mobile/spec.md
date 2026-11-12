@@ -16,6 +16,8 @@ Ao lado do avatar mobile, o seletor SHALL oferecer Claro, Escuro e Automático. 
 
 Modais de clientes, histórico, requalificação e agendamento/retorno, busca, paginação, menu do usuário e gráficos SHALL compartilhar tokens de contraste para os dois temas. O histórico individual mobile SHALL usar o modal temático, com observações escapadas, em vez do alerta nativo. Alterar tema SHALL redesenhar os gráficos com os dados já carregados, sem nova consulta. O desktop SHALL manter sua apresentação.
 
+Prospecção e Empreendimentos SHALL reutilizar a mesma preferência persistida, controle de tema, paleta de modais e navegação mobile. Filtros, seleção de carteira, qualificação e acesso ao book SHALL preservar suas funções existentes. Na prospecção, o item ativo da navegação SHALL manter a carteira em andamento. Um focusout sem destino (toque no Safari) não SHALL ocultar as opções antes do click que escolhe o tema.
+
 ### Requirement: Evolução individual
 No mobile, o tempo médio SHALL ser substituído por um gráfico de 30 dias com primeira qualificação, descartados e requalificações, conforme as classificações do admin. GET /api/corretor/evolucao SHALL usar exclusivamente o usuário autenticado, sua base atual e a carteira selecionada. A ordenação dos eventos SHALL ocorrer antes de filtrar o autor e o período para não transformar requalificações em primeiras qualificações. Datas SHALL seguir o calendário do relatório admin existente (CURRENT_DATE e criado_em::date).
 

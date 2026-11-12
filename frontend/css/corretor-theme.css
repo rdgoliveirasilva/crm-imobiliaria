@@ -1,5 +1,7 @@
 /* Tokens e componentes do tema mobile. O desktop mantém sua apresentação. */
+@media (min-width: 601px) { .mobile-premium .mobile-only { display: none; } }
 @media (max-width: 600px) {
+    .mobile-premium .theme-control { display: block; }
     :root {
         color-scheme: dark;
         --theme-page: #061126; --theme-glow: #0c2b59;
@@ -58,6 +60,7 @@
     .mobile-premium .modal-header, .mobile-premium .modal-toolbar { background: var(--theme-surface); border-color: var(--theme-border); flex-shrink: 0; }
     .mobile-premium .modal-body { min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
     .mobile-premium .modal-header h2, .mobile-premium .modal-header h2 i { color: var(--theme-text); filter: none; }
+    .mobile-premium .modal-header p { color: var(--theme-muted); }
     .mobile-premium .modal-header::after { background: var(--theme-accent); }
     .mobile-premium .modal-close { min-width: 44px; min-height: 44px; background: var(--theme-control); color: var(--theme-text); }
     .mobile-premium .modal-search-wrap { min-width: 0; width: 100%; background: var(--theme-page); border-color: var(--theme-border); }
