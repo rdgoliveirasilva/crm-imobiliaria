@@ -54,7 +54,12 @@ async function reprocessarSemResposta() {
     const client = await pool.connect();
     try {
         await client.query('BEGIN');
-        await client.query('LOCK TABLE usuarios IN SHARE ROW EXCLUSIVE MODE');
+        // Nunca deixe uma transação suspensa bloquear a autenticação no serverless.
+        await client.query("SET LOCAL idle_in_transaction_session_timeout = '5s'");
+        await client.query("SET LOCAL statement_timeout = '3s'");
+        await client.query("SET LOCAL lock_timeout = '500ms'");
+        // Outra redistribuição/inativação em curso: tenta novamente na próxima visita.
+        await client.query('LOCK TABLE usuarios IN SHARE ROW EXCLUSIVE MODE NOWAIT');
         const prontos = await client.query(`
             SELECT id, corretor_id
             FROM leads
@@ -62,6 +67,8 @@ async function reprocessarSemResposta() {
               AND data_reenvio IS NOT NULL
               AND data_reenvio <= NOW()
               AND EXISTS (SELECT 1 FROM usuarios u WHERE u.id = leads.corretor_id AND u.ativo = TRUE)
+            ORDER BY id
+            LIMIT 10
         `);
 
         if (!prontos.rows.length) { await client.query('COMMIT'); return; }
@@ -139,7 +146,9 @@ router.get('/proximo-lead', async (req, res) => {
         const corretorId = req.usuario.id;
         const listaId = req.query.lista_id ? Number(req.query.lista_id) : null;
 
-        reprocessarSemResposta().catch(err => console.error('[lazy-check]', err.message));
+        // A Vercel pode suspender a execução assim que res.json é enviado.
+        // Aguarde COMMIT/ROLLBACK e release antes de encerrar a requisição.
+        await reprocessarSemResposta();
 
         let query, params;
 
@@ -648,6 +657,15 @@ router.get('/estatisticas', async (req, res) => {
         const followUp          = porTag.follow_up || 0;
         const mensagensEnviadas = porTag.mensagem_enviada || 0;
         const retornarDepois    = porTag.retornar_depois || 0;
+
+        // A tela de prospecção precisa apenas dos contadores atuais, não do
+        // cruzamento de todo o histórico para calcular tempo de requalificação.
+        if (req.query.resumo === '1') {
+            return res.json({ total, trabalhados, qualificados: trabalhados,
+                restantes: naFila, na_fila: naFila, descartados,
+                em_atendimento: emAtendimento, follow_up: followUp,
+                mensagens_enviadas: mensagensEnviadas, retornar_depois: retornarDepois, porTag });
+        }
 
         /* =========================================================
            4) Requalificações — total de eventos no histórico

@@ -12,6 +12,7 @@ document.addEventListener('DOMContentLoaded', () => {
        ========================================================= */
     let leadAtual = null;
     let processando = false;
+    let estatisticasRequest = 0;
     let toastTimer = null;
     let carteiraAtiva = null;
     let visaoGeral = !new URLSearchParams(window.location.search).has('lista');
@@ -219,7 +220,6 @@ document.addEventListener('DOMContentLoaded', () => {
        CARREGAR CENA
        ========================================================= */
     async function carregarCena() {
-        await atualizarEstatisticas();
         await carregarProximoLead();
     }
 
@@ -409,11 +409,13 @@ document.addEventListener('DOMContentLoaded', () => {
             if (callNotice) callNotice.style.display = 'none';
 
             mostrarTelaLead();
-            await atualizarEstatisticas();
+            void atualizarEstatisticas();
 
         } catch (err) {
             console.error('[prospeccao] erro ao carregar lead:', err);
             mostrarToast(err.message || 'Erro ao carregar.', 'error');
+        } finally {
+            processando = false;
         }
     }
 
@@ -425,7 +427,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (leadState)    leadState.style.display = 'none';
 
         try {
-            const stats = await ApiClient.get('/api/corretor/estatisticas');
+            const stats = await ApiClient.get('/api/corretor/estatisticas?resumo=1');
             const temHistorico = stats.trabalhados > 0;
 
             const waitingIcon  = $('waitingIcon');
@@ -462,13 +464,15 @@ document.addEventListener('DOMContentLoaded', () => {
        ESTATÍSTICAS
        ========================================================= */
     async function atualizarEstatisticas() {
+        const request = ++estatisticasRequest;
         try {
             const listaId = carteiraAtiva ? carteiraAtiva.id : null;
             const url = listaId
-                ? `/api/corretor/estatisticas?lista_id=${listaId}`
-                : '/api/corretor/estatisticas';
+                ? `/api/corretor/estatisticas?resumo=1&lista_id=${listaId}`
+                : '/api/corretor/estatisticas?resumo=1';
 
             const stats = await ApiClient.get(url);
+            if (request !== estatisticasRequest || listaId !== (carteiraAtiva ? carteiraAtiva.id : null)) return;
 
             if (progressCount) progressCount.textContent = `${stats.trabalhados} de ${stats.total} trabalhados`;
             const pct = stats.total > 0 ? (stats.trabalhados / stats.total) * 100 : 0;
@@ -596,8 +600,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 agendamento_local: agendamentoLocal
             });
 
-            await atualizarEstatisticas();
-            await new Promise(r => setTimeout(r, 400));
+            leadAtual = null;
+            mostrarTelaEspera();
             await carregarProximoLead();
 
         } catch (err) {
@@ -723,8 +727,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 fecharModalAgendamento();
                 processando = false;
-                await atualizarEstatisticas();
-                await new Promise(r => setTimeout(r, 300));
+                leadAtual = null;
+                mostrarTelaEspera();
                 await carregarProximoLead();
 
             } else {
