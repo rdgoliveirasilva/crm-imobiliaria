@@ -14,7 +14,7 @@
         root.dataset.theme = theme;
         root.dataset.themePreference = preference;
         const meta = document.querySelector('meta[name="theme-color"]');
-        if (meta) meta.content = mobile.matches ? (theme === 'dark' ? '#061126' : '#f3f6fc') : '#002c61';
+        if (meta) meta.content = mobile.matches || root.classList.contains('corretor-desktop-theme') ? (theme === 'dark' ? '#061126' : '#f3f6fc') : '#002c61';
         const toggle = document.getElementById('themeToggle');
         if (toggle) {
             toggle.setAttribute('aria-label', `Tema ${theme === 'dark' ? 'escuro' : 'claro'}${preference === 'auto' ? ' automático' : ''}. Escolher tema`);

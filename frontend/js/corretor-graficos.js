@@ -1,6 +1,7 @@
-/* Gráficos exclusivos do mobile; usa a mesma versão do Chart.js do admin. */
+/* Gráficos do dashboard responsivo; usa a mesma versão do Chart.js do admin. */
 (() => {
     const mobile = window.matchMedia('(max-width: 1024px)');
+    const visivel = () => mobile.matches || document.documentElement.classList.contains('corretor-desktop-theme');
     let carteira = null, request = 0, iniciado = false, biblioteca;
     let trend, spark, ultimosDados;
     const $ = id => document.getElementById(id);
@@ -68,7 +69,7 @@
         const atual = ++request;
         ultimosDados = null;
         limpar();
-        if (!mobile.matches) return;
+        if (!visivel()) return;
         const comparacao = $('mensagensComparacao');
         const resumo = $('mobileTrendResumo');
         comparacao.textContent = 'Carregando evolução diária…';
@@ -89,7 +90,7 @@
             $('mensagensSparkline').setAttribute('aria-label', 'Mensagens registradas: ' + dados.labels.slice(-7).map((dia, i) => `${dia}: ${dados.mensagens.slice(-7)[i]}`).join('; '));
             try {
                 await carregarBiblioteca();
-                if (atual === request && mobile.matches) renderizar(dados);
+                if (atual === request && visivel()) renderizar(dados);
             } catch {
                 if (atual === request) resumo.textContent += ' Gráfico indisponível no momento.';
             }
@@ -102,7 +103,7 @@
 
     mobile.addEventListener('change', () => { if (iniciado) carregar(carteira); });
     window.addEventListener('prospect:themechange', () => {
-        if (mobile.matches && ultimosDados && window.Chart) { limpar(); renderizar(ultimosDados); }
+        if (visivel() && ultimosDados && window.Chart) { limpar(); renderizar(ultimosDados); }
     });
     window.CorretorGraficos = { carregar };
 })();

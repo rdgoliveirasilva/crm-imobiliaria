@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" class="corretor-desktop-theme">
 <head>
     <script src="js/auth-session.js"></script>
     <script src="js/auth-guard.js"></script>
@@ -44,6 +44,8 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link rel="stylesheet" href="css/corretor-mobile.css">
     <link rel="stylesheet" href="css/corretor-theme.css">
+    <link rel="stylesheet" href="css/corretor-theme-components.css" media="(min-width: 1025px)">
+    <link rel="stylesheet" href="css/corretor-desktop.css">
 </head>
 <body class="corretor-page mobile-premium">
 
@@ -68,6 +70,14 @@
                 </div>
             </div>
 
+            <nav class="desktop-sidebar-nav" aria-label="Navegação principal desktop">
+                <a href="corretor.html" aria-current="page"><i class="fas fa-house"></i> Início</a>
+                <button type="button" disabled><i class="fas fa-layer-group"></i><span>Esteira Comercial<small>Em breve</small></span></button>
+                <button type="button" id="desktopIniciarProspeccao"><i class="fas fa-bolt"></i> Prospecção</button>
+                <button type="button" disabled><i class="fas fa-chart-simple"></i><span>Vendas<small>Em breve</small></span></button>
+                <a href="empreendimentos.html"><i class="far fa-building"></i> Empreendimentos</a>
+                <a class="sidebar-account" href="conta.html"><i class="fas fa-gear"></i> Minha conta</a>
+            </nav>
             <div class="header-user">
                 <div class="user-info">
                     <span class="user-greeting">Bem vindo,</span>

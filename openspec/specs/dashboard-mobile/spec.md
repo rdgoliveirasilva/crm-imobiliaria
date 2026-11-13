@@ -6,7 +6,7 @@ Aplicar a identidade Dark Premium Tech à visão inicial do corretor, preservand
 ## Requirements
 
 ### Requirement: Escopo visual
-O tema SHALL ser restrito à página do corretor até 1024px. Acima de 1024px, o desktop SHALL manter os estilos existentes. A navegação fixa SHALL respeitar safe areas e reservar espaço no conteúdo. Animações SHALL respeitar prefers-reduced-motion.
+O dashboard do corretor SHALL compartilhar o tema em todas as larguras. Acima de 1024px SHALL usar menu lateral, mensagens e ilustração na primeira linha, seis indicadores e gráfico ao lado dos acessos comerciais. As demais páginas SHALL preservar seu desktop existente. A navegação fixa SHALL respeitar safe areas e reservar espaço no conteúdo. Animações SHALL respeitar prefers-reduced-motion.
 
 ### Requirement: Indicadores reais
 Mensagens Enviadas SHALL usar estatisticas.mensagens_enviadas, nunca trabalhados. Agendados SHALL usar estatisticas.porTag.agendado. Os indicadores e drill-downs SHALL manter o filtro de carteira existente. Após o card maior de mensagens, os mini-cards SHALL seguir a ordem Clientes Trabalhados, Em Atendimento, Follow Up, Na Fila, Agendados e Retornar Depois. Não SHALL haver botões duplicados de trabalhados/retornos.
@@ -14,14 +14,14 @@ Mensagens Enviadas SHALL usar estatisticas.mensagens_enviadas, nunca trabalhados
 ### Requirement: Tema e contraste
 Ao lado do avatar mobile, o seletor SHALL oferecer Claro, Escuro e Automático. Automático SHALL ser o padrão, usando hora local do dispositivo: claro das 06:00 às 17:59 e escuro das 18:00 às 05:59. A preferência manual SHALL persistir em localStorage, sem ser substituída pela mudança de horário. Ao voltar à aba ou cruzar o horário de transição, o modo automático SHALL atualizar a interface. Falha de armazenamento não SHALL impedir a escolha durante a sessão.
 
-Modais de clientes, histórico, requalificação e agendamento/retorno, busca, paginação, menu do usuário e gráficos SHALL compartilhar tokens de contraste para os dois temas. O histórico individual mobile SHALL usar o modal temático, com observações escapadas, em vez do alerta nativo. Alterar tema SHALL redesenhar os gráficos com os dados já carregados, sem nova consulta. O desktop SHALL manter sua apresentação.
+Modais de clientes, histórico, requalificação e agendamento/retorno, busca, paginação, menu do usuário e gráficos SHALL compartilhar tokens de contraste para os dois temas. O histórico individual mobile SHALL usar o modal temático, com observações escapadas, em vez do alerta nativo. Alterar tema SHALL redesenhar os gráficos com os dados já carregados, sem nova consulta. O dashboard desktop SHALL compartilhar os mesmos tokens, gráficos e histórico temático.
 
 Prospecção e Empreendimentos SHALL reutilizar a mesma preferência persistida, controle de tema, paleta de modais e navegação mobile. Filtros, seleção de carteira, qualificação e acesso ao book SHALL preservar suas funções existentes. Na prospecção, o item ativo da navegação SHALL manter a carteira em andamento. Um focusout sem destino (toque no Safari) não SHALL ocultar as opções antes do click que escolhe o tema.
 
 Minha Conta SHALL compartilhar o tema e seletor existentes, preservando os formulários de perfil e senha e seu comportamento desktop. A ilustração do dashboard SHALL ocupar espaço no fluxo do cabeçalho, sem corte quando a largura cresce. O conteúdo da Prospecção SHALL reservar espaço inferior suficiente para que o botão de histórico fique acima da navegação fixa no fim da rolagem. Conferido em prévia local 464×951; Minha Conta também conferida em 320px nos temas claro/escuro, sem envio de formulários.
 
 ### Requirement: Evolução individual
-No mobile, o tempo médio SHALL ser substituído por um gráfico de 30 dias com primeira qualificação, descartados e requalificações, conforme as classificações do admin. GET /api/corretor/evolucao SHALL usar exclusivamente o usuário autenticado, sua base atual e a carteira selecionada. A ordenação dos eventos SHALL ocorrer antes de filtrar o autor e o período para não transformar requalificações em primeiras qualificações. Datas SHALL seguir o calendário do relatório admin existente (CURRENT_DATE e criado_em::date).
+No dashboard responsivo, o tempo médio SHALL ser substituído por um gráfico de 30 dias com primeira qualificação, descartados e requalificações, conforme as classificações do admin. GET /api/corretor/evolucao SHALL usar exclusivamente o usuário autenticado, sua base atual e a carteira selecionada. A ordenação dos eventos SHALL ocorrer antes de filtrar o autor e o período para não transformar requalificações em primeiras qualificações. Datas SHALL seguir o calendário do relatório admin existente (CURRENT_DATE e criado_em::date).
 
 ### Requirement: Comparação de mensagens
 A curva sombreada SHALL representar os últimos sete dias de contatos distintos com ação mensagem_enviada no histórico, mesmo que tenham mudado de tag depois. Vários registros do mesmo contato no mesmo dia SHALL contar uma vez. A comparação SHALL mostrar hoje até agora versus ontem completo, com diferença absoluta e percentual. Se ontem for zero, o percentual SHALL ser indisponível. O total principal SHALL continuar representando a classificação atual, distinguindo-se da atividade diária pelo texto do card.
@@ -39,3 +39,6 @@ Testes Node cobrem contagem distinta de mensagens, agendados, comparação perce
 
 ### Requirement: Tablet
 Entre 601 e 1024px, o dashboard SHALL usar três colunas nos indicadores, conteúdo limitado a 820px, gráfico mais alto e navegação inferior centralizada. Tema, gráficos e histórico SHALL usar o mesmo limite de 1024px. Prospecção, Empreendimentos e Minha Conta SHALL compartilhar essa adaptação sem alterar regras de negócio.
+
+### Requirement: Desktop do corretor
+Acima de 1024px SHALL manter filtros, dados reais e ações existentes, com navegação lateral. Entre 1025 e 1350px os seis indicadores SHALL se distribuir em três colunas; em telas maiores, seis colunas. Claro, Escuro e Automático SHALL funcionar junto ao avatar também no desktop. Esteira e Vendas SHALL continuar sinalizadas como Em breve. Abaixo de 1025px SHALL preservar o layout mobile/tablet e sua navegação inferior.

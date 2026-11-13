@@ -42,9 +42,10 @@ test('evolução usa o usuário autenticado, ignora corretor informado e valida 
     assert.equal(calls.length, 2);
 });
 
-test('gráficos não buscam dados no desktop e ignoram resposta de carteira anterior', async () => {
+test('gráficos respeitam a visibilidade, habilitam desktop temático e ignoram resposta antiga', async () => {
     const elementos = new Map(), pending = [], charts = [];
     const media = { matches: false, addEventListener() {} };
+    let desktopTematico = false;
     const get = id => {
         if (!elementos.has(id)) elementos.set(id, { textContent: '', dataset: {}, setAttribute() {}, getContext: () => ({ createLinearGradient: () => ({ addColorStop() {} }) }) });
         return elementos.get(id);
@@ -52,7 +53,7 @@ test('gráficos não buscam dados no desktop e ignoram resposta de carteira ante
     function Chart(ctx, config) { charts.push(config); this.destroy = () => {}; }
     const window = { Chart, matchMedia: () => media, addEventListener() {} };
     vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../../frontend/js/corretor-graficos.js'), 'utf8'), {
-        window, Chart, getComputedStyle: () => ({ getPropertyValue: () => '' }), document: { getElementById: get }, ApiClient: { get: url => new Promise(resolve => pending.push({ url, resolve })) }
+        window, Chart, getComputedStyle: () => ({ getPropertyValue: () => '' }), document: { documentElement: { classList: { contains: () => desktopTematico } }, getElementById: get }, ApiClient: { get: url => new Promise(resolve => pending.push({ url, resolve })) }
     });
     await window.CorretorGraficos.carregar(null);
     assert.equal(pending.length, 0);
@@ -68,4 +69,10 @@ test('gráficos não buscam dados no desktop e ignoram resposta de carteira ante
     assert.match(get('mensagensComparacao').textContent, /^2 hoje/);
     assert.equal(charts.length, 2);
     assert.deepEqual(charts[1].data.datasets[0].data, [2]);
+    media.matches = false;
+    desktopTematico = true;
+    const desktop = window.CorretorGraficos.carregar(7);
+    pending[2].resolve(data);
+    await desktop;
+    assert.equal(charts.length, 4);
 });

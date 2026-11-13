@@ -67,7 +67,7 @@ test('tema funciona com armazenamento bloqueado e sincroniza outras abas', () =>
 });
 
 test('paletas mantêm contraste de texto AA nas superfícies e estados', () => {
-    const css = fs.readFileSync(path.join(__dirname, '../../frontend/css/corretor-theme.css'), 'utf8');
+    const css = fs.readFileSync(path.join(__dirname, '../../frontend/css/corretor-theme-tokens.css'), 'utf8');
     const blocks = [css.match(/:root\s*\{([^}]+)\}/)[1], css.match(/:root\[data-theme="light"\]\s*\{([^}]+)\}/)[1]];
     const luminance = hex => {
         const values = hex.slice(1).match(/../g).map(n => parseInt(n,16)/255).map(v => v <= .04045 ? v/12.92 : ((v+.055)/1.055)**2.4);
