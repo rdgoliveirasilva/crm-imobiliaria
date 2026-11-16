@@ -46,3 +46,5 @@ Contrato registrado a partir do pedido do usuário. OpenSpec CLI/Skills não est
 
 ## Correção de estados herdados — 2026-11-16
 O script backend/scripts/corrigir-fila-inativacao.cjs faz diagnóstico por padrão e aplica com --apply. Só seleciona clientes cuja distribuição coincide com o evento de inativação, com destinatário correspondente e sem eventos posteriores. Registra o estado anterior no histórico antes de limpar a classificação e o agendamento. Foram corrigidos 188 clientes; a conferência posterior retornou zero candidatos. Clientes trabalhados após a transferência foram preservados.
+
+Complemento autorizado pelo gestor: a opção --incluir-trabalhados permite corrigir também qualificações posteriores à redistribuição, mantendo a validação de destinatário e data de transferência. Foram corrigidos mais 8 clientes, com estado anterior e observações registrados no histórico. A conferência imediata retornou zero candidatos.
