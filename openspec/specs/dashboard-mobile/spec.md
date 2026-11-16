@@ -42,3 +42,6 @@ Entre 601 e 1024px, o dashboard SHALL usar três colunas nos indicadores, conte�
 
 ### Requirement: Desktop do corretor
 Acima de 1024px SHALL manter filtros, dados reais e ações existentes, com navegação lateral. Entre 1025 e 1350px os seis indicadores SHALL se distribuir em três colunas; em telas maiores, seis colunas. Claro, Escuro e Automático SHALL funcionar junto ao avatar também no desktop. Esteira e Vendas SHALL continuar sinalizadas como Em breve. Abaixo de 1025px SHALL preservar o layout mobile/tablet e sua navegação inferior.
+
+### Ajuste de zoom desktop — 2026-11-16
+A coluna lateral SHALL alinhar seu conteúdo ao início e impedir encolhimento da marca. Em alturas até 760px SHALL reduzir espaçamentos. A rolagem vertical SHALL continuar disponível com barra oculta, mantendo acesso ao conteúdo em telas menores. Revisão visual não executada nesta alteração: acesso ao navegador de teste indisponível.

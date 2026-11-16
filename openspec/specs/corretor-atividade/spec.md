@@ -13,7 +13,7 @@ O sistema SHALL recusar login e requisições autenticadas de usuários inativos
 - THEN sua próxima requisição autenticada é recusada com 401
 
 ### Requirement: Redistribuição atômica
-Ao inativar, o sistema SHALL remover todos os vínculos de lista e distribuir os clientes entre os demais corretores ativos participantes de cada lista, em rodízio por ID. Sem destinatário, SHALL definir corretor_id como nulo. Dados, qualificação e histórico dos clientes transferidos SHALL ser preservados.
+Ao inativar, o sistema SHALL remover todos os vínculos de lista e distribuir os clientes entre os demais corretores ativos participantes de cada lista, em rodízio por ID. Sem destinatário, SHALL definir corretor_id como nulo. Os clientes transferidos e órfãos SHALL voltar a status novo (Na fila), sem resultado, data de decisão, agendamento ou reenvio pendente. Histórico e observações SHALL ser preservados; o evento de inativação SHALL registrar o estado anterior. As exceções sem interesse e sem resposta continuam com o inativo.
 
 #### Scenario: Clientes preservados
 - WHEN o cliente tem resultado sem_interesse ou sem_resposta, ou status sem_resposta
@@ -43,3 +43,6 @@ Seletores e endpoints de distribuição SHALL aceitar somente corretores ativos.
 
 ## Validation status
 Contrato registrado a partir do pedido do usuário. OpenSpec CLI/Skills não estão instalados; não houve validação via CLI. Verificações executáveis em backend/tests/corretorAtividade.test.cjs usam banco simulado e não substituem teste transacional PostgreSQL.
+
+## Correção de estados herdados — 2026-11-16
+O script backend/scripts/corrigir-fila-inativacao.cjs faz diagnóstico por padrão e aplica com --apply. Só seleciona clientes cuja distribuição coincide com o evento de inativação, com destinatário correspondente e sem eventos posteriores. Registra o estado anterior no histórico antes de limpar a classificação e o agendamento. Foram corrigidos 188 clientes; a conferência posterior retornou zero candidatos. Clientes trabalhados após a transferência foram preservados.

@@ -5,8 +5,12 @@
     body.mobile-premium { --sidebar-width: 232px; background: radial-gradient(ellipse at 90% 0%,var(--theme-glow),transparent 50%),var(--theme-page); color: var(--theme-text); min-height: 100dvh; }
     .mobile-premium::before, .mobile-premium .app-header::before { display: none; }
     .mobile-premium .app-header { position: fixed; inset: 0 auto 0 0; width: var(--sidebar-width); height: 100dvh; border-right: 1px solid var(--theme-border); background: var(--theme-surface); box-shadow: none; z-index: 110; }
-    .mobile-premium .header-inner { height: 100%; width: 100%; box-sizing: border-box; display: flex; flex-direction: column; align-items: stretch; padding: 26px 16px; gap: 26px; overflow-y: auto; }
-    .mobile-premium .header-brand { gap: 10px; }
+    .mobile-premium .header-inner { height: 100%; width: 100%; box-sizing: border-box; display: flex; flex-direction: column; align-items: stretch; justify-content: flex-start; padding: 26px 16px; gap: 26px; overflow-y: auto; overflow-x: hidden; scrollbar-width: none; }
+    .mobile-premium .header-inner::-webkit-scrollbar { width: 0; height: 0; }
+    .mobile-premium .header-inner > * { flex-shrink: 0; }
+    .mobile-premium .header-brand { gap: 10px; min-height: 52px; }
+    .mobile-premium .header-brand-text { min-width: 0; }
+    .mobile-premium .logo-mark { flex-shrink: 0; }
     .mobile-premium .logo-mark { width: 42px; height: 48px; }
     .mobile-premium .desktop-brand, .mobile-premium .header-brand-text > p { display: none; }
     .mobile-premium .logo-mark .mobile-only, .mobile-premium .mobile-brand, .mobile-premium .mobile-company { display: block; }
@@ -104,4 +108,12 @@
 }
 @media (min-width: 1025px) and (prefers-reduced-motion: reduce) {
     .mobile-premium *, .mobile-premium *::before, .mobile-premium *::after { animation: none !important; transition: none !important; }
+}
+
+@media (min-width: 1025px) and (max-height: 760px) {
+    .mobile-premium .header-inner { padding: 16px 12px; gap: 14px; }
+    .mobile-premium .desktop-sidebar-nav { gap: 4px; }
+    .desktop-sidebar-nav :is(a,button) { padding: 9px 12px; min-height: 44px; }
+    .desktop-sidebar-nav .sidebar-account { margin-top: 12px; }
+    .mobile-premium .header-user { padding: 10px; }
 }

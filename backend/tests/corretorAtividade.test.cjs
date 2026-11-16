@@ -6,7 +6,7 @@ const path = require('node:path');
 function fixture({ fail = false } = {}) {
     let state = { ativo: true, membros: [1], leads: [
         {id:1,lista_id:10,corretor_id:1,resultado:null,status:'novo'},
-        {id:2,lista_id:10,corretor_id:1,resultado:'agendado',status:'qualificado'},
+        {id:2,lista_id:10,corretor_id:1,resultado:'agendado',status:'qualificado',agendamento_data:'amanha',agendamento_local:'local',decidido_em:'ontem'},
         {id:3,lista_id:11,corretor_id:1,resultado:'telefone_invalido',status:'descartado'},
         {id:4,lista_id:10,corretor_id:1,resultado:'sem_interesse',status:'descartado'},
         {id:5,lista_id:10,corretor_id:1,resultado:'sem_resposta',status:'sem_resposta',data_reenvio:'amanha'}
@@ -22,7 +22,7 @@ function fixture({ fail = false } = {}) {
         else if(sql.startsWith('UPDATE leads SET data_reenvio')) state.leads.filter(protectedLead).forEach(l=>l.data_reenvio=null);
         else if(sql.startsWith('SELECT id, lista_id')) return {rows:state.leads.filter(l=>l.corretor_id===1&&!protectedLead(l))};
         else if(sql.startsWith('SELECT u.id')) return {rows:args[0]===10?[{id:2},{id:3}]:[]};
-        else if(sql.startsWith('UPDATE leads SET corretor_id')) {if(fail) throw Error('falha de escrita');args[0].forEach((id,i)=>state.leads.find(l=>l.id===id).corretor_id=args[1][i]);}
+        else if(sql.startsWith('UPDATE leads SET corretor_id')) {assert.match(sql, /status = 'novo'/); for (const field of ['resultado','decidido_em','agendamento_data','agendamento_local','data_reenvio']) assert.ok(sql.includes(field + ' = NULL')); if(fail) throw Error('falha de escrita');args[0].forEach((id,i)=>Object.assign(state.leads.find(l=>l.id===id),{corretor_id:args[1][i],status:'novo',resultado:null,decidido_em:null,agendamento_data:null,agendamento_local:null,data_reenvio:null}));}
         else if(sql.startsWith('SELECT id FROM usuarios')) return {rows:args[0].includes(1)&&!state.ativo?[]:args[0].map(id=>({id}))};
         return {rows:[]};
     }};
@@ -34,7 +34,8 @@ test('inativar distribui na lista, mantém exceções e cria órfãos',async()=>
     const f=fixture();const r=await f.alterarAtividade(1,false);
     assert.equal(r.redistribuidos,2);assert.equal(r.orfaos,1);
     assert.deepEqual(f.state.leads.map(l=>l.corretor_id),[2,3,null,1,1]);
-    assert.equal(f.state.leads[1].resultado,'agendado');
+    for (const lead of f.state.leads.slice(0,3)) { assert.equal(lead.status,'novo'); assert.equal(lead.resultado,null); assert.equal(lead.agendamento_data,null); assert.equal(lead.decidido_em,null); }
+    assert.equal(f.state.leads[3].resultado,'sem_interesse'); assert.equal(f.state.leads[4].resultado,'sem_resposta');
     assert.equal(f.state.leads[4].data_reenvio,null);assert.equal(f.state.membros.length,0);assert.equal(f.released,1);
 });
 test('reativar não recupera clientes ou listas; repetir inativação é idempotente',async()=>{

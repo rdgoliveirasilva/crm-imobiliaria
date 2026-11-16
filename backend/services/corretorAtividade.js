@@ -35,14 +35,24 @@ async function alterarAtividade(id, ativo) {
                     const recipients = await client.query("SELECT u.id FROM lista_corretores lc JOIN usuarios u ON u.id = lc.corretor_id WHERE lc.lista_id = $1 AND u.ativo = TRUE AND u.tipo IN ('corretor', 'teste') ORDER BY u.id", [listaId]);
                     const ids = recipients.rows.map(r => r.id);
                     const destinos = leadIds.map((_, index) => ids.length ? ids[index % ids.length] : null);
-                    await client.query(`UPDATE leads SET corretor_id = destino.corretor_id, distribuido_em = NOW()
+                    // Guarda o estado anterior antes de reiniciar o trabalho do destinatário.
+                    await client.query(`INSERT INTO historico (lead_id, corretor_id, acao, observacao)
+                        SELECT lead_id, $3, 'corretor_inativado',
+                            CASE WHEN destino.corretor_id IS NULL
+                                THEN 'Sem corretor ativo na lista; cliente órfão.'
+                                ELSE 'Redistribuído para corretor ' || destino.corretor_id || ' por inativação.' END
+                            || ' Estado anterior: ' || jsonb_build_object(
+                                'status', l.status, 'resultado', l.resultado,
+                                'agendamento_data', l.agendamento_data,
+                                'agendamento_local', l.agendamento_local,
+                                'decidido_em', l.decidido_em)::text
+                        FROM unnest($1::int[], $2::int[]) AS destino(lead_id, corretor_id)
+                        JOIN leads l ON l.id = destino.lead_id`, [leadIds, destinos, id]);
+                    await client.query(`UPDATE leads SET corretor_id = destino.corretor_id, distribuido_em = NOW(),
+                            status = 'novo', resultado = NULL, decidido_em = NULL,
+                            agendamento_data = NULL, agendamento_local = NULL, data_reenvio = NULL
                         FROM unnest($1::int[], $2::int[]) AS destino(lead_id, corretor_id)
                         WHERE leads.id = destino.lead_id`, [leadIds, destinos]);
-                    await client.query(`INSERT INTO historico (lead_id, corretor_id, acao, observacao)
-                        SELECT lead_id, $3, 'corretor_inativado', CASE WHEN corretor_id IS NULL
-                            THEN 'Sem corretor ativo na lista; cliente órfão.'
-                            ELSE 'Redistribuído para corretor ' || corretor_id || ' por inativação.' END
-                        FROM unnest($1::int[], $2::int[]) AS destino(lead_id, corretor_id)`, [leadIds, destinos, id]);
                     if (ids.length) redistribuidos += leadIds.length; else orfaos += leadIds.length;
                 }
             }
