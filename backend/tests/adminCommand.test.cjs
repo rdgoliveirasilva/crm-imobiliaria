@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const vm = require('node:vm');
 const path = require('node:path');
 
-function fixture(get) {
+function fixture(get, withCharts=false) {
     const elements = new Map();
     const element = id => {
         if (!elements.has(id)) elements.set(id, {innerHTML:'',textContent:'',focus(){}});
@@ -12,11 +12,13 @@ function fixture(get) {
     };
     // Exposição apenas no contexto de teste; não adiciona API pública ao produto.
     const source = fs.readFileSync(path.join(__dirname,'../../frontend/js/admin-command.js'),'utf8')
-        .replace('window.AdminCommand={connect', 'window.testApi={state,render,open,walletNumbers,userNumbers,tags,filterHealth,withoutRecentAccess,teamTable}; window.AdminCommand={connect');
-    const window={addEventListener(){}};
-    vm.runInNewContext(source, { window, document:{getElementById:element,querySelectorAll:()=>[],addEventListener(){},body:{classList:{add(){},remove(){}}}},
+        .replace('window.AdminCommand={connect', 'window.testApi={state,render,open,walletNumbers,userNumbers,tags,filterHealth,withoutRecentAccess,teamTable,walletHub,liveTeam}; window.AdminCommand={connect');
+    const charts=[];
+    function Chart(canvas,config){Object.assign(this,config);this.destroy=()=>{};charts.push(this);}
+    const window={addEventListener(){},matchMedia:()=>({matches:false}),Chart:withCharts?Chart:undefined};
+    vm.runInNewContext(source, { window, Chart, getComputedStyle:()=>({getPropertyValue:()=>''}), document:{documentElement:{},getElementById:element,querySelectorAll:()=>[],addEventListener(){},body:{classList:{add(){},remove(){}}}},
         ApiClient:{get},Date,URLSearchParams,clearTimeout,console });
-    return {api:window.AdminCommand,testApi:window.testApi,element};
+    return {api:window.AdminCommand,testApi:window.testApi,element,charts};
 }
 const sample = {
     '/api/admin/dashboard':{totalContatos:10,qualificados:4,porTag:{em_atendimento:2},porCorretor:[{id:9,total:10,qualificados:3}]},
@@ -91,4 +93,34 @@ test('KPIs têm ações reais e alerta de acesso restringe a tabela',async()=>{
     f.testApi.state.summary=[{id:9,ultimo_acesso:new Date().toISOString()}];
     assert.doesNotMatch(f.testApi.teamTable(),/data-user="9"/);
     f.testApi.state.summary=[];assert.match(f.testApi.teamTable(),/data-user="9"/);
+});
+
+test('hub pagina seis carteiras, limita a página após filtro e não perde itens',async()=>{
+    const f=fixture(async url=>sample[url]);await f.api.refresh();
+    f.testApi.state.wallets=Array.from({length:14},(_,i)=>({lista_id:i+1,nome:'Carteira '+(i+1),total:5,corretores:[]}));
+    const seen=[];
+    for(let page=1;page<=3;page++){
+        f.testApi.state.hubPage=page;
+        const html=f.testApi.walletHub(true);
+        const ids=[...html.matchAll(/data-wallet="(\d+)"/g)].map(m=>Number(m[1]));
+        assert.equal(ids.length,page===3?2:6);seen.push(...ids);
+    }
+    assert.deepEqual(seen,Array.from({length:14},(_,i)=>i+1));
+    f.testApi.state.search='Carteira 14';const filtered=f.testApi.walletHub(false);
+    assert.equal(f.testApi.state.hubPage,1);assert.match(filtered,/1–1 de 1 carteiras/);
+});
+test('tooltip por dia contém as três séries inclusive valores zero',async()=>{
+    const f=fixture(async url=>sample[url],true);await f.api.refresh();
+    const chart=f.charts[0];assert.equal(chart.options.interaction.mode,'index');
+    assert.equal(chart.options.interaction.intersect,false);
+    assert.deepEqual(Array.from(chart.data.datasets,d=>d.label),['Primeiras qualificações','Descartados','Requalificações']);
+    const callback=chart.options.plugins.tooltip.callbacks;
+    assert.equal(callback.title([{label:'17/11'}]),'Dia 17/11');
+    assert.equal(callback.label({dataset:{label:'Descartados'},parsed:{y:0}}),'Descartados: 0');
+});
+test('equipe ao vivo mostra presença e último acesso sem tratar offline como online',async()=>{
+    const f=fixture(async url=>sample[url]);await f.api.refresh();
+    f.testApi.state.summary=[{id:9,nome:'Maria',status:'offline',ultimo_acesso:null,total_carteira:10,total_qualificados:2}];
+    const html=f.testApi.liveTeam();assert.match(html,/data-presence="offline"/);
+    assert.match(html,/Último acesso: Nunca acessou/);assert.match(html,/2 \/ 10 trabalhados/);
 });

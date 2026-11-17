@@ -10,7 +10,7 @@
     const date = value => value ? new Date(value).toLocaleString('pt-BR') : 'Não disponível';
     const labels = {sem_qualificacao:'Sem qualificação',mensagem_enviada:'Mensagem enviada',follow_up:'Follow up',agendado:'Agendado',em_atendimento:'Em atendimento',retornar_depois:'Retornar depois',vendido:'Vendido',sem_interesse:'Sem interesse',sem_resposta:'Sem resposta',telefone_invalido:'Telefone inválido'};
     const colors = ['#21c7ed','#21dda8','#aa7cf7','#ffc568','#f47793','#689bd7','#7f8cae','#43b6a3'];
-    const state = { view:'geral', wallets:[], users:[], summary:[], kpis:null, graphs:null, search:'', filter:'todas', drawer:null, page:1, busy:null, serial:0, charts:[], healthUser:'', healthData:null, healthRequest:0, userAttention:false };
+    const state = { view:'geral', wallets:[], users:[], summary:[], kpis:null, graphs:null, search:'', filter:'todas', drawer:null, page:1, busy:null, serial:0, charts:[], healthUser:'', healthData:null, healthRequest:0, userAttention:false, hubPage:1 };
     let actions = {}, previousFocus, contactTimer;
     const panel = (title,sub,body,cls='') => `<section class="cc-panel ${cls}"><header><div><h2>${title}</h2><p>${sub}</p></div></header>${body}</section>`;
     const empty = text => `<p class="cc-empty">${text}</p>`;
@@ -31,7 +31,7 @@
         state.charts.filter(c=>c.ccId===id).forEach(c=>c.destroy()); state.charts=state.charts.filter(c=>c.ccId!==id);
         const theme=getComputedStyle(document.documentElement);
         const token=(name,fallback)=>theme.getPropertyValue(name).trim()||fallback;
-        state.charts.push(new Chart(canvas,{type:'line',data:{labels:data.labels||[],datasets:[['Primeiras qualificações','qualificados',token('--theme-chart-green','#21dda8')],['Descartados','descartados',token('--theme-chart-red','#f47793')],['Requalificações','requalificados',token('--theme-chart-purple','#aa7cf7')]].map(([label,key,color])=>({label,data:data[key]||[],borderColor:color,backgroundColor:color+'16',fill:true,tension:.35,pointRadius:0,borderWidth:2}))},options:{responsive:true,maintainAspectRatio:false,animation:window.matchMedia('(prefers-reduced-motion: reduce)').matches?false:{duration:200},plugins:{legend:{position:'bottom',labels:{color:token('--theme-muted','#a9bddb'),boxWidth:8,usePointStyle:true,font:{size:10}}}},scales:{x:{ticks:{color:token('--theme-muted','#a9bddb'),maxTicksLimit:7,maxRotation:0},grid:{display:false}},y:{beginAtZero:true,ticks:{color:token('--theme-muted','#a9bddb'),precision:0},grid:{color:token('--theme-chart-grid','#ffffff0b')}}}}}));
+        state.charts.push(new Chart(canvas,{type:'line',data:{labels:data.labels||[],datasets:[['Primeiras qualificações','qualificados',token('--theme-chart-green','#21dda8')],['Descartados','descartados',token('--theme-chart-red','#f47793')],['Requalificações','requalificados',token('--theme-chart-purple','#aa7cf7')]].map(([label,key,color])=>({label,data:data[key]||[],borderColor:color,backgroundColor:color+'16',fill:true,tension:.35,pointRadius:0,pointHoverRadius:4,pointHitRadius:16,borderWidth:2}))},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false,axis:'x'},animation:window.matchMedia('(prefers-reduced-motion: reduce)').matches?false:{duration:200},plugins:{tooltip:{enabled:true,mode:'index',intersect:false,backgroundColor:token('--theme-surface','#0b1e3d'),titleColor:token('--theme-text','#f8faff'),bodyColor:token('--theme-text','#f8faff'),borderColor:token('--theme-border','#35547c'),borderWidth:1,padding:12,callbacks:{title:items=>items.length?'Dia '+items[0].label:'',label:item=>item.dataset.label+': '+fmt(item.parsed.y)}},legend:{position:'bottom',labels:{color:token('--theme-muted','#a9bddb'),boxWidth:8,usePointStyle:true,font:{size:10}}}},scales:{x:{ticks:{color:token('--theme-muted','#a9bddb'),maxTicksLimit:7,maxRotation:0},grid:{display:false}},y:{beginAtZero:true,ticks:{color:token('--theme-muted','#a9bddb'),precision:0},grid:{color:token('--theme-chart-grid','#ffffff0b')}}}}}));
         state.charts.at(-1).ccId=id;
     }
     function destroyCharts() { state.charts.filter(c=>c.ccId!=='ccDrawerChart').forEach(c=>c.destroy()); state.charts=state.charts.filter(c=>c.ccId==='ccDrawerChart'); }
@@ -73,7 +73,10 @@
     }
     function liveTeam() {
         const list=state.summary.filter(c=>c.tipo!=='teste');
-        return list.map(c=>`<button class="cc-person" data-user="${c.id}"><span class="cc-avatar">${esc(c.nome.split(' ').map(x=>x[0]).slice(0,2).join(''))}</span><span><strong>${esc(c.nome)}</strong><small>${c.status==='online'?'Online':c.status==='ausente'?'Ausente':'Offline'}</small></span><span class="cc-person-progress"><b>${pct(c.total_qualificados,c.total_carteira)}%</b><progress value="${num(c.total_qualificados)}" max="${Math.max(1,num(c.total_carteira))}"></progress></span></button>`).join('') || empty('Nenhum corretor ativo.');
+        return `<div class="cc-live-caption"><span class="cc-live-indicator" aria-hidden="true"></span> Monitoramento ao vivo <small>Atualização a cada minuto</small></div>`+ (list.map(c=>{
+            const status=['online','ausente'].includes(c.status)?c.status:'offline';
+            return `<button class="cc-person cc-live-person" data-presence="${status}" data-user="${c.id}" aria-label="Ver ${esc(c.nome)}, ${status}"><span class="cc-avatar">${esc(c.nome.split(' ').map(x=>x[0]).slice(0,2).join(''))}<i class="cc-presence-dot" aria-hidden="true"></i></span><span><strong>${esc(c.nome)}</strong><small class="cc-presence-label">${status==='online'?'Online':status==='ausente'?'Ausente':'Offline'}</small><small class="cc-last-access">Último acesso: ${esc(c.ultimo_acesso?date(c.ultimo_acesso):'Nunca acessou')}</small></span><span class="cc-person-progress"><b>${pct(c.total_qualificados,c.total_carteira)}%</b><progress value="${num(c.total_qualificados)}" max="${Math.max(1,num(c.total_carteira))}"></progress><small>${fmt(c.total_qualificados)} / ${fmt(c.total_carteira)} trabalhados</small></span></button>`;
+        }).join('') || empty('Nenhum corretor ativo.'));
     }
     function alerts() {
         const low=state.wallets.filter(c=>{const n=walletNumbers(c);return n.total>0&&n.progress<20;});
@@ -85,11 +88,16 @@
         let list=state.wallets.filter(w=>w.nome.toLocaleLowerCase().includes(state.search.toLocaleLowerCase()));
         if(state.filter==='atencao') list=list.filter(w=>{const n=walletNumbers(w);return n.total>0&&n.progress<20;});
         if(state.filter==='ativas') list=list.filter(w=>walletNumbers(w).pending>0);
+        const total=list.length, pageSize=6, pages=Math.max(1,Math.ceil(total/pageSize));
+        state.hubPage=Math.max(1,Math.min(state.hubPage,pages));
+        const start=(state.hubPage-1)*pageSize;
+        list=list.slice(start,start+pageSize);
+        const pagination=`<nav class="cc-pagination cc-hub-pagination" aria-label="Paginação de carteiras"><span role="status">${total?start+1:0}–${Math.min(start+pageSize,total)} de ${total} carteiras</span><div><button data-hub-page="1" ${state.hubPage===1?'disabled':''} aria-label="Primeira página">«</button><button data-hub-page="${state.hubPage-1}" ${state.hubPage===1?'disabled':''} aria-label="Página anterior">‹</button><strong>${state.hubPage} / ${pages}</strong><button data-hub-page="${state.hubPage+1}" ${state.hubPage===pages?'disabled':''} aria-label="Próxima página">›</button><button data-hub-page="${pages}" ${state.hubPage===pages?'disabled':''} aria-label="Última página">»</button></div></nav>`;
         const tools=`<div class="cc-tools"><label class="cc-search"><i class="fas fa-search"></i><input id="ccSearch" placeholder="Buscar carteira..." value="${esc(state.search)}" aria-label="Buscar carteira"></label><select id="ccWalletFilter" aria-label="Situação das carteiras"><option value="todas" ${state.filter==='todas'?'selected':''}>Todas</option><option value="ativas" ${state.filter==='ativas'?'selected':''}>Com pendências</option><option value="atencao" ${state.filter==='atencao'?'selected':''}>Atenção</option></select></div>`;
         let body;
         if(cards) body=`<div class="cc-wallet-grid">${list.map((w,i)=>{const n=walletNumbers(w);return `<button class="cc-wallet" data-wallet="${w.lista_id}" style="--wallet:${colors[i%3]}"><div class="cc-wallet-title"><i class="fas fa-folder"></i><span><strong>${esc(w.nome)}</strong><small>${fmt(n.total)} contatos</small></span><b>→</b></div><div class="cc-wallet-body"><div class="cc-ring" style="--progress:${n.progress}%"><div><strong>${n.progress}%</strong><small>Trabalhado</small></div></div><dl><div><dt>Trabalhados</dt><dd>${fmt(n.worked)}</dd></div><div><dt>Pendentes*</dt><dd>${fmt(n.pending)}</dd></div><div><dt>Total</dt><dd>${fmt(n.total)}</dd></div></dl></div></button>`;}).join('')}<button class="cc-wallet cc-create" data-nav="upload"><i class="fas fa-plus"></i><strong>Nova carteira</strong><small>Cadastre e organize uma nova carteira</small></button></div>`;
         else body=`<div class="cc-table-scroll"><table class="cc-table"><thead><tr><th>Carteira</th><th>Contatos</th><th>Trabalhados</th><th>Pendentes*</th><th>Progresso</th><th></th></tr></thead><tbody>${list.map(w=>{const n=walletNumbers(w);return `<tr><td><i class="fas fa-folder"></i> ${esc(w.nome)}</td><td>${fmt(n.total)}</td><td>${fmt(n.worked)}</td><td>${fmt(n.pending)}</td><td><progress value="${n.worked}" max="${Math.max(1,n.total)}"></progress> ${n.progress}%</td><td><button data-wallet="${w.lista_id}">Abrir →</button></td></tr>`;}).join('')}</tbody></table></div>`;
-        return `<section class="cc-panel cc-hub"><header><div><h2><i class="fas fa-folder-open"></i> Hub de Carteiras</h2><p>${cards?'Selecione uma carteira para equipe, contatos e evolução.':'Gerencie e acompanhe suas carteiras.'}</p></div>${tools}</header>${list.length||cards?body:empty('Nenhuma carteira encontrada.')}<p class="cc-footnote">*Saldo entre total e qualificados/descartados. Pode incluir sem resposta e contatos sem responsável. Base sem usuários de teste.</p></section>`;
+        return `<section class="cc-panel cc-hub"><header><div><h2><i class="fas fa-folder-open"></i> Hub de Carteiras</h2><p>${cards?'Selecione uma carteira para equipe, contatos e evolução.':'Gerencie e acompanhe suas carteiras.'}</p></div>${tools}</header>${list.length||cards?body:empty('Nenhuma carteira encontrada.')}${pagination}<p class="cc-footnote">*Saldo entre total e qualificados/descartados. Pode incluir sem resposta e contatos sem responsável. Base sem usuários de teste.</p></section>`;
     }
     function renderHub() { $('ccHubMount').innerHTML=walletHub(state.view==='carteira'); }
     function teamTable() {
@@ -201,17 +209,18 @@
             if(b.dataset.user)open('user',Number(b.dataset.user));
             if(b.dataset.drawerTab)open(state.drawer.type,state.drawer.id,b.dataset.drawerTab);
             if(b.hasAttribute('data-retry-drawer'))renderDrawer();
+            if(b.dataset.hubPage){state.hubPage=Number(b.dataset.hubPage);renderHub();$('ccHubMount').querySelector('.cc-hub-pagination button:not(:disabled)')?.focus();}
             if(b.dataset.page)contacts(Number(b.dataset.page));
             if(b.dataset.edit){const u=state.users.find(u=>u.id===Number(b.dataset.edit));close();actions.editar?.(u);}
             if(b.dataset.active){const u=state.users.find(u=>u.id===Number(b.dataset.active));close();actions.atividade?.(u);}
             if(b.dataset.access)open('user',Number(b.dataset.access),'acesso');
             if(b.dataset.manageWallet){const w=state.wallets.find(w=>w.lista_id===Number(b.dataset.manageWallet));close();actions.lista?.(w);}
             if(b.dataset.nav)navigate(b.dataset.nav);
-            if(b.dataset.attention){state.userAttention=b.dataset.attention==='users';state.view=b.dataset.attention==='wallets'?'carteira':'corretor';state.filter=b.dataset.attention==='wallets'?'atencao':'todas';render();}
+            if(b.dataset.attention){state.hubPage=1;state.userAttention=b.dataset.attention==='users';state.view=b.dataset.attention==='wallets'?'carteira':'corretor';state.filter=b.dataset.attention==='wallets'?'atencao':'todas';render();}
             if(b.dataset.tag){const scope=b.dataset.scope;const wallet=scope==='wallet'?state.drawer?.id:'';const user=b.dataset.global?'':scope==='user'?state.drawer?.id:scope==='wallet'?'':state.healthUser;close();actions.tag?.(b.dataset.tag,labels[b.dataset.tag]||b.dataset.tag,wallet,user);}
         });
-        document.addEventListener('input',e=>{if(e.target.id==='ccSearch'){state.search=e.target.value;const cursor=e.target.selectionStart;renderHub();$('ccSearch').focus();$('ccSearch').setSelectionRange(cursor,cursor);}if(e.target.id==='ccContactSearch'){clearTimeout(contactTimer);contactTimer=setTimeout(()=>contacts(1),250);}});
-        document.addEventListener('change',async e=>{if(e.target.id==='ccWalletFilter'){state.filter=e.target.value;renderHub();}if(e.target.id==='ccHealthUser')await filterHealth(e.target.value);});
+        document.addEventListener('input',e=>{if(e.target.id==='ccSearch'){state.search=e.target.value;state.hubPage=1;const cursor=e.target.selectionStart;renderHub();$('ccSearch').focus();$('ccSearch').setSelectionRange(cursor,cursor);}if(e.target.id==='ccContactSearch'){clearTimeout(contactTimer);contactTimer=setTimeout(()=>contacts(1),250);}});
+        document.addEventListener('change',async e=>{if(e.target.id==='ccWalletFilter'){state.filter=e.target.value;state.hubPage=1;renderHub();}if(e.target.id==='ccHealthUser')await filterHealth(e.target.value);});
         document.addEventListener('keydown',e=>{if(!state.drawer)return;if(e.key==='Escape'){close();return;}if(e.key==='Tab'){const items=Array.from(overlay.querySelectorAll('button:not(:disabled),input,a[href],select')).filter(el=>el.getClientRects().length);const first=items[0],last=items.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}}});
     }
     window.addEventListener('prospect:themechange',()=>{
@@ -221,6 +230,7 @@
             c.data.datasets.forEach((d,i)=>{d.borderColor=palette[i];d.backgroundColor=palette[i]+'16';});
             const muted=tokens.getPropertyValue('--theme-muted').trim();
             c.options.plugins.legend.labels.color=muted;
+            Object.assign(c.options.plugins.tooltip,{backgroundColor:tokens.getPropertyValue('--theme-surface').trim(),titleColor:tokens.getPropertyValue('--theme-text').trim(),bodyColor:tokens.getPropertyValue('--theme-text').trim(),borderColor:tokens.getPropertyValue('--theme-border').trim()});
             c.options.scales.x.ticks.color=muted;c.options.scales.y.ticks.color=muted;
             c.options.scales.y.grid.color=tokens.getPropertyValue('--theme-chart-grid').trim();c.update('none');
         }
