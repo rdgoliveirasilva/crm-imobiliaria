@@ -582,3 +582,7 @@ O usuário forneceu o documento “AI ENGINEERING REPOSITORY BOOTSTRAP V6.1” e
 - Manter conhecimento durável neste arquivo sem copiar integralmente o bootstrap nem criar documentação duplicada.
 
 FIM DO CONTEXTO. Conferir o código atual antes de alterar comportamentos: este documento é um mapa do projeto, não substitui evidência do runtime.
+
+
+## Admin — centro de comando (17/11/2026)
+Frontend reorganizado em Operação geral, Por carteira e Por corretor: frontend/js/admin-command.js e frontend/css/admin-command.css. admin.js mantém os formulários e ações existentes por uma ponte de integração; markup legado do dashboard fica oculto para conservar os elementos dos drill-downs. admin.html carrega o mesmo controlador e tokens Claro/Escuro/Automático do corretor; preferência manual persistida em prospect-theme. Nenhuma API ou regra de banco alterada. Detalhes e limitações em openspec/specs/admin-dashboard/spec.md. 26 testes passaram; revisão visual ainda pendente por indisponibilidade segura do navegador.

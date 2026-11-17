@@ -807,6 +807,7 @@ function abrirTelaRevisao(resposta) {
        DASHBOARD
        ========================================================= */
         async function atualizarDashboard() {
+        if (window.AdminCommand) return window.AdminCommand.refresh();
         try {
             const stats = await ApiClient.get('/api/admin/dashboard');
 
@@ -4628,6 +4629,7 @@ statsListaAtual = {};
        Init — puxa dados reais
        ========================================================= */
     async function initDashboardV2() {
+        if (window.AdminCommand) return window.AdminCommand.refresh();
         try {
             // 1. KPIs + progresso
             const filtroVisao = document.getElementById('filtroCarteiraDonut');
@@ -4802,6 +4804,25 @@ statsListaAtual = {};
         }
     })();
 
+    window.AdminCommand?.connect({
+        editar: abrirEditarCorretor,
+        lista: lista => abrirModalLista(lista.lista_id || lista.id, { ...lista, id: lista.lista_id || lista.id }),
+        tag: (chave, label, carteira = '', corretor = '') => {
+            $('filtroCarteiraDonut').value = carteira;
+            $('filtroCorretorDonut').value = corretor;
+            return abrirModalTagDash(chave, label);
+        },
+        atividade: corretor => abrirConfirm(corretor.ativo === false ? 'Ativar corretor?' : 'Inativar corretor?',
+            corretor.ativo === false ? 'Liberar acesso sem recuperar clientes e carteiras anteriores?'
+                : 'Bloquear acesso e redistribuir clientes para Na fila entre participantes ativos? Sem interesse e Sem resposta permanecem com ele.', async () => {
+                try {
+                    await ApiClient.patch(`/api/admin/corretores/${corretor.id}/ativo`, { ativo: corretor.ativo === false });
+                    await Promise.all([renderizarCorretores(), renderizarSeletorCorretores(), renderizarListas(), window.AdminCommand.refresh()]);
+                    window.AdminCommand.close();
+                    mostrarToast('Atividade atualizada.', 'success');
+                } catch (err) { mostrarToast(err.message, 'error'); }
+            })
+    });
     init();
 
 });

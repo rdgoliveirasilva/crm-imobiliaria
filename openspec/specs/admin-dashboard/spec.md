@@ -1,0 +1,18 @@
+# Centro de comando administrativo
+
+## Escopo
+Refatoração exclusiva do frontend admin. APIs, autenticação, banco e regras de distribuição permanecem intactos. As páginas do corretor não recebem novos estilos.
+
+## Visões
+- Operação geral: indicadores reais, distribuição por qualificação com filtro de corretor, alertas derivados de progresso/acesso/retorno, evolução de 30 dias, presença estimada por acesso e hub resumido.
+- Por carteira: cards com total, trabalhados, saldo e progresso circular. Desempenho individual somente no slide over. Abas Visão geral, Equipe, Contatos (30 por página com busca) e Atividades (agregados diários reais).
+- Por corretor: indicadores globais, funil, evolução e tabela de manutenção. Slide over com estado atual, qualificações, requalificações e acesso. Cadastro, edição e atividade reutilizam os formulários e confirmações anteriores.
+
+## Tema
+Claro, Escuro e Automático compartilham a chave prospect-theme e o controlador existente. Sem preferência salva, Automático usa o horário local: claro de 06h a 18h, escuro fora desse intervalo. Uma escolha manual persiste e prevalece sobre o horário até a pessoa escolher Automático novamente. Os gráficos mudam de paleta sem nova consulta.
+
+## Limitações explícitas dos dados
+APIs não fornecem evolução ou requalificações individuais, último acesso dos inativos nem permissões granulares. Esses dados são sinalizados como indisponíveis. Não são inventadas variações percentuais entre períodos. Carteiras com clientes atribuídos não equivalem necessariamente a vínculos de distribuição. O saldo dos cards respeita os totais existentes e pode incluir sem resposta e órfãos. Exportação CSV contém o resumo atual das carteiras.
+
+## Validação
+26 testes Node aprovados, incluindo isolamento de respostas do slide over, carregamentos concorrentes, escape de conteúdo, totais dos cards e preferência persistida do admin. Verificação de sintaxe dos scripts e git diff --check. O projeto não possui scripts de build/lint nem TypeScript. Conferência visual interrompida pelo controle do navegador, que não conseguiu identificar a URL atual com segurança; nenhuma validação visual completa foi declarada.

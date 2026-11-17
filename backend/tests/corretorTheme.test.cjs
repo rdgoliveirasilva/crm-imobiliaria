@@ -5,21 +5,21 @@ const vm = require('node:vm');
 const path = require('node:path');
 const source = fs.readFileSync(path.join(__dirname, '../../frontend/js/corretor-theme.js'), 'utf8');
 
-function fixture(hour, stored = null, storageBlocked = false) {
+function fixture(hour, stored = null, storageBlocked = false, adminDesktop = false) {
     let now = new Date(2026, 10, 12, hour, 0, 0);
     const events = {}, dataset = {}, buttons = {}, meta = {};
     const options = { hidden: true, querySelectorAll: () => Object.values(buttons), querySelector: () => Object.values(buttons).find(b => b.pressed === 'true') };
     const toggle = { setAttribute() {}, querySelector: () => ({}), focus() {}, addEventListener: (type, fn) => { events['toggle:' + type] = fn; } };
     const control = { contains: target => target === toggle || Object.values(buttons).includes(target), addEventListener: (name, fn) => { events['control:' + name] = fn; } };
     for (const choice of ['auto', 'light', 'dark']) buttons[choice] = { dataset: { themeChoice: choice }, setAttribute(k,v) { this.pressed = v; }, focus() {}, addEventListener: (type, fn) => { events[choice + ':' + type] = fn; } };
-    const document = { documentElement: { dataset }, querySelector: () => meta, querySelectorAll: () => Object.values(buttons),
+    const document = { documentElement: { dataset, classList: { contains: name => adminDesktop && name === "admin-desktop-theme" } }, querySelector: () => meta, querySelectorAll: () => Object.values(buttons),
         getElementById: id => ({ themeToggle: toggle, themeControl: control, themeOptions: options })[id], addEventListener: (name, fn) => { events[name] = fn; } };
-    const window = { matchMedia: () => ({ matches: true, addEventListener() {} }), dispatchEvent() {}, addEventListener: (name, fn) => { events[name] = fn; } };
+    const window = { matchMedia: () => ({ matches: !adminDesktop, addEventListener() {} }), dispatchEvent() {}, addEventListener: (name, fn) => { events[name] = fn; } };
     const localStorage = { getItem() { if (storageBlocked) throw Error(); return stored; }, setItem(key, value) { if (storageBlocked) throw Error(); stored = value; } };
     let timer;
     vm.runInNewContext(source, { document, window, localStorage, CustomEvent: function() {}, Date: class extends Date { constructor(value) { super(value ?? now.getTime()); } }, clearTimeout() {}, setTimeout(fn, delay) { timer = { fn, delay }; } });
     events.DOMContentLoaded();
-    return { dataset, events, options, get stored() { return stored; }, get timer() { return timer; }, setHour(hour) { now.setHours(hour); } };
+    return { dataset, events, options, meta, get stored() { return stored; }, get timer() { return timer; }, setHour(hour) { now.setHours(hour); } };
 }
 
 test('automático usa claro entre 6h e 18h e agenda a próxima transição', () => {
@@ -82,4 +82,20 @@ test('paletas mantêm contraste de texto AA nas superfícies e estados', () => {
             assert.ok((a+.05)/(b+.05) >= 4.5, `${fg} sobre ${bg}: contraste insuficiente`);
         }
     }
+});
+
+test('admin desktop inicia automático e conserva escolha manual nos próximos acessos', () => {
+    const initial = fixture(12, null, false, true);
+    assert.equal(initial.dataset.themePreference, 'auto');
+    assert.equal(initial.meta.content, '#f3f6fc');
+    initial.events['dark:click']();
+    const reopened = fixture(10, initial.stored, false, true);
+    assert.equal(reopened.dataset.themePreference, 'dark');
+    assert.equal(reopened.dataset.theme, 'dark');
+    assert.equal(reopened.meta.content, '#061126');
+    reopened.events['auto:click']();
+    assert.equal(reopened.dataset.theme, 'light');
+    reopened.setHour(20); reopened.events.focus();
+    assert.equal(reopened.dataset.theme, 'dark');
+    assert.equal(reopened.stored, 'auto');
 });

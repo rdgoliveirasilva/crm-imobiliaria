@@ -1,11 +1,12 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" class="admin-desktop-theme">
 <head>
     <script src="js/auth-session.js"></script>
     <meta charset="UTF-8">
     <link rel="manifest" href="/manifest.webmanifest">
     <link rel="apple-touch-icon" sizes="180x180" href="/assets/icons/apple-touch-icon.png?v=2">
     <meta name="theme-color" content="#002c61">
+    <script src="js/corretor-theme.js"></script>
     <meta name="apple-mobile-web-app-title" content="Prospect">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Prospect - Painel Administrativo</title>
@@ -40,11 +41,13 @@
 
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/admin.css">
+    <link rel="stylesheet" href="css/corretor-theme-tokens.css">
+    <link rel="stylesheet" href="css/admin-command.css">
 
     <!-- Chart.js (gráficos do dashboard) -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 </head>
-<body class="admin-page">
+<body class="admin-page admin-command">
 
     <!-- =====================================================
          HEADER
@@ -54,15 +57,15 @@
             <div class="header-brand">
                 <div class="logo-mark">
                     <img
-                        src="assets/img/logo2.png"
-                        alt="SR Lançamentos"
+                        src="assets/img/prospect.png"
+                        alt="Prospect"
                         onerror="this.style.display='none'; this.parentElement.classList.add('fallback');"
                     >
                     <i class="fas fa-building logo-fallback"></i>
                 </div>
                 <div class="header-brand-text">
-                    <h1>SR <span>Lançamentos</span></h1>
-                    <p>Painel Administrativo</p>
+                    <h1>Prospect</h1>
+                    <p>SR Lançamentos</p>
                 </div>
             </div>
 
@@ -70,6 +73,14 @@
                 <div class="user-info">
                     <span class="user-greeting">Bem vindo</span>
                     <strong id="headerUserName">Administrador</strong>
+                </div>
+                <div class="theme-control" id="themeControl">
+                    <button type="button" class="theme-toggle" id="themeToggle" aria-label="Escolher tema" aria-expanded="false" aria-controls="themeOptions"><i class="fas fa-circle-half-stroke" aria-hidden="true"></i></button>
+                    <div id="themeOptions" class="theme-options" role="group" aria-label="Tema da interface" hidden>
+                        <button type="button" data-theme-choice="auto" aria-pressed="true"><i class="fas fa-clock" aria-hidden="true"></i> Automático <small>Claro 6h–18h · escuro à noite</small></button>
+                        <button type="button" data-theme-choice="light" aria-pressed="false"><i class="fas fa-sun" aria-hidden="true"></i> Claro</button>
+                        <button type="button" data-theme-choice="dark" aria-pressed="false"><i class="fas fa-moon" aria-hidden="true"></i> Escuro</button>
+                    </div>
                 </div>
                 <button class="btn-avatar" id="btnAvatar" title="Menu">
                     <i class="fas fa-user"></i>
@@ -85,7 +96,7 @@
         <div class="admin-nav-inner">
             <button class="nav-tab active" data-tab="dashboard">
                 <i class="fas fa-chart-line"></i>
-                <span>Dashboard</span>
+                <span>Centro de comando</span>
             </button>
             <button class="nav-tab" data-tab="upload">
                 <i class="fas fa-cloud-upload-alt"></i>
@@ -1234,6 +1245,7 @@
 
     <script src="js/api-client.js"></script>
     <script src="js/avatar.js"></script>
+    <script src="js/admin-command.js"></script>
     <script src="js/admin.js"></script>
 
 </body>
