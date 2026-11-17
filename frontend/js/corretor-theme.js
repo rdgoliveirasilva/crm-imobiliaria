@@ -47,17 +47,47 @@
         const control = document.getElementById('themeControl');
         const toggle = document.getElementById('themeToggle');
         const options = document.getElementById('themeOptions');
+        if (!control || !toggle || !options) return;
+        // O top layer evita que o scroll da sidebar recorte o seletor do admin.
+        const floating = root.classList.contains('admin-desktop-theme');
+        if (floating && options.showPopover) options.setAttribute('popover', 'manual');
+        function positionOptions() {
+            if (!floating || options.hidden) return;
+            const anchor = toggle.getBoundingClientRect();
+            const viewport = window.visualViewport;
+            const width = viewport?.width || window.innerWidth;
+            const height = viewport?.height || window.innerHeight;
+            const left = viewport?.offsetLeft || 0;
+            const top = viewport?.offsetTop || 0;
+            options.style.maxWidth = `${Math.max(0, width - 24)}px`;
+            options.style.maxHeight = `${Math.max(0, height - 24)}px`;
+            const menu = options.getBoundingClientRect();
+            const below = anchor.bottom + 10;
+            const y = below + menu.height <= top + height - 12 ? below : anchor.top - menu.height - 10;
+            options.style.left = `${Math.max(left + 12, Math.min(anchor.left, left + width - menu.width - 12))}px`;
+            options.style.top = `${Math.max(top + 12, Math.min(y, top + height - menu.height - 12))}px`;
+        }
         function close(focus = false) {
+            if (floating && options.hidePopover && !options.hidden) options.hidePopover();
             options.hidden = true;
             toggle.setAttribute('aria-expanded', 'false');
             if (focus) toggle.focus();
         }
         toggle.addEventListener('click', () => {
             const open = options.hidden;
-            options.hidden = !open;
-            toggle.setAttribute('aria-expanded', String(open));
-            if (open) options.querySelector('[aria-pressed="true"]').focus();
+            if (!open) { close(); return; }
+            options.hidden = false;
+            if (floating && options.showPopover) options.showPopover();
+            positionOptions();
+            toggle.setAttribute('aria-expanded', 'true');
+            options.querySelector('[aria-pressed="true"]').focus();
         });
+        if (floating) {
+            window.addEventListener('resize', positionOptions);
+            document.addEventListener('scroll', positionOptions, true);
+            window.visualViewport?.addEventListener('resize', positionOptions);
+            window.visualViewport?.addEventListener('scroll', positionOptions);
+        }
         options.querySelectorAll('[data-theme-choice]').forEach(button => button.addEventListener('click', () => { choose(button.dataset.themeChoice); close(true); }));
         control.addEventListener('keydown', event => { if (event.key === 'Escape') { close(true); event.stopPropagation(); } });
         document.addEventListener('click', event => { if (!control.contains(event.target)) close(); });

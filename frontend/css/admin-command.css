@@ -352,3 +352,20 @@ html.admin-desktop-theme[data-theme="light"] { color-scheme:light; }
 .admin-command .cc-hub-pagination button:disabled { opacity:.35; cursor:default; }
 @media(max-width:520px) { .admin-command .cc-hub-pagination { flex-direction:column; } .cc-live-caption small { margin-left:15px; } }
 @media(prefers-reduced-motion:reduce) { .cc-live-indicator { animation:none; } }
+
+/* Seletor no top layer: sem recorte pelo scroll da sidebar, inclusive com zoom. */
+.admin-command .theme-options {
+    position:fixed; inset:auto; margin:0; width:220px; box-sizing:border-box;
+    overflow:auto; overscroll-behavior:contain; color:var(--theme-text);
+}
+.admin-command .theme-options button {
+    display:block; min-height:44px; line-height:1.5; white-space:normal;
+    overflow-wrap:break-word;
+}
+.admin-command .theme-options button i { width:20px; text-align:center; margin-right:5px; }
+.admin-command .theme-options button:hover { background:var(--theme-control); }
+.admin-command :is(.theme-toggle,.theme-options button):focus-visible {
+    outline:2px solid var(--theme-accent); outline-offset:2px;
+}
+.admin-command .theme-options small { font-size:11px; line-height:1.5; }
+.admin-command .theme-toggle { display:grid; place-items:center; padding:0; flex-shrink:0; }

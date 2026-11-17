@@ -8,13 +8,13 @@ const source = fs.readFileSync(path.join(__dirname, '../../frontend/js/corretor-
 function fixture(hour, stored = null, storageBlocked = false, adminDesktop = false) {
     let now = new Date(2026, 10, 12, hour, 0, 0);
     const events = {}, dataset = {}, buttons = {}, meta = {};
-    const options = { hidden: true, querySelectorAll: () => Object.values(buttons), querySelector: () => Object.values(buttons).find(b => b.pressed === 'true') };
-    const toggle = { setAttribute() {}, querySelector: () => ({}), focus() {}, addEventListener: (type, fn) => { events['toggle:' + type] = fn; } };
+    const options = { hidden: true, style: {}, setAttribute() {}, showPopover() { this.open = true; }, hidePopover() { this.open = false; }, getBoundingClientRect: () => ({ width: 220, height: 190 }), querySelectorAll: () => Object.values(buttons), querySelector: () => Object.values(buttons).find(b => b.pressed === 'true') };
+    const toggle = { getBoundingClientRect: () => ({ left: 270, top: 430, bottom: 470 }), setAttribute() {}, querySelector: () => ({}), focus() {}, addEventListener: (type, fn) => { events['toggle:' + type] = fn; } };
     const control = { contains: target => target === toggle || Object.values(buttons).includes(target), addEventListener: (name, fn) => { events['control:' + name] = fn; } };
     for (const choice of ['auto', 'light', 'dark']) buttons[choice] = { dataset: { themeChoice: choice }, setAttribute(k,v) { this.pressed = v; }, focus() {}, addEventListener: (type, fn) => { events[choice + ':' + type] = fn; } };
     const document = { documentElement: { dataset, classList: { contains: name => adminDesktop && name === "admin-desktop-theme" } }, querySelector: () => meta, querySelectorAll: () => Object.values(buttons),
         getElementById: id => ({ themeToggle: toggle, themeControl: control, themeOptions: options })[id], addEventListener: (name, fn) => { events[name] = fn; } };
-    const window = { matchMedia: () => ({ matches: !adminDesktop, addEventListener() {} }), dispatchEvent() {}, addEventListener: (name, fn) => { events[name] = fn; } };
+    const window = { innerWidth: 320, innerHeight: 500, matchMedia: () => ({ matches: !adminDesktop, addEventListener() {} }), dispatchEvent() {}, addEventListener: (name, fn) => { events[name] = fn; } };
     const localStorage = { getItem() { if (storageBlocked) throw Error(); return stored; }, setItem(key, value) { if (storageBlocked) throw Error(); stored = value; } };
     let timer;
     vm.runInNewContext(source, { document, window, localStorage, CustomEvent: function() {}, Date: class extends Date { constructor(value) { super(value ?? now.getTime()); } }, clearTimeout() {}, setTimeout(fn, delay) { timer = { fn, delay }; } });
@@ -98,4 +98,25 @@ test('admin desktop inicia automático e conserva escolha manual nos próximos a
     reopened.setHour(20); reopened.events.focus();
     assert.equal(reopened.dataset.theme, 'dark');
     assert.equal(reopened.stored, 'auto');
+});
+
+test('seletor do admin abre acima da sidebar sem sair da viewport e fecha ao escolher', () => {
+    const f = fixture(12, null, false, true);
+    f.events['toggle:click']();
+    assert.equal(f.options.open, true);
+    assert.equal(f.options.hidden, false);
+    assert.equal(f.options.style.left, '88px');
+    assert.equal(f.options.style.top, '230px');
+    assert.equal(f.options.style.maxWidth, '296px');
+    f.events['dark:click']();
+    assert.equal(f.options.open, false);
+    assert.equal(f.options.hidden, true);
+    assert.equal(f.stored, 'dark');
+    f.events['toggle:click']();
+    f.events['light:click']();
+    assert.equal(f.dataset.theme, 'light');
+    f.events['toggle:click']();
+    f.events['auto:click']();
+    assert.equal(f.dataset.themePreference, 'auto');
+    assert.equal(f.options.open, false);
 });

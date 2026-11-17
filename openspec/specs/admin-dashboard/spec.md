@@ -23,3 +23,9 @@ Atualizações de fundo não consultam nem redesenham durante um slide over aber
 
 ## Setas, avisos e paginação
 Setas da saúde possuem somente a superfície recortada e brilho discreto, sem card retangular de fundo. Avisos têm contraste âmbar nos temas claro e escuro. O gráfico seleciona por posição horizontal do dia e mostra primeiras qualificações, descartados e requalificações, inclusive zero. A equipe exibe o último acesso retornado pela API e presença estimada; o indicador de monitoramento anima suavemente e respeita movimento reduzido. O hub pagina seis carteiras por vez em memória, sem chamadas adicionais ao trocar página, mantendo filtros e busca. Total de 33 testes Node aprovados.
+
+### Correção do seletor de tema — 17/11/2026
+- Menu Claro/Escuro/Automático do admin usa top layer para escapar do recorte da sidebar, com posição limitada à viewport e reajuste em scroll/resize.
+- Opções com áreas de toque de 44px, texto legível e foco visível. Preferência manual persistente e automático por horário preservados.
+- Validação: 34 testes Node aprovados, sintaxe JavaScript e git diff --check sem erros. Revisão visual em navegador pendente.
+
