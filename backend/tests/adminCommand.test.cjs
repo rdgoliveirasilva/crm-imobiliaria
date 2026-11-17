@@ -12,7 +12,7 @@ function fixture(get) {
     };
     // Exposição apenas no contexto de teste; não adiciona API pública ao produto.
     const source = fs.readFileSync(path.join(__dirname,'../../frontend/js/admin-command.js'),'utf8')
-        .replace('window.AdminCommand={connect', 'window.testApi={state,render,open,walletNumbers,userNumbers}; window.AdminCommand={connect');
+        .replace('window.AdminCommand={connect', 'window.testApi={state,render,open,walletNumbers,userNumbers,tags,filterHealth,withoutRecentAccess,teamTable}; window.AdminCommand={connect');
     const window={addEventListener(){}};
     vm.runInNewContext(source, { window, document:{getElementById:element,querySelectorAll:()=>[],addEventListener(){},body:{classList:{add(){},remove(){}}}},
         ApiClient:{get},Date,URLSearchParams,clearTimeout,console });
@@ -55,4 +55,40 @@ test('slide over ignora resposta de carteira anterior e sinaliza requalificaçõ
     resolve(sample['/api/admin/dashboard/graficos']);await old;
     assert.match(f.element('ccDrawerContent').innerHTML,/não estão disponíveis/);
     assert.doesNotMatch(f.element('ccDrawerContent').innerHTML,/Progresso da carteira/);
+});
+
+test('saúde mantém cores e ordem por qualificação mesmo quando os totais mudam',()=>{
+    const f=fixture(async()=>({}));
+    const a=f.testApi.tags({chaves:['em_atendimento','sem_qualificacao'],labels:['Em atendimento','Sem qualificação'],valores:[4,6]});
+    const b=f.testApi.tags({chaves:['sem_qualificacao','em_atendimento'],labels:['Sem qualificação','Em atendimento'],valores:[1,9]});
+    for(const html of [a,b]) {
+        assert.ok(html.indexOf('data-tag="sem_qualificacao"')<html.indexOf('data-tag="em_atendimento"'));
+        assert.match(html,/data-tag="em_atendimento"[^>]*--tag:#23cba5/);
+    }
+    assert.match(a,/40% da base trabalhada/);assert.match(b,/90% da base trabalhada/);
+});
+test('filtro da saúde ignora respostas antigas e persiste ao trocar de visão',async()=>{
+    const pending=[];
+    const f=fixture(url=>url.includes('?corretor_id=')?new Promise(resolve=>pending.push(resolve)):Promise.resolve(sample[url]));
+    await f.api.refresh();
+    const old=f.testApi.filterHealth('1'),current=f.testApi.filterHealth('9');
+    pending[1]({donut:{chaves:['em_atendimento'],labels:['Em atendimento'],valores:[3]}});await current;
+    pending[0]({donut:{chaves:['em_atendimento'],labels:['Em atendimento'],valores:[999]}});await old;
+    assert.equal(f.testApi.state.healthUser,'9');assert.equal(f.testApi.state.healthData.valores[0],3);
+    f.testApi.state.view='carteira';f.testApi.render();f.testApi.state.view='geral';f.testApi.render();
+    assert.match(f.element('ccContent').innerHTML,/value="9" selected/);assert.doesNotMatch(f.element('ccHealth').innerHTML,/999/);
+});
+test('atualização automática não busca nem redesenha durante detalhe aberto',async()=>{
+    let calls=0;const f=fixture(async url=>{calls++;return sample[url];});
+    await f.api.refresh();f.testApi.state.drawer={type:'wallet',id:23};
+    await f.api.refresh({background:true});assert.equal(calls,4);
+    f.testApi.state.drawer=null;await f.api.refresh({background:true});assert.equal(calls,8);
+});
+test('KPIs têm ações reais e alerta de acesso restringe a tabela',async()=>{
+    const f=fixture(async url=>sample[url]);await f.api.refresh();
+    assert.match(f.element('ccContent').innerHTML,/class="cc-metric cc-metric-action" data-tag="em_atendimento" data-global="true"/);
+    f.testApi.state.userAttention=true;
+    f.testApi.state.summary=[{id:9,ultimo_acesso:new Date().toISOString()}];
+    assert.doesNotMatch(f.testApi.teamTable(),/data-user="9"/);
+    f.testApi.state.summary=[];assert.match(f.testApi.teamTable(),/data-user="9"/);
 });

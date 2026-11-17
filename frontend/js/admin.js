@@ -2155,7 +2155,8 @@ function renderizarCorretoresResumo(corretores) {
         pollingTimer = setInterval(() => {
             const dashTab = document.querySelector('.nav-tab[data-tab="dashboard"]');
             if (dashTab && dashTab.classList.contains('active')) {
-                atualizarDashboard();
+                if (window.AdminCommand) window.AdminCommand.refresh({ background: true });
+                else atualizarDashboard();
             }
         }, 60000);
     }

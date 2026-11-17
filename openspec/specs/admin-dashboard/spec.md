@@ -16,3 +16,7 @@ APIs não fornecem evolução ou requalificações individuais, último acesso d
 
 ## Validação
 26 testes Node aprovados, incluindo isolamento de respostas do slide over, carregamentos concorrentes, escape de conteúdo, totais dos cards e preferência persistida do admin. Verificação de sintaxe dos scripts e git diff --check. O projeto não possui scripts de build/lint nem TypeScript. Conferência visual interrompida pelo controle do navegador, que não conseguiu identificar a URL atual com segurança; nenhuma validação visual completa foi declarada.
+
+## Refinamento de interação e leitura
+Saúde da operação usa ordem e cores estáveis por qualificação, barra proporcional e botões em seta. O percentual respeita a seleção de corretor. Em espaços estreitos, apenas a faixa de qualificações rola horizontalmente; rótulos não são quebrados no meio das palavras. KPIs principais abrem carteiras, a distribuição ou os clientes da qualificação correspondente. O alerta de falta de acesso filtra a equipe e oferece retorno à lista completa.
+Atualizações de fundo não consultam nem redesenham durante um slide over aberto, edição de campos ou aba oculta. O filtro de corretor persiste entre visões e descarta respostas antigas. Cards interativos possuem hover para mouse, foco por teclado e feedback de toque, respeitando movimento reduzido. 30 testes passaram; verificação visual segue pendente devido à indisponibilidade do navegador seguro nesta sessão.
