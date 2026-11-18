@@ -10,7 +10,7 @@
     const date = value => value ? new Date(value).toLocaleString('pt-BR') : 'Não disponível';
     const labels = {sem_qualificacao:'Sem qualificação',mensagem_enviada:'Mensagem enviada',follow_up:'Follow up',agendado:'Agendado',em_atendimento:'Em atendimento',retornar_depois:'Retornar depois',vendido:'Vendido',sem_interesse:'Sem interesse',sem_resposta:'Sem resposta',telefone_invalido:'Telefone inválido'};
     const colors = ['#21c7ed','#21dda8','#aa7cf7','#ffc568','#f47793','#689bd7','#7f8cae','#43b6a3'];
-    const state = { view:'geral', wallets:[], users:[], summary:[], kpis:null, graphs:null, search:'', filter:'todas', drawer:null, page:1, busy:null, serial:0, charts:[], healthUser:'', healthData:null, healthRequest:0, userAttention:false, hubPage:1 };
+    const state = { view:'geral', wallets:[], users:[], summary:[], kpis:null, graphs:null, search:'', filter:'todas', drawer:null, page:1, busy:null, serial:0, charts:[], healthPeriod:'', healthFrom:'', healthTo:'', healthData:null, healthRequest:0, userAttention:false, hubPage:1 };
     let actions = {}, previousFocus, contactTimer;
     const panel = (title,sub,body,cls='') => `<section class="cc-panel ${cls}"><header><div><h2>${title}</h2><p>${sub}</p></div></header>${body}</section>`;
     const empty = text => `<p class="cc-empty">${text}</p>`;
@@ -59,17 +59,21 @@
         const last=state.summary.find(c=>c.id===u.id)?.ultimo_acesso;
         return u.ativo!==false&&u.tipo!=='teste'&&(!last||Date.now()-new Date(last).getTime()>3*86400000);
     }
-    async function filterHealth(value) {
-        state.healthUser=value;
+    function healthFilter() {
+        return `<form id="ccHealthFilter" class="cc-health-filter"><label>Período <select id="ccHealthPeriod"><option value="">Geral</option><option value="custom" ${state.healthPeriod?'selected':''}>Personalizado</option></select></label><div class="cc-health-dates" ${state.healthPeriod?'':'hidden'}><label>De <input id="ccHealthFrom" type="date" required ${state.healthPeriod?'':'disabled'} value="${esc(state.healthFrom)}"></label><label>Até <input id="ccHealthTo" type="date" required ${state.healthPeriod?'':'disabled'} value="${esc(state.healthTo)}"></label><button type="submit">Aplicar</button></div></form>`;
+    }
+    async function filterHealth(value, de='', ate='') {
+        if(value && (!de || !ate || de > ate))return;
+        state.healthPeriod=value;state.healthFrom=de;state.healthTo=ate;
         const request=++state.healthRequest;
         state.healthData=null;
         if($('ccHealth'))$('ccHealth').innerHTML=empty('Carregando qualificações…');
         try {
-            const data=value?await ApiClient.get('/api/admin/dashboard/graficos?corretor_id='+encodeURIComponent(value)):state.graphs;
+            const data=value?await ApiClient.get('/api/admin/dashboard/graficos?de='+encodeURIComponent(de)+'&ate='+encodeURIComponent(ate)):state.graphs;
             if(request!==state.healthRequest)return;
             state.healthData=data.donut;
             if($('ccHealth'))$('ccHealth').innerHTML=tags(state.healthData);
-        }catch{if(request===state.healthRequest&&$('ccHealth'))$('ccHealth').innerHTML=empty('Não foi possível carregar. Selecione novamente para tentar.');}
+        }catch{if(request===state.healthRequest&&$('ccHealth'))$('ccHealth').innerHTML=empty('Não foi possível carregar. Aplique o período novamente para tentar.');}
     }
     function liveTeam() {
         const list=state.summary.filter(c=>c.tipo!=='teste');
@@ -110,7 +114,7 @@
         let metrics,content;
         if(state.view==='geral') {
             metrics=metric('Base total',fmt(total),'Sem usuários de teste','users','data-view="carteira"')+metric('Trabalhados',fmt(worked),`${rate}% com qualificação`,'circle-check','data-health-jump="true"')+metric('Pendentes',fmt(pending),'Sem qualificação atribuída','hourglass-half','data-tag="sem_qualificacao" data-global="true"')+metric('Em atendimento',fmt(k.porTag?.em_atendimento),'Classificação atual','headset','data-tag="em_atendimento" data-global="true"');
-            content=`<div class="cc-bento">${panel('Saúde da operação','Distribuição atual por qualificações',`<label class="cc-inline-filter">Corretor <select id="ccHealthUser"><option value="">Todos</option>${state.users.filter(u=>u.tipo!=='teste').map(u=>`<option value="${u.id}" ${String(u.id)===state.healthUser?'selected':''}>${esc(u.nome)}</option>`).join('')}</select></label><div id="ccHealth">${state.healthUser?(state.healthData?tags(state.healthData):empty('Carregando qualificações…')):tags(g.donut)}</div>`,'cc-health')}${panel('Atenção do gestor','Demandas que precisam de acompanhamento',alerts(),'cc-alerts')}${panel('Evolução de qualificações','Últimos 30 dias · eventos registrados','<div class="cc-chart"><canvas id="ccTrend"></canvas></div>','cc-evolution')}${panel('Equipe em tempo real','Presença estimada pelo último acesso · atualização a cada minuto',liveTeam(),'cc-live')}</div><div id="ccHubMount">${walletHub(false)}</div>`;
+            content=`<div class="cc-bento"><section class="cc-panel cc-health" aria-labelledby="ccHealthTitle"><header><div><h2 id="ccHealthTitle">Saúde da operação</h2><p>Classificações atuais · período pela data da última classificação</p></div>${healthFilter()}</header><div id="ccHealth">${state.healthPeriod?(state.healthData?tags(state.healthData):empty('Carregando qualificações…')):tags(g.donut)}</div></section>${panel('Atenção do gestor','Demandas que precisam de acompanhamento',alerts(),'cc-alerts')}${panel('Evolução de qualificações','Últimos 30 dias · eventos registrados','<div class="cc-chart"><canvas id="ccTrend"></canvas></div>','cc-evolution')}${panel('Equipe em tempo real','Presença estimada pelo último acesso · atualização a cada minuto',liveTeam(),'cc-live')}</div><div id="ccHubMount">${walletHub(false)}</div>`;
         } else if(state.view==='carteira') {
             metrics=metric('Carteiras',fmt(state.wallets.length),'Listas cadastradas','folder')+metric('Contatos na base',fmt(total),'Sem usuários de teste','users')+metric('Trabalhados',fmt(worked),`${rate}% da base`,'circle-check')+metric('Pendentes',fmt(pending),'Sem qualificação atribuída','hourglass-half');
             content=`<div id="ccHubMount">${walletHub(true)}</div>`;
@@ -186,8 +190,8 @@
         state.busy=(async()=>{try {
             const [kpis,graphs,data,users]=await Promise.all([ApiClient.get('/api/admin/dashboard'),ApiClient.get('/api/admin/dashboard/graficos'),ApiClient.get('/api/admin/dashboard/carteiras'),ApiClient.get('/api/admin/corretores')]);
             state.kpis=kpis;state.graphs=graphs;state.wallets=data.carteiras||[];state.summary=data.corretoresResumo||[];state.users=users.corretores||[];
-            render();if(state.healthUser)await filterHealth(state.healthUser);$('ccUpdated').textContent=`Atualizado às ${new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}`;
-        }catch(error){$('ccUpdated').textContent='Falha na atualização';if(!state.kpis)$('ccContent').innerHTML=empty('Não foi possível carregar o painel. Use Atualizar para tentar novamente.');}finally{state.busy=null;}})();
+            render();if(state.healthPeriod)await filterHealth(state.healthPeriod,state.healthFrom,state.healthTo);
+        }catch(error){if(!state.kpis)$('ccContent').innerHTML=empty('Não foi possível carregar o painel. Recarregue a página para tentar novamente.');}finally{state.busy=null;}})();
         return state.busy;
     }
     function navigate(tab) {close();document.querySelector(`.nav-tab[data-tab="${tab}"]`)?.click();if(tab==='corretores')$('novoNome')?.focus();}
@@ -195,14 +199,29 @@
         const dashboard=$('tab-dashboard');if(!dashboard)return;
         const header=document.querySelector('.header-inner');header.insertBefore(document.querySelector('.admin-nav'),document.querySelector('.header-user'));
         const legacy=document.createElement('div');legacy.hidden=true;legacy.id='ccLegacy';while(dashboard.firstChild)legacy.append(dashboard.firstChild);dashboard.append(legacy);
-        const root=document.createElement('div');root.id='ccRoot';root.innerHTML=`<header class="cc-top"><div><span class="cc-eyebrow">PROSPECT / GESTÃO COMERCIAL</span><h1>Centro de comando</h1><p>Operação comercial · ${new Date().toLocaleDateString('pt-BR')} <span id="ccUpdated" role="status">Carregando…</span></p></div><div class="cc-tools"><span class="cc-period"><i class="far fa-calendar"></i> Gráficos: últimos 30 dias</span><button id="ccRefresh" aria-label="Atualizar painel"><i class="fas fa-rotate"></i></button><button id="ccExport">Exportar resumo <i class="fas fa-download"></i></button></div></header><nav class="cc-tabs" role="tablist" aria-label="Visão do painel"><button role="tab" data-view="geral" aria-selected="true" class="active"><i class="fas fa-chart-simple"></i> Operação geral</button><button role="tab" data-view="carteira" aria-selected="false"><i class="fas fa-folder"></i> Por carteira</button><button role="tab" data-view="corretor" aria-selected="false"><i class="fas fa-users"></i> Por corretor</button></nav><div id="ccContent" aria-live="polite">${empty('Carregando operação…')}</div>`;dashboard.prepend(root);
+        const root=document.createElement('div');root.id='ccRoot';root.innerHTML=`<nav class="cc-tabs" role="tablist" aria-label="Visão do painel"><button role="tab" data-view="geral" aria-selected="true" class="active"><i class="fas fa-chart-simple"></i> Operação geral</button><button role="tab" data-view="carteira" aria-selected="false"><i class="fas fa-folder"></i> Por carteira</button><button role="tab" data-view="corretor" aria-selected="false"><i class="fas fa-users"></i> Por corretor</button></nav><div id="ccContent" aria-live="polite">${empty('Carregando operação…')}</div>`;dashboard.prepend(root);
         const overlay=document.createElement('div');overlay.id='ccOverlay';overlay.hidden=true;overlay.innerHTML=`<aside class="cc-drawer" role="dialog" aria-modal="true" aria-labelledby="ccDrawerTitle"><header><div><h2 id="ccDrawerTitle"></h2><p id="ccDrawerSubtitle"></p></div><button id="ccDrawerClose" aria-label="Fechar detalhes">×</button></header><nav id="ccDrawerTabs" role="tablist" aria-label="Detalhes"></nav><div id="ccDrawerContent"></div></aside>`;document.body.append(overlay);
         $('ccDrawerClose').onclick=close;overlay.addEventListener('click',e=>{if(e.target===overlay)close();});
-        $('ccRefresh').onclick=refresh;
-        $('ccExport').onclick=()=>{if(!state.kpis)return;const rows=[['Carteira','Total','Trabalhados','Pendentes','Progresso (%)'],...state.wallets.map(w=>{const n=walletNumbers(w);return [w.nome,n.total,n.worked,n.pending,n.progress];})];const csv=rows.map(row=>row.map(v=>'"'+String(v).replace(/^[=+@-]/,"'$&").replace(/"/g,'""')+'"').join(';')).join('\r\n');const url=URL.createObjectURL(new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'}));const a=document.createElement('a');a.href=url;a.download='prospect-resumo-carteiras.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
+        // Mova os controles existentes para preservar listeners, tema e menu da conta.
+        const account=document.querySelector('.header-user');
+        account.querySelector('.user-info').hidden=true;
+        const toolbar=document.createElement('header');toolbar.className='cc-top cc-account-toolbar';
+        toolbar.innerHTML='<h1 id="ccPageTitle">Centro de comando</h1>';
+        toolbar.append(account);document.querySelector('.admin-main').prepend(toolbar);
+        const clock=document.createElement('time');clock.className='cc-sidebar-clock';header.append(clock);
+        function updateClock(){const now=new Date();clock.dateTime=now.toISOString();clock.textContent=now.toLocaleDateString('pt-BR')+' · '+now.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});}
+        updateClock();setInterval(updateClock,30000);
+        document.querySelectorAll('.nav-tab[data-tab]').forEach(tab=>tab.addEventListener('click',()=>{$('ccPageTitle').textContent=tab.textContent.trim();}));
+        document.addEventListener('submit',async e=>{
+            if(e.target.id!=='ccHealthFilter')return;e.preventDefault();
+            const de=$('ccHealthFrom').value,ate=$('ccHealthTo').value;
+            $('ccHealthTo').setCustomValidity(de>ate?'A data final deve ser igual ou posterior à inicial.':'');
+            if(!e.target.reportValidity())return;
+            await filterHealth('custom',de,ate);
+        });
         document.addEventListener('click',e=>{
             const b=e.target.closest('button');if(!b)return;
-            if(b.dataset.healthJump){state.view='geral';render();$('ccHealthUser')?.focus();$('ccHealth')?.scrollIntoView({block:'nearest'});}
+            if(b.dataset.healthJump){state.view='geral';render();$('ccHealthPeriod')?.focus();$('ccHealth')?.scrollIntoView({block:'nearest'});}
             if(b.hasAttribute('data-clear-user-filter')){state.userAttention=false;render();}
             if(b.dataset.view){state.view=b.dataset.view;render();}
             if(b.dataset.wallet)open('wallet',Number(b.dataset.wallet));
@@ -217,10 +236,14 @@
             if(b.dataset.manageWallet){const w=state.wallets.find(w=>w.lista_id===Number(b.dataset.manageWallet));close();actions.lista?.(w);}
             if(b.dataset.nav)navigate(b.dataset.nav);
             if(b.dataset.attention){state.hubPage=1;state.userAttention=b.dataset.attention==='users';state.view=b.dataset.attention==='wallets'?'carteira':'corretor';state.filter=b.dataset.attention==='wallets'?'atencao':'todas';render();}
-            if(b.dataset.tag){const scope=b.dataset.scope;const wallet=scope==='wallet'?state.drawer?.id:'';const user=b.dataset.global?'':scope==='user'?state.drawer?.id:scope==='wallet'?'':state.healthUser;close();actions.tag?.(b.dataset.tag,labels[b.dataset.tag]||b.dataset.tag,wallet,user);}
+            if(b.dataset.tag){const scope=b.dataset.scope;const wallet=scope==='wallet'?state.drawer?.id:'';const user=b.dataset.global?'':scope==='user'?state.drawer?.id:'';close();actions.tag?.(b.dataset.tag,labels[b.dataset.tag]||b.dataset.tag,wallet,user,b.closest('#ccHealth')?{de:state.healthFrom,ate:state.healthTo}:{});}
         });
         document.addEventListener('input',e=>{if(e.target.id==='ccSearch'){state.search=e.target.value;state.hubPage=1;const cursor=e.target.selectionStart;renderHub();$('ccSearch').focus();$('ccSearch').setSelectionRange(cursor,cursor);}if(e.target.id==='ccContactSearch'){clearTimeout(contactTimer);contactTimer=setTimeout(()=>contacts(1),250);}});
-        document.addEventListener('change',async e=>{if(e.target.id==='ccWalletFilter'){state.filter=e.target.value;state.hubPage=1;renderHub();}if(e.target.id==='ccHealthUser')await filterHealth(e.target.value);});
+        document.addEventListener('change',async e=>{if(e.target.id==='ccWalletFilter'){state.filter=e.target.value;state.hubPage=1;renderHub();}if(e.target.id==='ccHealthPeriod'){
+                if(!e.target.value){await filterHealth('');render();}
+                else{document.querySelector('.cc-health-dates').hidden=false;$('ccHealthFrom').disabled=false;$('ccHealthTo').disabled=false;$('ccHealthFrom').focus();}
+            }
+            if(['ccHealthFrom','ccHealthTo'].includes(e.target.id))$('ccHealthTo').setCustomValidity('');});
         document.addEventListener('keydown',e=>{if(!state.drawer)return;if(e.key==='Escape'){close();return;}if(e.key==='Tab'){const items=Array.from(overlay.querySelectorAll('button:not(:disabled),input,a[href],select')).filter(el=>el.getClientRects().length);const first=items[0],last=items.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}}});
     }
     window.addEventListener('prospect:themechange',()=>{

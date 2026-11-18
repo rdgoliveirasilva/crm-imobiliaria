@@ -4355,7 +4355,7 @@ statsListaAtual = {};
     /* =========================================================
        Modal de TAG (drill-down do donut)
        ========================================================= */
-    async function abrirModalTagDash(chave, label) {
+    async function abrirModalTagDash(chave, label, periodo = {}) {
         const modalTag = document.getElementById('modalTag');
         const modalTagTitulo = document.getElementById('modalTagTitulo');
         const modalTagInfo = document.getElementById('modalTagInfo');
@@ -4370,7 +4370,7 @@ statsListaAtual = {};
             return;
         }
 
-        filtroTagAtual = { chave, label, busca: '', de: '', ate: '' };
+        filtroTagAtual = { chave, label, busca: '', de: periodo.de || '', ate: periodo.ate || '' };
         window.leadsTagAtuais = [];
 
         if (modalTagTitulo) modalTagTitulo.textContent = label;
@@ -4378,8 +4378,8 @@ statsListaAtual = {};
         if (modalTagTbody) modalTagTbody.innerHTML = '';
         if (modalTagVazio) modalTagVazio.style.display = 'none';
         if (modalTagBusca) modalTagBusca.value = '';
-        if (modalTagDe) modalTagDe.value = '';
-        if (modalTagAte) modalTagAte.value = '';
+        if (modalTagDe) modalTagDe.value = filtroTagAtual.de;
+        if (modalTagAte) modalTagAte.value = filtroTagAtual.ate;
 
         modalTag.style.display = 'flex';
 
@@ -4808,10 +4808,10 @@ statsListaAtual = {};
     window.AdminCommand?.connect({
         editar: abrirEditarCorretor,
         lista: lista => abrirModalLista(lista.lista_id || lista.id, { ...lista, id: lista.lista_id || lista.id }),
-        tag: (chave, label, carteira = '', corretor = '') => {
+        tag: (chave, label, carteira = '', corretor = '', periodo = {}) => {
             $('filtroCarteiraDonut').value = carteira;
             $('filtroCorretorDonut').value = corretor;
-            return abrirModalTagDash(chave, label);
+            return abrirModalTagDash(chave, label, periodo);
         },
         atividade: corretor => abrirConfirm(corretor.ativo === false ? 'Ativar corretor?' : 'Inativar corretor?',
             corretor.ativo === false ? 'Liberar acesso sem recuperar clientes e carteiras anteriores?'

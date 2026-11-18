@@ -22,6 +22,7 @@ async function categoriaCadastrada(client, valor) {
     if (!result.rows.length) { const e = new Error('Cadastre a categoria na aba Categorias antes de usá-la.'); e.status = 400; throw e; }
     return result.rows[0].nome;
 }
+const { qualificationPeriod } = require('../services/qualificationPeriod');
 const router = express.Router();
 
 router.use(autenticar, apenasAdmin);
@@ -742,6 +743,8 @@ router.get('/dashboard', async (req, res) => {
 
 router.get('/dashboard/graficos', async (req, res) => {
     try {
+        // Valide antes das consultas. O período afeta somente a distribuição atual.
+        qualificationPeriod(req.query, []);
         // Filtros opcionais (só afetam o donut por enquanto)
         const filtroCorretorId = req.query.corretor_id ? Number(req.query.corretor_id) : null;
         const filtroListaId    = req.query.lista_id ? Number(req.query.lista_id) : null;
@@ -794,6 +797,7 @@ router.get('/dashboard/graficos', async (req, res) => {
             donutWhere += ' AND l.lista_id = $' + donutParams.length;
         }
 
+        donutWhere += qualificationPeriod(req.query, donutParams);
         const donutResult = await pool.query(`
             SELECT COALESCE(l.resultado, 'sem_qualificacao') AS resultado, COUNT(*) AS count
             FROM leads l
@@ -918,6 +922,7 @@ router.get('/dashboard/graficos', async (req, res) => {
         });
 
     } catch (err) {
+        if (err.status === 400) return res.status(400).json({ erro: err.message });
         console.error('[admin/dashboard/graficos] erro:', err);
         res.status(500).json({ erro: 'Erro ao carregar gráficos.' });
     }
@@ -957,15 +962,7 @@ router.get('/dashboard/tag/:tag', async (req, res) => {
               ))
         `;
 
-        if (de) {
-            params.push(de);
-            sql += ` AND l.decidido_em >= $${params.length}::date`;
-        }
-
-        if (ate) {
-            params.push(ate);
-            sql += ` AND l.decidido_em < ($${params.length}::date + INTERVAL '1 day')`;
-        }
+        sql += qualificationPeriod(req.query, params);
 
         if (corretor_id) {
             params.push(Number(corretor_id));
@@ -988,6 +985,7 @@ router.get('/dashboard/tag/:tag', async (req, res) => {
         });
 
     } catch (err) {
+        if (err.status === 400) return res.status(400).json({ erro: err.message });
         console.error('[admin/dashboard/tag] erro:', err);
         res.status(500).json({ erro: 'Erro ao carregar leads da tag.' });
     }

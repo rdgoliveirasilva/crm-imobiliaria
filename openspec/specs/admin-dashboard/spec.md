@@ -37,3 +37,11 @@ Setas da saúde possuem somente a superfície recortada e brilho discreto, sem c
 - Layout com quatro colunas no desktop, duas em telas intermediárias e uma coluna
   de linhas horizontais abaixo de 600px para preservar leitura e números completos.
 - Verificação: testes do admin e tema; conferência visual em navegador pendente.
+
+### 18/11/2026 — Cabeçalho e período da saúde
+- Removidos eyebrow, subtítulo com atualização, indicação de gráficos, refresh e exportação do topo.
+- Controles existentes de tema/conta movidos ao cabeçalho principal; rodapé da sidebar com data/hora em faixa compacta. Conta continua acessível em todas as abas do admin.
+- Saúde da operação com destaque semântico e filtro ao lado do título: Geral (padrão) ou Personalizado com início/fim e Aplicar.
+- Período considera `leads.decidido_em`, a data da classificação atual, e não reconstrói estado histórico. Sem período inclui toda a base. Contatos ainda sem data de classificação não entram no período.
+- Distribuição e drill-down compartilham validação e limites: início inclusivo, fim até o início do dia seguinte. As datas acompanham o clique na distribuição; KPIs, alertas e slide overs não herdam esse filtro.
+- Testados intervalo inválido, dia final, cancelamento de respostas antigas e retorno a Geral. Revisão visual em navegador pendente.

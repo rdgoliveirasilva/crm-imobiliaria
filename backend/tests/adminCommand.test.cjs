@@ -71,14 +71,14 @@ test('saúde mantém cores e ordem por qualificação mesmo quando os totais mud
 });
 test('filtro da saúde ignora respostas antigas e persiste ao trocar de visão',async()=>{
     const pending=[];
-    const f=fixture(url=>url.includes('?corretor_id=')?new Promise(resolve=>pending.push(resolve)):Promise.resolve(sample[url]));
+    const f=fixture(url=>url.includes('?de=')?new Promise(resolve=>pending.push(resolve)):Promise.resolve(sample[url]));
     await f.api.refresh();
-    const old=f.testApi.filterHealth('1'),current=f.testApi.filterHealth('9');
+    const old=f.testApi.filterHealth('custom','2026-11-01','2026-11-02'),current=f.testApi.filterHealth('custom','2026-11-10','2026-11-18');
     pending[1]({donut:{chaves:['em_atendimento'],labels:['Em atendimento'],valores:[3]}});await current;
     pending[0]({donut:{chaves:['em_atendimento'],labels:['Em atendimento'],valores:[999]}});await old;
-    assert.equal(f.testApi.state.healthUser,'9');assert.equal(f.testApi.state.healthData.valores[0],3);
+    assert.equal(f.testApi.state.healthFrom,'2026-11-10');assert.equal(f.testApi.state.healthData.valores[0],3);
     f.testApi.state.view='carteira';f.testApi.render();f.testApi.state.view='geral';f.testApi.render();
-    assert.match(f.element('ccContent').innerHTML,/value="9" selected/);assert.doesNotMatch(f.element('ccHealth').innerHTML,/999/);
+    assert.match(f.element('ccContent').innerHTML,/value="custom" selected/);assert.doesNotMatch(f.element('ccHealth').innerHTML,/999/);
 });
 test('atualização automática não busca nem redesenha durante detalhe aberto',async()=>{
     let calls=0;const f=fixture(async url=>{calls++;return sample[url];});
@@ -123,4 +123,17 @@ test('equipe ao vivo mostra presença e último acesso sem tratar offline como o
     f.testApi.state.summary=[{id:9,nome:'Maria',status:'offline',ultimo_acesso:null,total_carteira:10,total_qualificados:2}];
     const html=f.testApi.liveTeam();assert.match(html,/data-presence="offline"/);
     assert.match(html,/Último acesso: Nunca acessou/);assert.match(html,/2 \/ 10 trabalhados/);
+});
+
+test('saúde começa geral e voltar a geral cancela resposta antiga do período',async()=>{
+    let resolve;
+    const f=fixture(url=>url.includes('?de=')?new Promise(r=>resolve=r):Promise.resolve(sample[url]));
+    await f.api.refresh(); assert.equal(f.testApi.state.healthPeriod,'');
+    assert.doesNotMatch(f.element('ccContent').innerHTML,/ccHealthUser/);
+    const old=f.testApi.filterHealth('custom','2026-11-01','2026-11-18');
+    await f.testApi.filterHealth('');
+    resolve({donut:{chaves:['em_atendimento'],labels:['Em atendimento'],valores:[999]}});await old;
+    assert.equal(f.testApi.state.healthPeriod,'');
+    assert.equal(f.testApi.state.healthFrom,'');assert.equal(f.testApi.state.healthTo,'');
+    assert.doesNotMatch(f.element('ccHealth').innerHTML,/999/);
 });
