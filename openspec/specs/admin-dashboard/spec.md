@@ -58,3 +58,9 @@ Setas da saúde possuem somente a superfície recortada e brilho discreto, sem c
 - Temas e mobile preservados; animação respeita prefers-reduced-motion.
 - Testes cobrem disposição, três categorias, ausência de itens, falha e pausa durante análise.
   Conferência visual em navegador pendente.
+
+### 18/11/2026 — Navegação inferior mobile
+- Até 900px, navegação fixa no rodapé, com ícones/labels, safe area e rolagem horizontal para manter todas as abas acessíveis.
+- Marca (logo/Prospect/SR Lançamentos) e relógio ocultos nessa faixa. Tema e conta permanecem fora da barra inferior.
+- Espaço inferior no conteúdo evita sobreposição. Sidebar desktop permanece como antes.
+- Conferência visual em navegador pendente; verificação de diff e regressões do admin/tema.
