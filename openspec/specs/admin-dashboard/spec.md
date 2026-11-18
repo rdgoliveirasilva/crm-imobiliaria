@@ -29,3 +29,11 @@ Setas da saúde possuem somente a superfície recortada e brilho discreto, sem c
 - Opções com áreas de toque de 44px, texto legível e foco visível. Preferência manual persistente e automático por horário preservados.
 - Validação: 34 testes Node aprovados, sintaxe JavaScript e git diff --check sem erros. Revisão visual em navegador pendente.
 
+
+### 18/11/2026 — KPIs em faixa tabular
+- Topo de Operação Geral, Por Carteira e Por Corretor em faixa contínua, com divisórias,
+  título/descrição à esquerda e valor à direita. Sem ícones grandes ou cards individuais.
+- Mantidos os dados, temas e ações existentes; métricas dos slide overs não mudam.
+- Layout com quatro colunas no desktop, duas em telas intermediárias e uma coluna
+  de linhas horizontais abaixo de 600px para preservar leitura e números completos.
+- Verificação: testes do admin e tema; conferência visual em navegador pendente.
