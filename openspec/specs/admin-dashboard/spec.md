@@ -64,3 +64,11 @@ Setas da saúde possuem somente a superfície recortada e brilho discreto, sem c
 - Marca (logo/Prospect/SR Lançamentos) e relógio ocultos nessa faixa. Tema e conta permanecem fora da barra inferior.
 - Espaço inferior no conteúdo evita sobreposição. Sidebar desktop permanece como antes.
 - Conferência visual em navegador pendente; verificação de diff e regressões do admin/tema.
+
+### 18/11/2026 — Navbar flutuante compacta
+- Barra mobile em cápsula, limitada a 420px, com afastamento lateral/inferior e safe area.
+- Início, Carteiras e Equipe visíveis; Mais abre diálogo com os demais destinos existentes.
+- Menu reutiliza o clique original, preservando rotas e handlers. Destino secundário ativo destaca Mais.
+- Desktop sem mudança. Na página WhatsApp, os dois destinos permanecem diretos, sem menu redundante.
+- Testes de navegação cobrem ações originais, destaque e fechamento na mudança para desktop.
+  Revisão visual no navegador pendente.

@@ -527,3 +527,47 @@ html.admin-desktop-theme[data-theme="light"] { color-scheme:light; }
     /* A página WhatsApp mantém seus controles de conta acima do conteúdo. */
     .admin-command .app-header .header-user { margin:12px 16px; justify-content:flex-end; }
 }
+
+/* Cápsula mobile flutuante; destinos secundários ficam em Mais. */
+.admin-command .cc-mobile-more { display:none; }
+.admin-command .cc-mobile-nav-dialog {
+    width:min(390px,calc(100% - 32px)); max-height:calc(100dvh - 120px);
+    inset:auto 0 calc(90px + env(safe-area-inset-bottom)); margin:0 auto;
+    padding:18px; border:1px solid var(--theme-border); border-radius:24px;
+    background:var(--theme-surface); color:var(--theme-text); box-shadow:0 12px 44px #0004; overflow:auto;
+}
+.cc-mobile-nav-dialog::backdrop { background:#0005; backdrop-filter:blur(3px); }
+.cc-mobile-nav-dialog header { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; gap:12px; }
+.cc-mobile-nav-dialog h2 { margin:0; font-size:17px; }
+.admin-command .cc-mobile-nav-dialog button { font:inherit; color:var(--theme-text); background:var(--theme-control); border:1px solid var(--theme-border); cursor:pointer; }
+.cc-mobile-nav-dialog header button { min-width:40px; min-height:40px; border-radius:50%; font-size:22px; }
+.cc-mobile-menu { display:grid; gap:8px; }
+.admin-command .cc-mobile-menu-item { display:flex; align-items:center; text-align:left; gap:12px; min-height:48px; padding:12px; border-radius:13px; }
+.cc-mobile-menu-item i { width:20px; color:var(--theme-accent); }
+.admin-command .cc-mobile-menu-item.active { border-color:var(--theme-accent); }
+@media(max-width:900px) {
+    .admin-command .admin-nav {
+        inset:auto max(12px,env(safe-area-inset-right)) calc(12px + env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left));
+        width:auto; max-width:420px; margin-inline:auto; padding:6px;
+        border:1px solid color-mix(in srgb,var(--theme-border) 75%,transparent); border-radius:36px;
+        background:color-mix(in srgb,var(--theme-surface) 92%,transparent);
+        box-shadow:0 8px 24px #0003,inset 0 1px 0 #ffffff20; overflow:visible;
+    }
+    .admin-command .admin-nav-inner { width:100%; min-width:0; gap:4px; }
+    .admin-command .admin-nav .nav-tab {
+        flex:1 1 0; width:auto; min-width:0; min-height:48px; padding:6px 4px; gap:4px;
+        border-radius:28px; font-size:10px; line-height:1.2; border:0;
+    }
+    .admin-command .admin-nav .nav-tab[data-mobile-primary="false"] { display:none; }
+    .admin-command .admin-nav .cc-mobile-more { display:flex; }
+    .admin-command .admin-nav .nav-tab i { font-size:16px; width:18px; }
+    .admin-command .admin-nav .nav-tab span[data-mobile-label] { font-size:0; }
+    .admin-command .admin-nav .nav-tab span[data-mobile-label]::after { content:attr(data-mobile-label); font-size:10px; }
+    .admin-command .admin-nav .nav-tab.active {
+        background:linear-gradient(145deg,#174b7c,#10264b); color:#fff;
+        box-shadow:0 3px 10px #0002;
+    }
+    .admin-command .admin-nav .nav-tab.active i { color:inherit; }
+    :root[data-theme="light"] .admin-command .admin-nav .nav-tab.active { background:linear-gradient(145deg,#35383e,#17191e); color:#fff; }
+    .admin-command .admin-main { padding-bottom:calc(100px + env(safe-area-inset-bottom)); }
+}
