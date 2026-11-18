@@ -45,3 +45,16 @@ Setas da saúde possuem somente a superfície recortada e brilho discreto, sem c
 - Período considera `leads.decidido_em`, a data da classificação atual, e não reconstrói estado histórico. Sem período inclui toda a base. Contatos ainda sem data de classificação não entram no período.
 - Distribuição e drill-down compartilham validação e limites: início inclusivo, fim até o início do dia seguinte. As datas acompanham o clique na distribuição; KPIs, alertas e slide overs não herdam esse filtro.
 - Testados intervalo inválido, dia final, cancelamento de respostas antigas e retorno a Geral. Revisão visual em navegador pendente.
+
+### 18/11/2026 — Operação geral e notificações do gestor
+- Hub de Carteiras permanece somente na visão Por Carteira. Saúde e Equipe em tempo real
+  ocupam a primeira linha da Operação geral; Evolução ocupa a largura total logo abaixo.
+- Atenção do gestor é um botão ao lado do tema, com modal nativo acessível e ações existentes
+  para analisar carteiras, equipe e retornos. Não conta categorias com zero itens.
+- Verde quando os dados carregaram sem pendências; amarelo com sinal pulsante quando há
+  pendências; neutro/desabilitado enquanto carrega ou após falha de atualização.
+- Modal fecha pelo botão, Escape ou clique externo e pausa atualização automática durante análise.
+  Ações fecham o modal e abrem a visão filtrada correta, sem herdar busca antiga de carteira.
+- Temas e mobile preservados; animação respeita prefers-reduced-motion.
+- Testes cobrem disposição, três categorias, ausência de itens, falha e pausa durante análise.
+  Conferência visual em navegador pendente.

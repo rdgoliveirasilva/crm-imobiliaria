@@ -7,12 +7,12 @@ const path = require('node:path');
 function fixture(get, withCharts=false) {
     const elements = new Map();
     const element = id => {
-        if (!elements.has(id)) elements.set(id, {innerHTML:'',textContent:'',focus(){}});
+        if (!elements.has(id)) elements.set(id, {innerHTML:'',textContent:'',dataset:{},setAttribute(name,value){this[name]=value;},focus(){}});
         return elements.get(id);
     };
     // Exposição apenas no contexto de teste; não adiciona API pública ao produto.
     const source = fs.readFileSync(path.join(__dirname,'../../frontend/js/admin-command.js'),'utf8')
-        .replace('window.AdminCommand={connect', 'window.testApi={state,render,open,walletNumbers,userNumbers,tags,filterHealth,withoutRecentAccess,teamTable,walletHub,liveTeam}; window.AdminCommand={connect');
+        .replace('window.AdminCommand={connect', 'window.testApi={state,render,open,walletNumbers,userNumbers,tags,filterHealth,withoutRecentAccess,teamTable,walletHub,liveTeam,attentionItems,updateAttention,alerts}; window.AdminCommand={connect');
     const charts=[];
     function Chart(canvas,config){Object.assign(this,config);this.destroy=()=>{};charts.push(this);}
     const window={addEventListener(){},matchMedia:()=>({matches:false}),Chart:withCharts?Chart:undefined};
@@ -136,4 +136,45 @@ test('saúde começa geral e voltar a geral cancela resposta antiga do período'
     assert.equal(f.testApi.state.healthPeriod,'');
     assert.equal(f.testApi.state.healthFrom,'');assert.equal(f.testApi.state.healthTo,'');
     assert.doesNotMatch(f.element('ccHealth').innerHTML,/999/);
+});
+
+test('operação geral remove hub e alertas e coloca evolução depois da saúde e equipe',async()=>{
+    const f=fixture(async url=>sample[url]);await f.api.refresh();
+    const html=f.element('ccContent').innerHTML;
+    assert.doesNotMatch(html,/ccHubMount|Hub de Carteiras|Atenção do gestor/);
+    assert.ok(html.indexOf('Saúde da operação')<html.indexOf('Equipe em tempo real'));
+    assert.ok(html.indexOf('Equipe em tempo real')<html.indexOf('Evolução de qualificações'));
+    assert.match(html,/cc-evolution cc-evolution-wide/);
+    f.testApi.state.view='carteira';f.testApi.render();
+    assert.match(f.element('ccContent').innerHTML,/Hub de Carteiras/);
+});
+
+test('ícone dos alertas distingue carregamento, ausência de pendências e cada categoria real',async()=>{
+    const f=fixture(async url=>sample[url]);
+    f.testApi.updateAttention();assert.equal(f.element('ccAttentionToggle').dataset.status,'unknown');
+    assert.equal(f.element('ccAttentionToggle').disabled,true);
+    await f.api.refresh();
+    assert.equal(f.element('ccAttentionToggle').dataset.status,'warning');
+    assert.match(f.element('ccAttentionContent').innerHTML,/data-attention="users"/);
+    f.testApi.state.users=[];f.testApi.updateAttention();
+    assert.equal(f.element('ccAttentionToggle').dataset.status,'clear');
+    assert.equal(f.element('ccAttentionToggle').disabled,false);
+    assert.match(f.element('ccAttentionContent').innerHTML,/Nenhum item de atenção/);
+    f.testApi.state.wallets=[{total:100,corretores:[]}];f.testApi.updateAttention();
+    assert.equal(f.element('ccAttentionToggle').dataset.status,'warning');
+    assert.match(f.element('ccAttentionContent').innerHTML,/data-attention="wallets"/);
+    f.testApi.state.wallets=[];
+    f.testApi.state.kpis={...f.testApi.state.kpis,porTag:{retornar_depois:2}};f.testApi.updateAttention();
+    assert.equal(f.element('ccAttentionToggle').dataset.status,'warning');
+    assert.match(f.element('ccAttentionContent').innerHTML,/data-tag="retornar_depois" data-global="true"/);
+    assert.equal(f.testApi.attentionItems()[0].count,2);
+    f.testApi.updateAttention(false);assert.equal(f.element('ccAttentionToggle').dataset.status,'unknown');
+});
+
+test('atualização automática não redesenha o modal de atenção enquanto está em análise',async()=>{
+    let calls=0;const f=fixture(async url=>{calls++;return sample[url];});
+    await f.api.refresh();f.testApi.state.attentionOpen=true;
+    await f.api.refresh({background:true});assert.equal(calls,4);
+    f.testApi.state.attentionOpen=false;
+    await f.api.refresh({background:true});assert.equal(calls,8);
 });

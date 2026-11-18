@@ -10,7 +10,7 @@
     const date = value => value ? new Date(value).toLocaleString('pt-BR') : 'Não disponível';
     const labels = {sem_qualificacao:'Sem qualificação',mensagem_enviada:'Mensagem enviada',follow_up:'Follow up',agendado:'Agendado',em_atendimento:'Em atendimento',retornar_depois:'Retornar depois',vendido:'Vendido',sem_interesse:'Sem interesse',sem_resposta:'Sem resposta',telefone_invalido:'Telefone inválido'};
     const colors = ['#21c7ed','#21dda8','#aa7cf7','#ffc568','#f47793','#689bd7','#7f8cae','#43b6a3'];
-    const state = { view:'geral', wallets:[], users:[], summary:[], kpis:null, graphs:null, search:'', filter:'todas', drawer:null, page:1, busy:null, serial:0, charts:[], healthPeriod:'', healthFrom:'', healthTo:'', healthData:null, healthRequest:0, userAttention:false, hubPage:1 };
+    const state = { view:'geral', wallets:[], users:[], summary:[], kpis:null, graphs:null, search:'', filter:'todas', drawer:null, page:1, busy:null, serial:0, charts:[], healthPeriod:'', healthFrom:'', healthTo:'', healthData:null, healthRequest:0, userAttention:false, hubPage:1, attentionOpen:false };
     let actions = {}, previousFocus, contactTimer;
     const panel = (title,sub,body,cls='') => `<section class="cc-panel ${cls}"><header><div><h2>${title}</h2><p>${sub}</p></div></header>${body}</section>`;
     const empty = text => `<p class="cc-empty">${text}</p>`;
@@ -82,11 +82,25 @@
             return `<button class="cc-person cc-live-person" data-presence="${status}" data-user="${c.id}" aria-label="Ver ${esc(c.nome)}, ${status}"><span class="cc-avatar">${esc(c.nome.split(' ').map(x=>x[0]).slice(0,2).join(''))}<i class="cc-presence-dot" aria-hidden="true"></i></span><span><strong>${esc(c.nome)}</strong><small class="cc-presence-label">${status==='online'?'Online':status==='ausente'?'Ausente':'Offline'}</small><small class="cc-last-access">Último acesso: ${esc(c.ultimo_acesso?date(c.ultimo_acesso):'Nunca acessou')}</small></span><span class="cc-person-progress"><b>${pct(c.total_qualificados,c.total_carteira)}%</b><progress value="${num(c.total_qualificados)}" max="${Math.max(1,num(c.total_carteira))}"></progress><small>${fmt(c.total_qualificados)} / ${fmt(c.total_carteira)} trabalhados</small></span></button>`;
         }).join('') || empty('Nenhum corretor ativo.'));
     }
+    function attentionItems() {
+        if(!state.kpis)return [];
+        return [
+            {key:'wallets',icon:'triangle-exclamation',title:'Carteiras com baixo progresso',description:'Menos de 20% da base trabalhada',count:state.wallets.filter(c=>{const n=walletNumbers(c);return n.total>0&&n.progress<20;}).length},
+            {key:'users',icon:'user-clock',title:'Equipe sem acesso recente',description:'Sem acesso há 3 dias ou nunca acessou',count:state.users.filter(withoutRecentAccess).length},
+            {key:'returns',icon:'clock',title:'Clientes com retorno combinado',description:'Classificação atual · sem análise de atraso',count:num(state.kpis.porTag?.retornar_depois)}
+        ].filter(item=>item.count>0);
+    }
     function alerts() {
-        const low=state.wallets.filter(c=>{const n=walletNumbers(c);return n.total>0&&n.progress<20;});
-        const inactive=state.users.filter(withoutRecentAccess);
-        const returns=num(state.kpis.porTag?.retornar_depois);
-        return `<button class="cc-alert" data-attention="wallets"><i class="fas fa-triangle-exclamation"></i><span><strong>Carteiras com baixo progresso</strong><small>Menos de 20% da base trabalhada</small></span><b>${low.length}</b><span>→</span></button><button class="cc-alert" data-attention="users"><i class="fas fa-user-clock"></i><span><strong>Equipe sem acesso recente</strong><small>Sem acesso há 3 dias ou nunca acessou</small></span><b>${inactive.length}</b><span>→</span></button><button class="cc-alert" data-tag="retornar_depois"><i class="fas fa-clock"></i><span><strong>Clientes com retorno combinado</strong><small>Classificação atual · sem análise de atraso</small></span><b>${returns}</b><span>→</span></button>`;
+        const items=attentionItems();
+        return items.length?items.map(item=>`<button type="button" class="cc-alert" ${item.key==='returns'?'data-tag="retornar_depois" data-global="true"':`data-attention="${item.key}"`}><i class="fas fa-${item.icon}" aria-hidden="true"></i><span><strong>${item.title}</strong><small>${item.description}</small></span><b>${fmt(item.count)}</b><span aria-hidden="true">→</span></button>`).join(''):'<div class="cc-attention-empty"><i class="fas fa-circle-check" aria-hidden="true"></i><p>Nenhum item de atenção nos indicadores acompanhados.</p></div>';
+    }
+    function updateAttention(available=true) {
+        const button=$('ccAttentionToggle');if(!button)return;
+        const items=attentionItems();
+        const status=!available||!state.kpis?'unknown':items.length?'warning':'clear';
+        const label=status==='unknown'?'Alertas indisponíveis. Aguarde a atualização.':items.length?`Atenção do gestor: ${items.length} categorias com pendências`:'Atenção do gestor: nenhum item de atenção';
+        button.dataset.status=status;button.disabled=status==='unknown';button.title=label;button.setAttribute('aria-label',label);
+        if($('ccAttentionContent'))$('ccAttentionContent').innerHTML=alerts();
     }
     function walletHub(cards) {
         let list=state.wallets.filter(w=>w.nome.toLocaleLowerCase().includes(state.search.toLocaleLowerCase()));
@@ -114,7 +128,7 @@
         let metrics,content;
         if(state.view==='geral') {
             metrics=metric('Base total',fmt(total),'Sem usuários de teste','users','data-view="carteira"')+metric('Trabalhados',fmt(worked),`${rate}% com qualificação`,'circle-check','data-health-jump="true"')+metric('Pendentes',fmt(pending),'Sem qualificação atribuída','hourglass-half','data-tag="sem_qualificacao" data-global="true"')+metric('Em atendimento',fmt(k.porTag?.em_atendimento),'Classificação atual','headset','data-tag="em_atendimento" data-global="true"');
-            content=`<div class="cc-bento"><section class="cc-panel cc-health" aria-labelledby="ccHealthTitle"><header><div><h2 id="ccHealthTitle">Saúde da operação</h2><p>Classificações atuais · período pela data da última classificação</p></div>${healthFilter()}</header><div id="ccHealth">${state.healthPeriod?(state.healthData?tags(state.healthData):empty('Carregando qualificações…')):tags(g.donut)}</div></section>${panel('Atenção do gestor','Demandas que precisam de acompanhamento',alerts(),'cc-alerts')}${panel('Evolução de qualificações','Últimos 30 dias · eventos registrados','<div class="cc-chart"><canvas id="ccTrend"></canvas></div>','cc-evolution')}${panel('Equipe em tempo real','Presença estimada pelo último acesso · atualização a cada minuto',liveTeam(),'cc-live')}</div><div id="ccHubMount">${walletHub(false)}</div>`;
+            content=`<div class="cc-bento cc-operation-row"><section class="cc-panel cc-health" aria-labelledby="ccHealthTitle"><header><div><h2 id="ccHealthTitle">Saúde da operação</h2><p>Classificações atuais · período pela data da última classificação</p></div>${healthFilter()}</header><div id="ccHealth">${state.healthPeriod?(state.healthData?tags(state.healthData):empty('Carregando qualificações…')):tags(g.donut)}</div></section>${panel('Equipe em tempo real','Presença estimada pelo último acesso · atualização a cada minuto',liveTeam(),'cc-live')}</div>${panel('Evolução de qualificações','Últimos 30 dias · eventos registrados','<div class="cc-chart"><canvas id="ccTrend"></canvas></div>','cc-evolution cc-evolution-wide')}`;
         } else if(state.view==='carteira') {
             metrics=metric('Carteiras',fmt(state.wallets.length),'Listas cadastradas','folder')+metric('Contatos na base',fmt(total),'Sem usuários de teste','users')+metric('Trabalhados',fmt(worked),`${rate}% da base`,'circle-check')+metric('Pendentes',fmt(pending),'Sem qualificação atribuída','hourglass-half');
             content=`<div id="ccHubMount">${walletHub(true)}</div>`;
@@ -126,6 +140,7 @@
         $('ccContent').innerHTML=`<div class="cc-metrics">${metrics}</div>${content}`;
         document.querySelectorAll('.cc-tabs [data-view]').forEach(b=>{b.classList.toggle('active',b.dataset.view===state.view);b.setAttribute('aria-selected',String(b.dataset.view===state.view));});
         chart('ccTrend',g.linha);
+        updateAttention();
     }
     function close() {
         state.serial++; state.drawer=null; clearTimeout(contactTimer);
@@ -185,13 +200,13 @@
         } catch(error){if(request===state.serial)$('ccContacts').innerHTML=empty('Falha ao carregar contatos. Use a busca novamente para tentar.');}
     }
     async function refresh({background=false}={}) {
-        if(background&&(document.hidden||state.drawer||document.activeElement?.closest?.('#ccRoot input, #ccRoot select, .modal-overlay, .theme-control')))return;
+        if(background&&(document.hidden||state.drawer||state.attentionOpen||document.activeElement?.closest?.('#ccRoot input, #ccRoot select, .modal-overlay, .theme-control')))return;
         if(state.busy)return state.busy;
         state.busy=(async()=>{try {
             const [kpis,graphs,data,users]=await Promise.all([ApiClient.get('/api/admin/dashboard'),ApiClient.get('/api/admin/dashboard/graficos'),ApiClient.get('/api/admin/dashboard/carteiras'),ApiClient.get('/api/admin/corretores')]);
             state.kpis=kpis;state.graphs=graphs;state.wallets=data.carteiras||[];state.summary=data.corretoresResumo||[];state.users=users.corretores||[];
             render();if(state.healthPeriod)await filterHealth(state.healthPeriod,state.healthFrom,state.healthTo);
-        }catch(error){if(!state.kpis)$('ccContent').innerHTML=empty('Não foi possível carregar o painel. Recarregue a página para tentar novamente.');}finally{state.busy=null;}})();
+        }catch(error){updateAttention(false);if(!state.kpis)$('ccContent').innerHTML=empty('Não foi possível carregar o painel. Recarregue a página para tentar novamente.');}finally{state.busy=null;}})();
         return state.busy;
     }
     function navigate(tab) {close();document.querySelector(`.nav-tab[data-tab="${tab}"]`)?.click();if(tab==='corretores')$('novoNome')?.focus();}
@@ -208,6 +223,20 @@
         const toolbar=document.createElement('header');toolbar.className='cc-top cc-account-toolbar';
         toolbar.innerHTML='<h1 id="ccPageTitle">Centro de comando</h1>';
         toolbar.append(account);document.querySelector('.admin-main').prepend(toolbar);
+        const attentionButton=document.createElement('button');attentionButton.type='button';attentionButton.id='ccAttentionToggle';
+        attentionButton.className='cc-attention-toggle';attentionButton.disabled=true;attentionButton.dataset.status='unknown';
+        attentionButton.setAttribute('aria-label','Carregando alertas');attentionButton.setAttribute('aria-haspopup','dialog');attentionButton.setAttribute('aria-controls','ccAttentionDialog');
+        attentionButton.innerHTML='<i class="fas fa-bell" aria-hidden="true"></i><span class="cc-attention-dot" aria-hidden="true"></span>';
+        account.insertBefore(attentionButton,account.querySelector('.theme-control'));
+        const attentionDialog=document.createElement('dialog');attentionDialog.id='ccAttentionDialog';attentionDialog.className='cc-attention-dialog';
+        attentionDialog.setAttribute('aria-labelledby','ccAttentionTitle');
+        attentionDialog.innerHTML='<header><div><h2 id="ccAttentionTitle">Atenção do gestor</h2><p>Selecione uma pendência para analisar.</p></div><button type="button" id="ccAttentionClose" aria-label="Fechar alertas">×</button></header><div id="ccAttentionContent"></div>';
+        document.body.append(attentionDialog);
+        attentionButton.addEventListener('click',()=>{updateAttention();state.attentionOpen=true;attentionDialog.showModal();});
+        $('ccAttentionClose').addEventListener('click',()=>attentionDialog.close());
+        attentionDialog.addEventListener('close',()=>{state.attentionOpen=false;});
+        attentionDialog.addEventListener('click',event=>{if(event.target!==attentionDialog)return;const rect=attentionDialog.getBoundingClientRect();if(event.clientX<rect.left||event.clientX>rect.right||event.clientY<rect.top||event.clientY>rect.bottom)attentionDialog.close();});
+
         const clock=document.createElement('time');clock.className='cc-sidebar-clock';header.append(clock);
         function updateClock(){const now=new Date();clock.dateTime=now.toISOString();clock.textContent=now.toLocaleDateString('pt-BR')+' · '+now.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});}
         updateClock();setInterval(updateClock,30000);
@@ -235,8 +264,8 @@
             if(b.dataset.access)open('user',Number(b.dataset.access),'acesso');
             if(b.dataset.manageWallet){const w=state.wallets.find(w=>w.lista_id===Number(b.dataset.manageWallet));close();actions.lista?.(w);}
             if(b.dataset.nav)navigate(b.dataset.nav);
-            if(b.dataset.attention){state.hubPage=1;state.userAttention=b.dataset.attention==='users';state.view=b.dataset.attention==='wallets'?'carteira':'corretor';state.filter=b.dataset.attention==='wallets'?'atencao':'todas';render();}
-            if(b.dataset.tag){const scope=b.dataset.scope;const wallet=scope==='wallet'?state.drawer?.id:'';const user=b.dataset.global?'':scope==='user'?state.drawer?.id:'';close();actions.tag?.(b.dataset.tag,labels[b.dataset.tag]||b.dataset.tag,wallet,user,b.closest('#ccHealth')?{de:state.healthFrom,ate:state.healthTo}:{});}
+            if(b.dataset.attention){if(state.attentionOpen){attentionDialog.close();document.querySelector('.nav-tab[data-tab="dashboard"]')?.click();}state.search='';state.hubPage=1;state.userAttention=b.dataset.attention==='users';state.view=b.dataset.attention==='wallets'?'carteira':'corretor';state.filter=b.dataset.attention==='wallets'?'atencao':'todas';render();}
+            if(b.dataset.tag){if(state.attentionOpen)attentionDialog.close();const scope=b.dataset.scope;const wallet=scope==='wallet'?state.drawer?.id:'';const user=b.dataset.global?'':scope==='user'?state.drawer?.id:'';close();actions.tag?.(b.dataset.tag,labels[b.dataset.tag]||b.dataset.tag,wallet,user,b.closest('#ccHealth')?{de:state.healthFrom,ate:state.healthTo}:{});}
         });
         document.addEventListener('input',e=>{if(e.target.id==='ccSearch'){state.search=e.target.value;state.hubPage=1;const cursor=e.target.selectionStart;renderHub();$('ccSearch').focus();$('ccSearch').setSelectionRange(cursor,cursor);}if(e.target.id==='ccContactSearch'){clearTimeout(contactTimer);contactTimer=setTimeout(()=>contacts(1),250);}});
         document.addEventListener('change',async e=>{if(e.target.id==='ccWalletFilter'){state.filter=e.target.value;state.hubPage=1;renderHub();}if(e.target.id==='ccHealthPeriod'){
