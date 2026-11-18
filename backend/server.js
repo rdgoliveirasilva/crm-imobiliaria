@@ -46,6 +46,7 @@ app.use('/api/admin/empreendimentos', empreendimentosAdmin);
 app.use('/api/corretor/empreendimentos', empreendimentosCorretor);
 
 // Admin (genérico — vem depois pra não engolir as rotas específicas)
+app.use('/api/admin/whatsapp', require('./routes/whatsapp')());
 app.use('/api/admin', require('./routes/admin'));
 
 // Corretor (genérico — vem depois)

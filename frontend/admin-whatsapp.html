@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="admin-desktop-theme">
+<head>
+    <script src="js/auth-session.js"></script>
+    <meta charset="UTF-8">
+    <link rel="manifest" href="/manifest.webmanifest">
+    <link rel="apple-touch-icon" sizes="180x180" href="/assets/icons/apple-touch-icon.png?v=2">
+    <meta name="theme-color" content="#002c61">
+    <script src="js/corretor-theme.js"></script>
+    <meta name="apple-mobile-web-app-title" content="Prospect">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prospect - WhatsApp</title>
+
+    <!-- Open Graph (WhatsApp, Facebook, LinkedIn, etc) -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Prospect SR Lançamentos">
+    <meta property="og:description" content="Uma ferramenta exclusiva de prospecção da imobiliária Sônia e Ramalho para os corretores encontrarem novos clientes e potencializar suas oportunidades de venda de forma otimizada.">
+    <meta property="og:url" content="https://srlancamentosprospect.vercel.app/">
+    <meta property="og:image" content="https://srlancamentosprospect.vercel.app/assets/img/prospect.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="Prospect SR Lançamentos">
+    <meta property="og:site_name" content="Prospect SR Lançamentos">
+    <meta property="og:locale" content="pt_BR">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Prospect SR Lançamentos">
+    <meta name="twitter:description" content="Uma ferramenta exclusiva de prospecção da imobiliária Sônia e Ramalho para os corretores encontrarem novos clientes e potencializar suas oportunidades de venda de forma otimizada.">
+    <meta name="twitter:image" content="https://srlancamentosprospect.vercel.app/assets/img/prospect.png">
+
+    <!-- Descrição padrão (Google) -->
+    <meta name="description" content="Uma ferramenta exclusiva de prospecção da imobiliária Sônia e Ramalho para os corretores encontrarem novos clientes e potencializar suas oportunidades de venda de forma otimizada.">
+
+    <link rel="icon" type="image/png" href="assets/img/logo.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/admin.css">
+    <link rel="stylesheet" href="css/corretor-theme-tokens.css">
+    <link rel="stylesheet" href="css/admin-command.css">
+
+    <link rel="stylesheet" href="css/admin-whatsapp.css">
+</head>
+<body class="admin-page admin-command">
+
+    <!-- =====================================================
+         HEADER
+         ===================================================== -->
+    <header class="app-header">
+        <div class="header-inner">
+            <div class="header-brand">
+                <div class="logo-mark">
+                    <img
+                        src="assets/img/logo.png"
+                        alt="Prospect"
+                        onerror="this.style.display='none'; this.parentElement.classList.add('fallback');"
+                    >
+                    <i class="fas fa-building logo-fallback"></i>
+                </div>
+                <div class="header-brand-text">
+                    <h1>Prospect</h1>
+                    <p>SR Lançamentos</p>
+                </div>
+            </div>
+
+            <div class="header-user">
+                <div class="user-info">
+                    <span class="user-greeting">Bem vindo</span>
+                    <strong id="headerUserName">Administrador</strong>
+                </div>
+                <div class="theme-control" id="themeControl">
+                    <button type="button" class="theme-toggle" id="themeToggle" aria-label="Escolher tema" aria-expanded="false" aria-controls="themeOptions"><i class="fas fa-circle-half-stroke" aria-hidden="true"></i></button>
+                    <div id="themeOptions" class="theme-options" role="group" aria-label="Tema da interface" hidden>
+                        <button type="button" data-theme-choice="auto" aria-pressed="true"><i class="fas fa-clock" aria-hidden="true"></i> Automático <small>Claro 6h–18h · escuro à noite</small></button>
+                        <button type="button" data-theme-choice="light" aria-pressed="false"><i class="fas fa-sun" aria-hidden="true"></i> Claro</button>
+                        <button type="button" data-theme-choice="dark" aria-pressed="false"><i class="fas fa-moon" aria-hidden="true"></i> Escuro</button>
+                    </div>
+                </div>
+                <button class="btn-avatar" id="btnAvatar" title="Menu">
+                    <i class="fas fa-user"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <nav class="admin-nav" aria-label="Administração"><div class="admin-nav-inner">
+        <a class="nav-tab" href="admin.html"><i class="fas fa-chart-line"></i><span>Centro de comando</span></a>
+        <a class="nav-tab active" href="admin-whatsapp.html" aria-current="page"><i class="fab fa-whatsapp"></i><span>WhatsApp</span></a>
+    </div></nav>
+    <main class="admin-main wa-main">
+        <header class="cc-top"><div><span class="cc-eyebrow">CANAIS DE ATENDIMENTO</span><h1>WhatsApp</h1><p>Gerencie as conexões da sua operação.</p></div>
+            <button id="waRefresh" type="button"><i class="fas fa-rotate"></i> Atualizar</button></header>
+        <p id="waNotice" role="status" aria-live="polite">Verificando integração…</p>
+        <section class="cc-panel wa-setup" id="waSetup" hidden><h2>Conecte seu gateway</h2>
+            <p>O serviço WhatsApp ainda não foi configurado no servidor. Após a implantação, você poderá criar uma conexão e vincular o celular por QR Code.</p>
+            <p>O administrador técnico deve configurar <code>OPENWA_BASE_URL</code> e <code>OPENWA_API_KEY</code> no backend. Não informe a chave nesta página.</p>
+        </section>
+        <section class="cc-panel" aria-labelledby="waCreateTitle"><h2 id="waCreateTitle">Nova conexão</h2>
+            <form id="waCreate"><label for="waName">Nome da conexão<small>3 a 50 letras, números ou hífens. Ex.: atendimento-prospect</small></label>
+            <div class="wa-create-row"><input id="waName" name="name" required minlength="3" maxlength="50" pattern="[a-zA-Z0-9-]{3,50}" autocomplete="off" placeholder="atendimento-prospect"><button type="submit" disabled>Criar conexão</button></div></form>
+        </section>
+        <section class="wa-sessions" aria-labelledby="waSessionsTitle"><div class="wa-section-heading"><h2 id="waSessionsTitle">Conexões</h2><span id="waUpdated"></span></div>
+            <div id="waSessions" class="wa-grid" aria-busy="true"></div>
+            <nav class="cc-pagination" aria-label="Páginas de conexões"><button id="waPrev" type="button" disabled aria-label="Página anterior">‹</button><span id="waPage">Página 1</span><button id="waNext" type="button" disabled aria-label="Próxima página">›</button></nav>
+        </section>
+        <p class="wa-footnote">Esta área administra conexões. As mensagens e qualificações da prospecção continuam no fluxo atual.</p>
+    </main>
+    <dialog id="waQr" aria-labelledby="waQrTitle"><div class="wa-dialog-head"><h2 id="waQrTitle">Vincular WhatsApp</h2><button id="waCloseQr" type="button" aria-label="Fechar">×</button></div>
+        <p>Abra o WhatsApp no celular → Dispositivos conectados → Conectar dispositivo.</p><p id="waQrState" role="status"></p><img id="waQrImage" alt="QR Code para vincular esta conexão ao WhatsApp" hidden><p>O código é atualizado automaticamente enquanto esta janela estiver aberta.</p>
+    </dialog>
+    <script src="js/api-client.js"></script><script src="js/avatar.js"></script><script src="js/admin-whatsapp.js"></script>
+</body></html>

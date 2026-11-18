@@ -1,0 +1,39 @@
+.admin-command .nav-tab { text-decoration:none; }
+.wa-main { max-width:1500px; }
+.wa-main button,.admin-command #waQr button { min-height:44px; border:1px solid var(--theme-border); border-radius:12px; padding:10px 16px; background:var(--theme-control); color:var(--theme-text); font:inherit; cursor:pointer; }
+.wa-main button:hover,.admin-command #waQr button:hover { border-color:var(--theme-accent); }
+.wa-main button:disabled { opacity:.45; cursor:not-allowed; }
+.wa-main h2 { font-size:18px; margin:0 0 12px; }
+.wa-main p,.wa-main small { color:var(--theme-muted); line-height:1.6; }
+#waNotice { padding:14px 18px; border:1px solid var(--theme-border); border-radius:14px; background:var(--theme-control); overflow-wrap:anywhere; }
+#waNotice[data-error="true"] { color:var(--theme-danger); background:var(--theme-danger-bg); }
+.wa-setup { margin-bottom:20px; }
+.wa-main [hidden],#waQr [hidden] { display:none!important; }
+.wa-main code { overflow-wrap:anywhere; }
+#waCreate label { display:block; font-weight:600; margin:12px 0; }
+#waCreate small { display:block; font-weight:400; margin-top:6px; }
+.wa-create-row { display:flex; gap:12px; }
+.wa-create-row input { min-width:0; flex:1; padding:12px; border:1px solid var(--theme-border); border-radius:12px; font:inherit; }
+.wa-sessions { margin-top:28px; }
+.wa-section-heading { display:flex; justify-content:space-between; flex-wrap:wrap; align-items:center; gap:12px; margin-bottom:12px; }
+#waUpdated { color:var(--theme-muted); font-size:12px; }
+.wa-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr)); gap:16px; }
+.wa-session { min-width:0; }
+.wa-session h3 { overflow-wrap:anywhere; margin:0 0 14px; font-size:17px; }
+.wa-session h3 i { color:var(--theme-success); margin-right:8px; }
+.wa-status { display:inline-block; border-radius:20px; padding:6px 10px; font-size:12px; background:var(--theme-control); color:var(--theme-text); }
+.wa-status[data-state="ready"] { background:var(--theme-success-bg); color:var(--theme-success); }
+.wa-status:is([data-state="failed"],[data-state="action_required"]) { background:var(--theme-warning-bg); color:var(--theme-warning); }
+.wa-session dl { font-size:13px; line-height:1.6; margin:18px 0; }
+.wa-session dt { color:var(--theme-muted); }
+.wa-session dd { margin:0 0 8px; overflow-wrap:anywhere; }
+.wa-actions { display:flex; flex-wrap:wrap; gap:8px; }
+.wa-actions button[data-action="delete"],.wa-actions button[data-action="logout"] { color:var(--theme-danger); }
+.wa-footnote { font-size:12px; margin-top:28px; }
+.admin-command #waQr { width:min(460px,calc(100% - 24px)); max-height:calc(100dvh - 32px); margin:auto; padding:24px; border:1px solid var(--theme-border); border-radius:22px; background:var(--theme-surface); color:var(--theme-text); overflow:auto; }
+#waQr::backdrop { background:#0009; backdrop-filter:blur(4px); }
+.wa-dialog-head { display:flex; justify-content:space-between; align-items:center; gap:12px; }
+.wa-dialog-head h2 { font-size:20px; }
+#waQr p { color:var(--theme-muted); line-height:1.6; }
+#waQrImage { display:block; width:min(100%,300px); height:auto; margin:18px auto; border:12px solid white; background:white; border-radius:12px; }
+@media(max-width:600px) { .wa-create-row { flex-direction:column; } .wa-main .cc-top { align-items:flex-start; } .wa-actions button { flex:1; } }

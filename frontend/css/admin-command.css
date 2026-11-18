@@ -369,3 +369,5 @@ html.admin-desktop-theme[data-theme="light"] { color-scheme:light; }
 }
 .admin-command .theme-options small { font-size:11px; line-height:1.5; }
 .admin-command .theme-toggle { display:grid; place-items:center; padding:0; flex-shrink:0; }
+
+.admin-command a.nav-tab { text-decoration:none; }

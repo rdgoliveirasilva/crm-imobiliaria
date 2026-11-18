@@ -1,0 +1,10 @@
+{$OPENWA_DOMAIN} {
+    # Publica somente os endpoints utilizados pelo Prospect; o dashboard do gateway fica privado.
+    @sessions path /api/sessions /api/sessions/*
+    handle @sessions {
+        reverse_proxy openwa:2785
+    }
+    handle {
+        respond "Not found" 404
+    }
+}

@@ -1,0 +1,60 @@
+# Execute neste diretório: docker compose up -d --build
+services:
+  openwa:
+    build:
+      context: https://github.com/rmyndharis/OpenWA.git#640aadf9f46bc73efea936e4aa40563cc9f45a58
+    restart: unless-stopped
+    stop_grace_period: 75s
+    ports:
+      - "127.0.0.1:2785:2785"
+    environment:
+      NODE_ENV: production
+      PORT: 2785
+      TZ: America/Sao_Paulo
+      API_MASTER_KEY: ${OPENWA_API_KEY:?Gere as credenciais com node configure.cjs}
+      API_KEY_PEPPER: ${OPENWA_KEY_PEPPER:?Gere as credenciais com node configure.cjs}
+      DATABASE_TYPE: sqlite
+      DATABASE_NAME: /app/data/openwa.sqlite
+      DATABASE_SYNCHRONIZE: "true"
+      ENGINE_TYPE: whatsapp-web.js
+      SESSION_DATA_PATH: /app/data/sessions
+      AUTO_START_SESSIONS: "true"
+      STORAGE_TYPE: local
+      STORAGE_LOCAL_PATH: /app/data/media
+      REDIS_ENABLED: "false"
+      QUEUE_ENABLED: "false"
+      CACHE_ENABLED: "false"
+      ENABLE_SWAGGER: "false"
+      HOME: /tmp
+      XDG_CONFIG_HOME: /tmp/.config
+      XDG_CACHE_HOME: /tmp/.cache
+    volumes:
+      - openwa-data:/app/data
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: [ALL]
+    cap_add: [CHOWN, DAC_OVERRIDE, FOWNER, KILL, SETGID, SETUID]
+    pids_limit: 2048
+    mem_limit: 2g
+  caddy:
+    image: caddy:2.10.2-alpine
+    profiles: [https]
+    restart: unless-stopped
+    environment:
+      OPENWA_DOMAIN: ${OPENWA_DOMAIN:-localhost}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - openwa
+volumes:
+  openwa-data:
+  caddy-data:
+  caddy-config:

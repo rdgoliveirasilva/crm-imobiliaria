@@ -24,7 +24,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const headerUserName = $('headerUserName');
 
     // Nav
-    const navTabs = document.querySelectorAll('.nav-tab');
+    const navTabs = document.querySelectorAll('.nav-tab[data-tab]');
     const tabPanels = document.querySelectorAll('.tab-panel');
 
     // Dashboard

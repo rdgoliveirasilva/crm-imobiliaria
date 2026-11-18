@@ -586,3 +586,18 @@ FIM DO CONTEXTO. Conferir o código atual antes de alterar comportamentos: este 
 
 ## Admin — centro de comando (17/11/2026)
 Frontend reorganizado em Operação geral, Por carteira e Por corretor: frontend/js/admin-command.js e frontend/css/admin-command.css. admin.js mantém os formulários e ações existentes por uma ponte de integração; markup legado do dashboard fica oculto para conservar os elementos dos drill-downs. admin.html carrega o mesmo controlador e tokens Claro/Escuro/Automático do corretor; preferência manual persistida em prospect-theme. Nenhuma API ou regra de banco alterada. Detalhes e limitações em openspec/specs/admin-dashboard/spec.md. 26 testes passaram; revisão visual ainda pendente por indisponibilidade segura do navegador.
+
+
+## 17/11/2026 — Integração administrativa WhatsApp / OpenWA
+
+- Nova página `frontend/admin-whatsapp.html`, acessível no menu do admin, usando temas existentes.
+- Backend `/api/admin/whatsapp` protegido por `autenticar` e `apenasAdmin`; adaptador OpenWA com
+  timeout, erros sanitizados, ações restritas, chave somente em ambiente do servidor e respostas no-store.
+- Gerencia sessões (criar/iniciar/parar/desvincular/excluir), QR e paginação; não envia mensagens nem muda qualificação.
+- OpenWA 0.30.3 fixado no commit 640aadf9f46bc73efea936e4aa40563cc9f45a58; implantação separada em
+  `deploy/openwa`, com Docker, volume persistente, Caddy/HTTPS e gerador de segredos que não sobrescreve `.env`.
+- Usuário ainda não tem servidor/conta de hospedagem e pediu alternativa gratuita. Nenhum servidor foi
+  contratado/criado, nenhuma credencial de produção configurada, nenhum número pareado. Oracle Always Free
+  pode ser avaliada após cadastro do usuário; operação local requer computador ligado.
+- Docker não está disponível neste ambiente. Build da imagem, revisão visual e pareamento real pendentes.
+- Validação concluída: 40 testes Node aprovados, sintaxe JavaScript, IDs/arquivos do HTML e git diff --check. Nenhum teste usou banco ou gateway de produção.
