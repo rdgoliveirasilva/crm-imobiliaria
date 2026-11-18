@@ -27,7 +27,9 @@ body.ps-desktop .ps-sidebar-toggle {
 body.ps-desktop.ps-collapsed .ps-sidebar-toggle i { transform:rotate(180deg); }
 body.ps-desktop .app-header :is(.admin-nav,.desktop-sidebar-nav) {
     flex:1 1 auto; min-height:0; overflow-y:auto; overflow-x:hidden; scrollbar-width:none;
-    background:none; border:0; box-shadow:none; margin:0;
+    background:transparent; border:0; box-shadow:none; margin:0;
+    /* Evita o retângulo saturado herdado da antiga barra horizontal. */
+    backdrop-filter:none; -webkit-backdrop-filter:none;
 }
 body.ps-desktop .app-header :is(.admin-nav,.desktop-sidebar-nav)::-webkit-scrollbar { display:none; }
 body.ps-desktop .admin-nav-inner { padding:0; gap:7px; }
