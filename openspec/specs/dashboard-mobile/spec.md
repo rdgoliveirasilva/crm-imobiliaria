@@ -45,3 +45,11 @@ Acima de 1024px SHALL manter filtros, dados reais e ações existentes, com nave
 
 ### Ajuste de zoom desktop — 2026-11-16
 A coluna lateral SHALL alinhar seu conteúdo ao início e impedir encolhimento da marca. Em alturas até 760px SHALL reduzir espaçamentos. A rolagem vertical SHALL continuar disponível com barra oculta, mantendo acesso ao conteúdo em telas menores. Revisão visual não executada nesta alteração: acesso ao navegador de teste indisponível.
+
+### 18/11/2026 — Navbar flutuante e Centro de comando
+- CSS compartilhado de navegação compacta em cápsula para carteira, prospecção e empreendimentos até 1024px.
+- Prospecção destacada em azul sem mudar handlers, destino ou seleção de carteira. Links e itens em breve mantidos.
+- Logo/Prospect/SR Lançamentos ocultos no cabeçalho mobile; conta, tema e botões de voltar das páginas internas preservados.
+- Título mobile do dashboard: Centro de comando. Saudação e nome dinâmicos continuam no desktop.
+- Navbar respeita safe area e espaço inferior do conteúdo. 12 testes de carteira, dashboard e tema aprovados;
+  conferência visual em navegador pendente.

@@ -1,0 +1,50 @@
+/* Refinamento compartilhado apenas para mobile/tablet do corretor. */
+.mobile-premium .mobile-command-title { display:none; }
+@media(max-width:1024px) {
+    .mobile-premium .header-brand .logo-mark,
+    .mobile-premium .header-brand-text { display:none; }
+    .corretor-page.mobile-premium:not(.mobile-inner-page) .header-brand { display:none; }
+    .corretor-page.mobile-premium:not(.mobile-inner-page) .header-inner { justify-content:flex-end; padding-bottom:0; }
+    .mobile-premium .mobile-welcome #mobileGreeting,
+    .mobile-premium .mobile-welcome #mobileUserName { display:none; }
+    .mobile-premium .mobile-welcome .mobile-command-title {
+        display:block; margin:0 0 8px; font-size:clamp(23px,4.5vw,32px);
+        line-height:1.15; letter-spacing:-.7px; overflow-wrap:normal; color:var(--theme-text);
+    }
+    body.mobile-premium .mobile-bottom-nav {
+        display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:3px;
+        position:fixed; z-index:80; left:max(12px,env(safe-area-inset-left)); right:max(12px,env(safe-area-inset-right));
+        bottom:calc(12px + env(safe-area-inset-bottom)); width:auto; max-width:420px;
+        transform:none; margin-inline:auto; padding:6px; box-sizing:border-box;
+        border:1px solid var(--theme-border); border-radius:36px;
+        background:color-mix(in srgb,var(--theme-surface) 92%,transparent);
+        backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
+        box-shadow:0 8px 24px #0003,inset 0 1px 0 #ffffff20;
+    }
+    body.mobile-premium .mobile-bottom-nav > a,
+    body.mobile-premium .mobile-bottom-nav > button {
+        min-width:0; min-height:48px; padding:6px 2px; gap:4px;
+        border-radius:28px; font-size:9px; line-height:1.2;
+        justify-content:center; color:var(--theme-muted); text-shadow:none;
+    }
+    body.mobile-premium .mobile-bottom-nav i { font-size:16px; }
+    body.mobile-premium .mobile-bottom-nav small { display:none; }
+    body.mobile-premium .mobile-bottom-nav > a:last-child span { font-size:0; white-space:normal; }
+    body.mobile-premium .mobile-bottom-nav > a:last-child span::after { content:'Imóveis'; font-size:9px; }
+    body.mobile-premium .mobile-bottom-nav [aria-current]:not(.mobile-prospect) {
+        color:var(--theme-text); background:var(--theme-control); box-shadow:0 2px 7px #0002;
+    }
+    body.mobile-premium .mobile-bottom-nav [aria-current]:not(.mobile-prospect) i { color:inherit; }
+    body.mobile-premium .mobile-bottom-nav .mobile-prospect {
+        color:#fff; background:linear-gradient(145deg,#0879d9,#1645b7);
+        box-shadow:0 3px 12px #1479ff45,inset 0 1px 0 #ffffff35;
+        font-weight:600; justify-content:center;
+    }
+    body.mobile-premium .mobile-bottom-nav .mobile-prospect i {
+        display:block; width:auto; height:auto; margin:0; border:0; border-radius:0;
+        color:#fff; background:none; box-shadow:none; font-size:19px;
+    }
+    body.mobile-premium .mobile-bottom-nav .mobile-prospect[aria-current] { outline:2px solid var(--theme-accent); outline-offset:2px; }
+    body.mobile-premium .mobile-bottom-nav :is(a,button):focus-visible { outline:2px solid var(--theme-accent); outline-offset:2px; }
+    body.mobile-premium .app-main { padding-bottom:calc(100px + env(safe-area-inset-bottom)); }
+}
