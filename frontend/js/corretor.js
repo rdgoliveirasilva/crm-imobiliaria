@@ -695,6 +695,7 @@ function labelTag(tag) {
         editor.querySelectorAll('.tag-opcao').forEach(opc => {
             opc.addEventListener('click', async () => {
                 const novoResultado = opc.dataset.novoResultado;
+                window.ContatoEvents?.record('qualificacao', leadId);
 
                 if (['agendado', 'retornar_depois'].includes(novoResultado)) {
                     editor.remove();

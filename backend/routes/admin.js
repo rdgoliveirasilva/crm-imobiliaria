@@ -27,6 +27,22 @@ const router = express.Router();
 
 router.use(autenticar, apenasAdmin);
 
+router.patch('/listas/:id/atividade', async (req, res) => {
+    const id = Number(req.params.id);
+    if (!Number.isSafeInteger(id) || id < 1 || typeof req.body?.inativa_manual !== 'boolean')
+        return res.status(400).json({ erro: 'Carteira ou estado inválido.' });
+    try {
+        const result = await pool.query('UPDATE listas SET inativa_manual = $1 WHERE id = $2 RETURNING id, inativa_manual', [req.body.inativa_manual, id]);
+        if (!result.rows.length) return res.status(404).json({ erro: 'Carteira não encontrada.' });
+        res.json(result.rows[0]);
+    } catch { res.status(500).json({ erro: 'Não foi possível alterar a carteira.' }); }
+});
+router.get('/equipe/atividade', async (req, res) => {
+    try { res.json(await require('../services/contatoMetrics').carregarAtividade(pool, Number(req.query.pagina || 1))); }
+    catch (error) { res.status(error.status || 500).json({ erro: error.status ? error.message : 'Não foi possível carregar os indicadores.' }); }
+});
+
+
 router.get('/categorias', async (req, res) => {
     try {
         const result = await pool.query(`SELECT c.id, c.nome, COUNT(l.id)::int AS total_listas
@@ -1043,7 +1059,8 @@ router.get('/dashboard/carteiras', async (req, res) => {
         });
 
         const listasResult = await pool.query(`
-            SELECT id, nome, (SELECT COUNT(*) FROM leads l WHERE l.lista_id = listas.id ${naoTeste('l')}) AS total, criado_em
+            SELECT id, nome, inativa_manual, (SELECT COUNT(*) FROM leads l WHERE l.lista_id = listas.id ${naoTeste('l')}) AS total,
+                (SELECT COUNT(*) FROM leads l WHERE l.lista_id = listas.id AND l.status != 'novo' ${naoTeste('l')}) AS trabalhados, criado_em
             FROM listas
             ORDER BY criado_em DESC
         `);
@@ -1069,6 +1086,8 @@ router.get('/dashboard/carteiras', async (req, res) => {
 
             carteiras.push({
                 lista_id: lista.id,
+                inativa_manual: lista.inativa_manual,
+                trabalhados: Number(lista.trabalhados),
                 nome: lista.nome,
                 total: lista.total,
                 criado_em: lista.criado_em,

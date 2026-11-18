@@ -2153,7 +2153,7 @@ function renderizarCorretoresResumo(corretores) {
         if (pollingTimer) clearInterval(pollingTimer);
 
         pollingTimer = setInterval(() => {
-            const dashTab = document.querySelector('.nav-tab[data-tab="dashboard"]');
+            const dashTab = document.querySelector('.nav-tab.active[data-tab="dashboard"], .nav-tab.active[data-tab="listas"], .nav-tab.active[data-tab="corretores"]');
             if (dashTab && dashTab.classList.contains('active')) {
                 if (window.AdminCommand) window.AdminCommand.refresh({ background: true });
                 else atualizarDashboard();
@@ -3555,6 +3555,8 @@ fecharCustomSelectLista();
             novoNomeInput.value = '';
             novoUsuarioInput.value = '';
             novaSenhaInput.value = '';
+            document.getElementById('ccNewUser')?.close();
+            window.AdminCommand?.refresh();
 
             renderizarCorretores();
             renderizarSeletorCorretores();
@@ -3716,6 +3718,7 @@ if (btnToggleTipo) {
             mostrarToast('✅ Corretor atualizado!', 'success');
             fecharEditarCorretor();
             renderizarCorretores();
+            window.AdminCommand?.refresh();
 
         } catch (err) {
             console.error('[editar-corretor] erro:', err);

@@ -2,7 +2,7 @@
 // O calendário segue CURRENT_DATE e criado_em::date, como o relatório existente.
 const SQL_EVOLUCAO = `
     WITH base AS (
-        SELECT id FROM leads WHERE corretor_id = $1
+        SELECT id FROM leads WHERE corretor_id = $1 AND NOT EXISTS (SELECT 1 FROM listas vis WHERE vis.id = leads.lista_id AND vis.inativa_manual)
             AND ($2::int IS NULL OR lista_id = $2)
     ), eventos AS (
         SELECT h.*, ROW_NUMBER() OVER (

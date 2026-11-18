@@ -146,7 +146,7 @@ test('operação geral remove hub e alertas e coloca evolução depois da saúde
     assert.ok(html.indexOf('Equipe em tempo real')<html.indexOf('Evolução de qualificações'));
     assert.match(html,/cc-evolution cc-evolution-wide/);
     f.testApi.state.view='carteira';f.testApi.render();
-    assert.match(f.element('ccContent').innerHTML,/Hub de Carteiras/);
+    assert.match(f.element('ccContent').innerHTML,/Carteiras ativas/);
 });
 
 test('ícone dos alertas distingue carregamento, ausência de pendências e cada categoria real',async()=>{
@@ -177,4 +177,35 @@ test('atualização automática não redesenha o modal de atenção enquanto est
     await f.api.refresh({background:true});assert.equal(calls,4);
     f.testApi.state.attentionOpen=false;
     await f.api.refresh({background:true});assert.equal(calls,8);
+});
+
+
+test('carteiras concluídas e manuais ficam separadas das ativas, recolhidas por padrão',async()=>{
+    const f=fixture(async url=>sample[url]); await f.api.refresh();
+    f.testApi.state.wallets=[
+        {lista_id:1,nome:'Ativa',total:10,trabalhados:3},
+        {lista_id:2,nome:'Completa',total:10,trabalhados:10},
+        {lista_id:3,nome:'Manual',total:10,trabalhados:1,inativa_manual:true},
+        {lista_id:4,nome:'Vazia',total:0,trabalhados:0}
+    ];
+    const active=f.testApi.walletHub(true,'active'), inactive=f.testApi.walletHub(true,'inactive');
+    assert.match(active,/data-wallet="1"/); assert.match(active,/data-wallet="4"/);
+    assert.doesNotMatch(active,/data-wallet="[23]"/);
+    assert.match(inactive,/data-wallet="2"/);assert.match(inactive,/data-wallet="3"/);
+    f.testApi.state.view='carteira'; f.testApi.render();
+    assert.match(f.element('ccContent').innerHTML,/<details[^>]*id="ccInactiveWallets"[^>]*>/);
+    assert.doesNotMatch(f.element('ccContent').innerHTML,/<details[^>]* open/);
+});
+test('manutenção pagina dez corretores e limita a última página após reduzir a equipe',async()=>{
+    const f=fixture(async url=>sample[url]); await f.api.refresh();
+    f.testApi.state.users=Array.from({length:23},(_,i)=>({id:i+1,nome:'Pessoa '+i,ativo:true,tipo:'corretor'}));
+    assert.equal((f.testApi.teamTable().match(/data-user=/g)||[]).length,10);
+    f.testApi.state.teamPage=3; assert.equal((f.testApi.teamTable().match(/data-user=/g)||[]).length,3);
+    f.testApi.state.users.length=5;f.testApi.teamTable();assert.equal(f.testApi.state.teamPage,1);
+});
+test('filtrar atenção omite carteiras inativadas manualmente',async()=>{
+ const f=fixture(async url=>sample[url]);await f.api.refresh();
+ f.testApi.state.wallets=[{lista_id:1,nome:'Ativa',total:10,trabalhados:0},{lista_id:2,nome:'Oculta',total:10,trabalhados:0,inativa_manual:true}];
+ f.testApi.state.filter='atencao';assert.match(f.testApi.walletHub(),/data-wallet="1"/);
+ assert.doesNotMatch(f.testApi.walletHub(true,'inactive'),/data-wallet="2"/);
 });

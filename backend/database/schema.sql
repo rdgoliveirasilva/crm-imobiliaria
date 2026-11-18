@@ -204,3 +204,16 @@ BEGIN
             ON UPDATE CASCADE ON DELETE RESTRICT;
     END IF;
 END $$;
+
+-- Estado manual separado da conclusão calculada da carteira.
+ALTER TABLE listas ADD COLUMN IF NOT EXISTS inativa_manual BOOLEAN NOT NULL DEFAULT FALSE;
+CREATE TABLE IF NOT EXISTS eventos_contato (
+    id BIGSERIAL PRIMARY KEY,
+    evento_id UUID NOT NULL UNIQUE,
+    corretor_id INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+    lead_id INTEGER NOT NULL REFERENCES leads(id) ON DELETE CASCADE,
+    tipo TEXT NOT NULL CHECK (tipo IN ('ligacao','whatsapp','qualificacao')),
+    criado_em TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp()
+);
+CREATE INDEX IF NOT EXISTS idx_eventos_contato_corretor_data ON eventos_contato(corretor_id, criado_em, id);
+CREATE INDEX IF NOT EXISTS idx_eventos_contato_data ON eventos_contato(criado_em);

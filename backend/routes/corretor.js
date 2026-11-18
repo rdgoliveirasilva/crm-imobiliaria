@@ -10,6 +10,11 @@ const { carregarEvolucao } = require('../services/corretorGraficos');
 const router = express.Router();
 
 router.use(autenticar, apenasCorretor);
+router.post('/eventos-contato', async (req, res) => {
+    try { await require('../services/contatoMetrics').registrarEvento(pool, req.usuario.id, req.body); res.json({ ok: true }); }
+    catch (error) { res.status(error.status || 500).json({ erro: error.status ? error.message : 'Não foi possível registrar o evento.' }); }
+});
+
 
 /* =========================================================
    HELPERS
@@ -63,7 +68,7 @@ async function reprocessarSemResposta() {
         const prontos = await client.query(`
             SELECT id, corretor_id
             FROM leads
-            WHERE status = 'sem_resposta'
+            WHERE NOT EXISTS (SELECT 1 FROM listas vis WHERE vis.id = leads.lista_id AND vis.inativa_manual) AND status = 'sem_resposta'
               AND data_reenvio IS NOT NULL
               AND data_reenvio <= NOW()
               AND EXISTS (SELECT 1 FROM usuarios u WHERE u.id = leads.corretor_id AND u.ativo = TRUE)
@@ -157,7 +162,7 @@ router.get('/proximo-lead', async (req, res) => {
                 SELECT l.*, li.nome AS lista_nome, li.mensagem_whatsapp AS lista_mensagem
                 FROM leads l
                 LEFT JOIN listas li ON li.id = l.lista_id
-                WHERE l.corretor_id = $1 AND l.status = 'novo' AND l.lista_id = $2
+                WHERE NOT EXISTS (SELECT 1 FROM listas vis WHERE vis.id = l.lista_id AND vis.inativa_manual) AND l.corretor_id = $1 AND l.status = 'novo' AND l.lista_id = $2
                 ORDER BY l.id ASC
                 LIMIT 1
             `;
@@ -167,7 +172,7 @@ router.get('/proximo-lead', async (req, res) => {
                 SELECT l.*, li.nome AS lista_nome, li.mensagem_whatsapp AS lista_mensagem
                 FROM leads l
                 LEFT JOIN listas li ON li.id = l.lista_id
-                WHERE l.corretor_id = $1 AND l.status = 'novo'
+                WHERE NOT EXISTS (SELECT 1 FROM listas vis WHERE vis.id = l.lista_id AND vis.inativa_manual) AND l.corretor_id = $1 AND l.status = 'novo'
                 ORDER BY l.id ASC
                 LIMIT 1
             `;
@@ -197,7 +202,7 @@ router.get('/lead/:id', async (req, res) => {
             SELECT l.*, li.nome AS lista_nome, li.mensagem_whatsapp AS lista_mensagem
             FROM leads l
             LEFT JOIN listas li ON li.id = l.lista_id
-            WHERE l.id = $1 AND l.corretor_id = $2
+            WHERE NOT EXISTS (SELECT 1 FROM listas vis WHERE vis.id = l.lista_id AND vis.inativa_manual) AND l.id = $1 AND l.corretor_id = $2
         `, [leadId, corretorId]);
 
         if (!result.rows.length) {
@@ -222,7 +227,7 @@ router.get('/lead/:id/historico', async (req, res) => {
         const leadId = Number(req.params.id);
 
         const check = await pool.query(
-            'SELECT id FROM leads WHERE id = $1 AND corretor_id = $2',
+            'SELECT id FROM leads WHERE NOT EXISTS (SELECT 1 FROM listas vis WHERE vis.id = leads.lista_id AND vis.inativa_manual) AND id = $1 AND corretor_id = $2',
             [leadId, corretorId]
         );
 
@@ -281,7 +286,7 @@ router.get('/leads-por-status', async (req, res) => {
                 li.nome AS lista_nome
             FROM leads l
             LEFT JOIN listas li ON li.id = l.lista_id
-            WHERE l.corretor_id = $1
+            WHERE NOT EXISTS (SELECT 1 FROM listas vis WHERE vis.id = l.lista_id AND vis.inativa_manual) AND l.corretor_id = $1
         `;
 
         switch (status) {
@@ -386,7 +391,7 @@ router.post('/leads/:id/resultado', async (req, res) => {
         const agendamentoLimpo = limparTimezone(agendamento_data);
 
         const leadCheck = await client.query(
-            'SELECT id FROM leads WHERE id = $1 AND corretor_id = $2',
+            'SELECT id FROM leads WHERE NOT EXISTS (SELECT 1 FROM listas vis WHERE vis.id = leads.lista_id AND vis.inativa_manual) AND id = $1 AND corretor_id = $2',
             [leadId, corretorId]
         );
 
@@ -474,7 +479,7 @@ router.patch('/leads/:id/qualificacao', async (req, res) => {
         const agendamentoLimpo = limparTimezone(agendamento_data);
 
         const leadCheck = await client.query(
-            `SELECT id FROM leads WHERE id = $1 AND corretor_id = $2 AND status IN ('qualificado', 'descartado', 'sem_resposta')`,
+            `SELECT id FROM leads WHERE NOT EXISTS (SELECT 1 FROM listas vis WHERE vis.id = leads.lista_id AND vis.inativa_manual) AND id = $1 AND corretor_id = $2 AND status IN ('qualificado', 'descartado', 'sem_resposta')`,
             [leadId, corretorId]
         );
 
@@ -552,7 +557,7 @@ router.get('/minhas-carteiras', async (req, res) => {
                 COUNT(l.id) FILTER (WHERE l.status = 'novo')  AS restantes
             FROM listas li
             LEFT JOIN leads l ON l.lista_id = li.id AND l.corretor_id = $1
-            WHERE EXISTS (SELECT 1 FROM lista_corretores lc WHERE lc.lista_id = li.id AND lc.corretor_id = $1)
+            WHERE li.inativa_manual = FALSE AND EXISTS (SELECT 1 FROM lista_corretores lc WHERE lc.lista_id = li.id AND lc.corretor_id = $1)
             GROUP BY li.id, li.nome, li.categoria, li.criado_em
             ORDER BY li.criado_em ASC
         `, [corretorId]);
@@ -624,7 +629,7 @@ router.get('/estatisticas', async (req, res) => {
                 COUNT(*) FILTER (WHERE status = 'novo')        AS na_fila,
                 COUNT(*) FILTER (WHERE status = 'descartado')  AS descartados
             FROM leads
-            WHERE corretor_id = $1${filtro}
+            WHERE NOT EXISTS (SELECT 1 FROM listas vis WHERE vis.id = leads.lista_id AND vis.inativa_manual) AND corretor_id = $1${filtro}
         `, params);
 
         const s = stats.rows[0];
@@ -641,7 +646,7 @@ router.get('/estatisticas', async (req, res) => {
         const porTagResult = await pool.query(`
             SELECT resultado, COUNT(*) AS count
             FROM leads
-            WHERE corretor_id = $1 AND resultado IS NOT NULL${filtro}
+            WHERE NOT EXISTS (SELECT 1 FROM listas vis WHERE vis.id = leads.lista_id AND vis.inativa_manual) AND corretor_id = $1 AND resultado IS NOT NULL${filtro}
             GROUP BY resultado
         `, params);
 
@@ -679,7 +684,7 @@ router.get('/estatisticas', async (req, res) => {
         const eventosResult = await pool.query(`
             SELECT COUNT(*) AS count
             FROM historico h
-            WHERE h.corretor_id = $1
+            WHERE EXISTS (SELECT 1 FROM leads vl JOIN listas vi ON vi.id = vl.lista_id WHERE vl.id = h.lead_id AND vi.inativa_manual = FALSE) AND h.corretor_id = $1
               ${filtroHist}
         `, paramsHist);
 
@@ -696,7 +701,7 @@ router.get('/estatisticas', async (req, res) => {
                 ON h2.lead_id = h1.lead_id
                AND h2.criado_em > h1.criado_em
                AND h2.acao != 'mensagem_enviada'
-            WHERE h1.acao = 'mensagem_enviada'
+            WHERE EXISTS (SELECT 1 FROM leads vl JOIN listas vi ON vi.id = vl.lista_id WHERE vl.id = h1.lead_id AND vi.inativa_manual = FALSE) AND h1.acao = 'mensagem_enviada'
               AND h1.corretor_id = $1
               ${listaId ? 'AND h1.lead_id IN (SELECT id FROM leads WHERE lista_id = $2)' : ''}
         `, paramsHist);
@@ -753,7 +758,7 @@ router.get('/historico/carteiras', async (req, res) => {
                 MAX(l.decidido_em) AS ultima_atividade
             FROM leads l
             INNER JOIN listas li ON li.id = l.lista_id
-            WHERE l.corretor_id = $1
+            WHERE NOT EXISTS (SELECT 1 FROM listas vis WHERE vis.id = l.lista_id AND vis.inativa_manual) AND l.corretor_id = $1
               AND l.status IN ('qualificado', 'descartado', 'sem_resposta')
               AND l.decidido_em IS NOT NULL
             GROUP BY l.lista_id, li.nome, li.criado_em
@@ -784,7 +789,7 @@ router.get('/historico/carteiras/:listaId', async (req, res) => {
         const busca = (req.query.busca || '').trim().toLowerCase();
 
         const listaResult = await pool.query(
-            'SELECT id, nome, criado_em FROM listas WHERE id = $1',
+            'SELECT id, nome, criado_em FROM listas WHERE id = $1 AND inativa_manual = FALSE',
             [listaId]
         );
 
@@ -796,7 +801,7 @@ router.get('/historico/carteiras/:listaId', async (req, res) => {
             SELECT id, nome, telefone, resultado, observacao,
                    decidido_em, agendamento_data, agendamento_local, status
             FROM leads
-            WHERE corretor_id = $1
+            WHERE NOT EXISTS (SELECT 1 FROM listas vis WHERE vis.id = leads.lista_id AND vis.inativa_manual) AND corretor_id = $1
               AND lista_id = $2
               AND status IN ('qualificado', 'descartado', 'sem_resposta')
               AND decidido_em IS NOT NULL
@@ -836,7 +841,7 @@ router.get('/agendamentos', async (req, res) => {
                 id, lista_id, nome, telefone, resultado,
                 agendamento_data, agendamento_local, observacao
             FROM leads
-            WHERE corretor_id = $1
+            WHERE NOT EXISTS (SELECT 1 FROM listas vis WHERE vis.id = leads.lista_id AND vis.inativa_manual) AND corretor_id = $1
               AND status = 'qualificado'
               AND resultado IN ('agendado', 'retornar_depois')
               AND agendamento_data IS NOT NULL

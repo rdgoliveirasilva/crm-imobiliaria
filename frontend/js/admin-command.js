@@ -7,16 +7,16 @@
     const fmt = value => num(value).toLocaleString('pt-BR');
     const pct = (value,total) => total > 0 ? Math.min(100, Math.round(value / total * 100)) : 0;
     const sum = values => (values || []).reduce((a,v) => a + num(v),0);
-    const date = value => value ? new Date(value).toLocaleString('pt-BR') : 'Não disponível';
+    const date = value => value ? new Date(value).toLocaleString('pt-BR',{timeZone:'America/Sao_Paulo'}) : 'Não disponível';
     const labels = {sem_qualificacao:'Sem qualificação',mensagem_enviada:'Mensagem enviada',follow_up:'Follow up',agendado:'Agendado',em_atendimento:'Em atendimento',retornar_depois:'Retornar depois',vendido:'Vendido',sem_interesse:'Sem interesse',sem_resposta:'Sem resposta',telefone_invalido:'Telefone inválido'};
     const colors = ['#21c7ed','#21dda8','#aa7cf7','#ffc568','#f47793','#689bd7','#7f8cae','#43b6a3'];
-    const state = { view:'geral', wallets:[], users:[], summary:[], kpis:null, graphs:null, search:'', filter:'todas', drawer:null, page:1, busy:null, serial:0, charts:[], healthPeriod:'', healthFrom:'', healthTo:'', healthData:null, healthRequest:0, userAttention:false, hubPage:1, attentionOpen:false };
+    const state = { view:'geral', wallets:[], users:[], summary:[], kpis:null, graphs:null, search:'', filter:'todas', drawer:null, page:1, busy:null, serial:0, charts:[], healthPeriod:'', healthFrom:'', healthTo:'', healthData:null, healthRequest:0, userAttention:false, hubPage:1, attentionOpen:false, inactivePage:1, inactiveOpen:false, teamPage:1, activity:null, activityRequest:0 };
     let actions = {}, previousFocus, contactTimer;
     const panel = (title,sub,body,cls='') => `<section class="cc-panel ${cls}"><header><div><h2>${title}</h2><p>${sub}</p></div></header>${body}</section>`;
     const empty = text => `<p class="cc-empty">${text}</p>`;
     const metric = (title,value,desc,icon='chart-simple',action='') => `<${action?'button type="button"':'article'} class="cc-metric ${action?'cc-metric-action':''}" ${action}><i class="fas fa-${icon}" aria-hidden="true"></i><div><span>${title}</span><strong>${value}</strong><small>${desc}</small></div>${action?'<i class="fas fa-arrow-up-right-from-square cc-metric-arrow" aria-hidden="true"></i>':''}</${action?'button':'article'}>`;
     function walletNumbers(c) {
-        const worked = sum((c.corretores || []).map(x=>x.qualificou));
+        const worked = c.trabalhados === undefined ? sum((c.corretores || []).map(x=>x.qualificou)) : num(c.trabalhados);
         const total = num(c.total);
         return {total,worked,pending:Math.max(0,total-worked),progress:pct(worked,total)};
     }
@@ -85,7 +85,7 @@
     function attentionItems() {
         if(!state.kpis)return [];
         return [
-            {key:'wallets',icon:'triangle-exclamation',title:'Carteiras com baixo progresso',description:'Menos de 20% da base trabalhada',count:state.wallets.filter(c=>{const n=walletNumbers(c);return n.total>0&&n.progress<20;}).length},
+            {key:'wallets',icon:'triangle-exclamation',title:'Carteiras com baixo progresso',description:'Menos de 20% da base trabalhada',count:state.wallets.filter(c=>{const n=walletNumbers(c);return !c.inativa_manual&&n.total>0&&n.progress<20;}).length},
             {key:'users',icon:'user-clock',title:'Equipe sem acesso recente',description:'Sem acesso há 3 dias ou nunca acessou',count:state.users.filter(withoutRecentAccess).length},
             {key:'returns',icon:'clock',title:'Clientes com retorno combinado',description:'Classificação atual · sem análise de atraso',count:num(state.kpis.porTag?.retornar_depois)}
         ].filter(item=>item.count>0);
@@ -102,24 +102,36 @@
         button.dataset.status=status;button.disabled=status==='unknown';button.title=label;button.setAttribute('aria-label',label);
         if($('ccAttentionContent'))$('ccAttentionContent').innerHTML=alerts();
     }
-    function walletHub(cards) {
-        let list=state.wallets.filter(w=>w.nome.toLocaleLowerCase().includes(state.search.toLocaleLowerCase()));
-        if(state.filter==='atencao') list=list.filter(w=>{const n=walletNumbers(w);return n.total>0&&n.progress<20;});
-        if(state.filter==='ativas') list=list.filter(w=>walletNumbers(w).pending>0);
-        const total=list.length, pageSize=6, pages=Math.max(1,Math.ceil(total/pageSize));
-        state.hubPage=Math.max(1,Math.min(state.hubPage,pages));
-        const start=(state.hubPage-1)*pageSize;
-        list=list.slice(start,start+pageSize);
-        const pagination=`<nav class="cc-pagination cc-hub-pagination" aria-label="Paginação de carteiras"><span role="status">${total?start+1:0}–${Math.min(start+pageSize,total)} de ${total} carteiras</span><div><button data-hub-page="1" ${state.hubPage===1?'disabled':''} aria-label="Primeira página">«</button><button data-hub-page="${state.hubPage-1}" ${state.hubPage===1?'disabled':''} aria-label="Página anterior">‹</button><strong>${state.hubPage} / ${pages}</strong><button data-hub-page="${state.hubPage+1}" ${state.hubPage===pages?'disabled':''} aria-label="Próxima página">›</button><button data-hub-page="${pages}" ${state.hubPage===pages?'disabled':''} aria-label="Última página">»</button></div></nav>`;
-        const tools=`<div class="cc-tools"><label class="cc-search"><i class="fas fa-search"></i><input id="ccSearch" placeholder="Buscar carteira..." value="${esc(state.search)}" aria-label="Buscar carteira"></label><select id="ccWalletFilter" aria-label="Situação das carteiras"><option value="todas" ${state.filter==='todas'?'selected':''}>Todas</option><option value="ativas" ${state.filter==='ativas'?'selected':''}>Com pendências</option><option value="atencao" ${state.filter==='atencao'?'selected':''}>Atenção</option></select></div>`;
-        let body;
-        if(cards) body=`<div class="cc-wallet-grid">${list.map((w,i)=>{const n=walletNumbers(w);return `<button class="cc-wallet" data-wallet="${w.lista_id}" style="--wallet:${colors[i%3]}"><div class="cc-wallet-title"><i class="fas fa-folder"></i><span><strong>${esc(w.nome)}</strong><small>${fmt(n.total)} contatos</small></span><b>→</b></div><div class="cc-wallet-body"><div class="cc-ring" style="--progress:${n.progress}%"><div><strong>${n.progress}%</strong><small>Trabalhado</small></div></div><dl><div><dt>Trabalhados</dt><dd>${fmt(n.worked)}</dd></div><div><dt>Pendentes*</dt><dd>${fmt(n.pending)}</dd></div><div><dt>Total</dt><dd>${fmt(n.total)}</dd></div></dl></div></button>`;}).join('')}<button class="cc-wallet cc-create" data-nav="upload"><i class="fas fa-plus"></i><strong>Nova carteira</strong><small>Cadastre e organize uma nova carteira</small></button></div>`;
-        else body=`<div class="cc-table-scroll"><table class="cc-table"><thead><tr><th>Carteira</th><th>Contatos</th><th>Trabalhados</th><th>Pendentes*</th><th>Progresso</th><th></th></tr></thead><tbody>${list.map(w=>{const n=walletNumbers(w);return `<tr><td><i class="fas fa-folder"></i> ${esc(w.nome)}</td><td>${fmt(n.total)}</td><td>${fmt(n.worked)}</td><td>${fmt(n.pending)}</td><td><progress value="${n.worked}" max="${Math.max(1,n.total)}"></progress> ${n.progress}%</td><td><button data-wallet="${w.lista_id}">Abrir →</button></td></tr>`;}).join('')}</tbody></table></div>`;
-        return `<section class="cc-panel cc-hub"><header><div><h2><i class="fas fa-folder-open"></i> Hub de Carteiras</h2><p>${cards?'Selecione uma carteira para equipe, contatos e evolução.':'Gerencie e acompanhe suas carteiras.'}</p></div>${tools}</header>${list.length||cards?body:empty('Nenhuma carteira encontrada.')}${pagination}<p class="cc-footnote">*Saldo entre total e qualificados/descartados. Pode incluir sem resposta e contatos sem responsável. Base sem usuários de teste.</p></section>`;
+    function inactiveWallet(w) { const n=walletNumbers(w);return w.inativa_manual===true||(n.total>0&&n.pending===0); }
+    function walletHubs() {
+        return walletHub(true,'active')+`<details class="cc-inactive-wallets" id="ccInactiveWallets" ${state.inactiveOpen?'open':''}><summary>Carteiras inativas · ${state.wallets.filter(inactiveWallet).length}</summary>${walletHub(true,'inactive')}</details>`;
     }
-    function renderHub() { $('ccHubMount').innerHTML=walletHub(state.view==='carteira'); }
+    function walletHub(cards=true,group='active') {
+        let list=state.wallets.filter(w=>inactiveWallet(w)===(group==='inactive')&&w.nome.toLocaleLowerCase().includes(state.search.toLocaleLowerCase()));
+        if(state.filter==='atencao')list=list.filter(w=>{const n=walletNumbers(w);return !w.inativa_manual&&n.total>0&&n.progress<20;});
+        const total=list.length,pageSize=6,pages=Math.max(1,Math.ceil(total/pageSize)),key=group==='inactive'?'inactivePage':'hubPage';
+        state[key]=Math.max(1,Math.min(state[key],pages));const current=state[key],start=(current-1)*pageSize;
+        list=list.slice(start,start+pageSize);
+        const pagination=`<nav class="cc-pagination cc-hub-pagination" aria-label="Paginação de carteiras ${group==='inactive'?'inativas':'ativas'}"><span>${total?start+1:0}–${Math.min(start+pageSize,total)} de ${total} carteiras</span><div><button data-hub-group="${group}" data-hub-page="${current-1}" ${current===1?'disabled':''} aria-label="Página anterior">‹</button><strong>${current} / ${pages}</strong><button data-hub-group="${group}" data-hub-page="${current+1}" ${current===pages?'disabled':''} aria-label="Próxima página">›</button></div></nav>`;
+        const tools=group==='active'?`<div class="cc-tools"><label class="cc-search"><i class="fas fa-search"></i><input id="ccSearch" placeholder="Buscar carteira..." value="${esc(state.search)}" aria-label="Buscar carteira"></label><select id="ccWalletFilter" aria-label="Situação das carteiras"><option value="todas" ${state.filter==='todas'?'selected':''}>Todas</option><option value="atencao" ${state.filter==='atencao'?'selected':''}>Atenção</option></select><button data-upload-mode="nova" title="Nova carteira" aria-label="Nova carteira">＋</button><button data-upload-mode="atualizar" title="Atualizar carteira existente" aria-label="Atualizar carteira existente"><i class="fas fa-rotate"></i></button></div>`:'';
+        const body=`<div class="cc-wallet-grid">${list.map((w,i)=>{const n=walletNumbers(w);return `<div class="cc-wallet-shell"><button class="cc-wallet" data-wallet="${w.lista_id}" style="--wallet:${colors[i%3]}"><div class="cc-wallet-title"><i class="fas fa-folder"></i><span><strong>${esc(w.nome)}</strong><small>${w.inativa_manual?'Inativada pelo gestor · oculta dos corretores':inactiveWallet(w)?'Concluída · visível aos corretores':`${fmt(n.total)} contatos`}</small></span><b>→</b></div><div class="cc-wallet-body"><div class="cc-ring" style="--progress:${n.progress}%"><div><strong>${n.progress}%</strong><small>Trabalhado</small></div></div><dl><div><dt>Trabalhados</dt><dd>${fmt(n.worked)}</dd></div><div><dt>Pendentes</dt><dd>${fmt(n.pending)}</dd></div><div><dt>Total</dt><dd>${fmt(n.total)}</dd></div></dl></div></button><button class="cc-wallet-activity" data-wallet-activity="${w.lista_id}">${w.inativa_manual?'Reativar visibilidade':'Inativar carteira'}</button></div>`;}).join('')}</div>`;
+        return `<section class="cc-panel cc-hub"><header><div><h2><i class="fas fa-folder-open"></i> Carteiras ${group==='inactive'?'inativas':'ativas'}</h2><p>${group==='inactive'?'Concluídas ou inativadas manualmente.':'Selecione uma carteira para equipe, contatos e evolução.'}</p></div>${tools}</header>${list.length?body:empty('Nenhuma carteira encontrada.')}${pagination}</section>`;
+    }
+    function renderHub() { $('ccHubMount').innerHTML=walletHubs(); }
+    const duration = value => value===null||value===undefined?'—':`${Math.floor(Math.round(value)/60)} min ${Math.round(value)%60} s`;
+    async function loadActivity(page=1) {
+        const request=++state.activityRequest;
+        try { const data=await ApiClient.get('/api/admin/equipe/atividade?pagina='+page);if(request!==state.activityRequest)return;state.activity=data;if(state.view==='corretor')renderActivity(); }
+        catch{if(request===state.activityRequest&&$('ccActivity'))$('ccActivity').innerHTML=empty('Não foi possível carregar os indicadores.')+'<button data-call-page="1">Tentar novamente</button>';}
+    }
+    function renderActivity() {
+        if(!$('ccActivity'))return;const a=state.activity;
+        if(!a){$('ccActivity').innerHTML=empty('Carregando indicadores…');return;}
+        $('ccActivity').innerHTML=`<div class="cc-team-top">${panel('Log de ligações',`${fmt(a.totalLigacoes)} cliques · últimos 30 dias`, `<div class="cc-call-counts">${a.porCorretor.map(u=>`<span>${esc(u.corretor_nome)} <b>${fmt(u.cliques)}</b></span>`).join('')||'Nenhum clique registrado.'}</div><div class="cc-table-scroll"><table class="cc-table"><thead><tr><th>Corretor / contato</th><th>Data</th><th>Intervalo</th><th>Encerramento</th></tr></thead><tbody>${a.log.map(l=>`<tr><td>${esc(l.corretor_nome)}<small>${esc(l.contato_nome)}</small></td><td>${esc(date(l.criado_em))}</td><td>${duration(l.segundos===null?null:Number(l.segundos))}</td><td>${esc(({whatsapp:'WhatsApp',qualificacao:'Qualificação',substituida:'Nova ligação'})[l.encerramento]||'Sem encerramento')}</td></tr>`).join('')}</tbody></table></div><nav class="cc-pagination"><button data-call-page="${a.pagina-1}" ${a.pagina===1?'disabled':''}>‹</button><span>${a.pagina} / ${a.paginas}</span><button data-call-page="${a.pagina+1}" ${a.pagina===a.paginas?'disabled':''}>›</button></nav>`)}${panel('Ritmo de atendimento','Últimos 30 dias · somente registros reais',`<div class="cc-activity-metrics"><article><strong>${a.mediaContatosDia===null?'—':a.mediaContatosDia.toLocaleString('pt-BR',{maximumFractionDigits:1})}</strong><span>Contatos por corretor / dia com atividade</span><small>Clientes únicos acionados por ligação ou WhatsApp.</small></article><article><strong>${duration(a.mediaRequalificacaoSegundos)}</strong><span>Entre requalificações de clientes diferentes</span><small>Mesmo corretor e mesmo dia · ${fmt(a.amostrasRequalificacao)} intervalos.</small></article><article><strong>${duration(a.mediaLigacaoSegundos)}</strong><span>Do clique em Ligar à próxima qualificação ou WhatsApp</span><small>${fmt(a.ligacoesFinalizadas)} intervalos encerrados. Não mede chamada atendida.</small></article></div>`)}</div>`;
+    }
     function teamTable() {
-        return `${state.userAttention?'<div class="cc-filter-notice">Sem acesso há 3 dias ou nunca acessou <button data-clear-user-filter>Mostrar todos</button></div>':''}<div class="cc-table-scroll"><table class="cc-table"><thead><tr><th>Corretor</th><th>Status</th><th>Carteiras¹</th><th>Qualificados²</th><th>Requalificações</th><th>Desempenho²</th><th>Último acesso</th><th>Ações</th></tr></thead><tbody>${state.users.filter(u=>!state.userAttention||withoutRecentAccess(u)).map(u=>{const n=userNumbers(u),summary=state.summary.find(c=>c.id===u.id);return `<tr><td><button class="cc-name" data-user="${u.id}">${esc(u.nome)}</button>${u.tipo==='teste'?'<small>Usuário de teste</small>':''}</td><td><span class="cc-status ${u.ativo===false?'off':''}">${u.ativo===false?'Inativo':'Ativo'}</span></td><td>${n.wallets.length}</td><td>${u.tipo==='teste'?'—':fmt(n.qualified)}</td><td title="Não fornecido pela API atual">—</td><td>${u.tipo==='teste'?'—':n.rate+'%'}<progress value="${n.qualified}" max="${Math.max(1,n.total)}"></progress></td><td>${esc(date(summary?.ultimo_acesso))}</td><td><div class="cc-row-actions"><button data-edit="${u.id}" aria-label="Editar ${esc(u.nome)}"><i class="fas fa-pen"></i></button><button data-active="${u.id}">${u.ativo===false?'Ativar':'Inativar'}</button><button data-access="${u.id}" aria-label="Acesso de ${esc(u.nome)}"><i class="fas fa-key"></i></button></div></td></tr>`;}).join('')}</tbody></table></div><p class="cc-footnote">¹ Carteiras com clientes atribuídos, não vínculos vazios. ² Estado atual qualificado / base do corretor. Requalificações individuais e acesso de inativos não são fornecidos pelas APIs atuais.</p>`;
+        const list=state.users.filter(u=>!state.userAttention||withoutRecentAccess(u)),pages=Math.max(1,Math.ceil(list.length/10));state.teamPage=Math.max(1,Math.min(state.teamPage,pages));
+        return `${state.userAttention?'<div class="cc-filter-notice">Sem acesso há 3 dias ou nunca acessou <button data-clear-user-filter>Mostrar todos</button></div>':''}<div class="cc-table-scroll"><table class="cc-table"><thead><tr><th>Corretor</th><th>Status</th><th>Carteiras¹</th><th>Qualificados²</th><th>Requalificações</th><th>Desempenho²</th><th>Último acesso</th><th>Ações</th></tr></thead><tbody>${list.slice((state.teamPage-1)*10,state.teamPage*10).map(u=>{const n=userNumbers(u),summary=state.summary.find(c=>c.id===u.id);return `<tr><td><button class="cc-name" data-user="${u.id}">${esc(u.nome)}</button>${u.tipo==='teste'?'<small>Usuário de teste</small>':''}</td><td><span class="cc-status ${u.ativo===false?'off':''}">${u.ativo===false?'Inativo':'Ativo'}</span></td><td>${n.wallets.length}</td><td>${u.tipo==='teste'?'—':fmt(n.qualified)}</td><td title="Não fornecido pela API atual">—</td><td>${u.tipo==='teste'?'—':n.rate+'%'}<progress value="${n.qualified}" max="${Math.max(1,n.total)}"></progress></td><td>${esc(date(summary?.ultimo_acesso))}</td><td><div class="cc-row-actions"><button data-edit="${u.id}" aria-label="Editar ${esc(u.nome)}"><i class="fas fa-pen"></i></button><button data-active="${u.id}">${u.ativo===false?'Ativar':'Inativar'}</button><button data-access="${u.id}" aria-label="Acesso de ${esc(u.nome)}"><i class="fas fa-key"></i></button></div></td></tr>`;}).join('')}</tbody></table></div><nav class="cc-pagination"><button data-team-page="${state.teamPage-1}" ${state.teamPage===1?'disabled':''} aria-label="Página anterior de corretores">‹</button><span>${state.teamPage} / ${pages} · ${list.length} corretores</span><button data-team-page="${state.teamPage+1}" ${state.teamPage===pages?'disabled':''} aria-label="Próxima página de corretores">›</button></nav><p class="cc-footnote">¹ Carteiras com clientes atribuídos, não vínculos vazios. ² Estado atual qualificado / base do corretor. Requalificações individuais e acesso de inativos não são fornecidos pelas APIs atuais.</p>`;
     }
     function render() {
         if(!state.kpis) return;
@@ -131,15 +143,16 @@
             content=`<div class="cc-bento cc-operation-row"><section class="cc-panel cc-health" aria-labelledby="ccHealthTitle"><header><div><h2 id="ccHealthTitle">Saúde da operação</h2><p>Classificações atuais · período pela data da última classificação</p></div>${healthFilter()}</header><div id="ccHealth">${state.healthPeriod?(state.healthData?tags(state.healthData):empty('Carregando qualificações…')):tags(g.donut)}</div></section>${panel('Equipe em tempo real','Presença estimada pelo último acesso · atualização a cada minuto',liveTeam(),'cc-live')}</div>${panel('Evolução de qualificações','Últimos 30 dias · eventos registrados','<div class="cc-chart"><canvas id="ccTrend"></canvas></div>','cc-evolution cc-evolution-wide')}`;
         } else if(state.view==='carteira') {
             metrics=metric('Carteiras',fmt(state.wallets.length),'Listas cadastradas','folder')+metric('Contatos na base',fmt(total),'Sem usuários de teste','users')+metric('Trabalhados',fmt(worked),`${rate}% da base`,'circle-check')+metric('Pendentes',fmt(pending),'Sem qualificação atribuída','hourglass-half');
-            content=`<div id="ccHubMount">${walletHub(true)}</div>`;
+            content=`<div id="ccHubMount">${walletHubs()}</div>`;
         } else {
             const q=sum(g.linha.qualificados),r=sum(g.linha.requalificados);
             metrics=metric('Corretores ativos',fmt(state.users.filter(u=>u.ativo!==false&&u.tipo!=='teste').length),'Sem usuários de teste','users')+metric('Primeiras qualificações',fmt(q),'Eventos nos últimos 30 dias','circle-check')+metric('Requalificações',fmt(r),'Eventos nos últimos 30 dias','rotate')+metric('Taxa de qualificação',`${pct(sum((k.porCorretor||[]).map(c=>c.qualificados)),total)}%`,'Estado qualificado / base atual','bullseye');
-            content=`<div class="cc-team-top">${panel('Funil de qualificação da equipe','Base atual e atividade histórica, sem misturar períodos',`<div class="cc-funnel">${[['Contatos na base',total],['Com qualificação',worked],['Estado qualificado',sum((k.porCorretor||[]).map(c=>c.qualificados))]].map(([label,value],i)=>`<div><span style="width:${100-i*19}%;background:${colors[i]}"></span><p>${label}<strong>${fmt(value)}</strong></p></div>`).join('')}</div>`)}${panel('Qualificações e requalificações','Evolução global da equipe · últimos 30 dias','<div class="cc-chart"><canvas id="ccTrend"></canvas></div>')}</div><section class="cc-panel"><header><div><h2>Manutenção de corretores</h2><p>Gerencie acessos, carteiras e desempenho.</p></div><div class="cc-tools"><button class="cc-primary" data-nav="corretores">＋ Novo corretor</button><button data-nav="corretores">Cadastro e manutenção</button></div></header>${teamTable()}</section>`;
+            content=`<div id="ccActivity"></div><section class="cc-panel"><header><div><h2>Manutenção de corretores</h2><p>Gerencie acessos, carteiras e desempenho.</p></div><div class="cc-tools"><button class="cc-primary" data-new-user>＋ Novo corretor</button></div></header>${teamTable()}</section>`;
         }
         $('ccContent').innerHTML=`<div class="cc-metrics">${metrics}</div>${content}`;
         document.querySelectorAll('.cc-tabs [data-view]').forEach(b=>{b.classList.toggle('active',b.dataset.view===state.view);b.setAttribute('aria-selected',String(b.dataset.view===state.view));});
         chart('ccTrend',g.linha);
+        if(state.view==='corretor')renderActivity();
         updateAttention();
     }
     function close() {
@@ -200,21 +213,27 @@
         } catch(error){if(request===state.serial)$('ccContacts').innerHTML=empty('Falha ao carregar contatos. Use a busca novamente para tentar.');}
     }
     async function refresh({background=false}={}) {
-        if(background&&(document.hidden||state.drawer||state.attentionOpen||document.activeElement?.closest?.('#ccRoot input, #ccRoot select, .modal-overlay, .theme-control')))return;
+        if(background&&(document.hidden||state.drawer||state.attentionOpen||document.activeElement?.closest?.('#ccRoot input, #ccRoot select, .modal-overlay, #ccNewUser, .theme-control')))return;
         if(state.busy)return state.busy;
         state.busy=(async()=>{try {
             const [kpis,graphs,data,users]=await Promise.all([ApiClient.get('/api/admin/dashboard'),ApiClient.get('/api/admin/dashboard/graficos'),ApiClient.get('/api/admin/dashboard/carteiras'),ApiClient.get('/api/admin/corretores')]);
             state.kpis=kpis;state.graphs=graphs;state.wallets=data.carteiras||[];state.summary=data.corretoresResumo||[];state.users=users.corretores||[];
-            render();if(state.healthPeriod)await filterHealth(state.healthPeriod,state.healthFrom,state.healthTo);
+            render();if(state.view==='corretor')await loadActivity(state.activity?.pagina||1);if(state.healthPeriod)await filterHealth(state.healthPeriod,state.healthFrom,state.healthTo);
         }catch(error){updateAttention(false);if(!state.kpis)$('ccContent').innerHTML=empty('Não foi possível carregar o painel. Recarregue a página para tentar novamente.');}finally{state.busy=null;}})();
         return state.busy;
     }
-    function navigate(tab) {close();document.querySelector(`.nav-tab[data-tab="${tab}"]`)?.click();if(tab==='corretores')$('novoNome')?.focus();}
+    function navigate(tab) {close();document.querySelector(`.nav-tab[data-tab="${tab}"]`)?.click();}
     function mount() {
         const dashboard=$('tab-dashboard');if(!dashboard)return;
         const header=document.querySelector('.header-inner');header.insertBefore(document.querySelector('.admin-nav'),document.querySelector('.header-user'));
         const legacy=document.createElement('div');legacy.hidden=true;legacy.id='ccLegacy';while(dashboard.firstChild)legacy.append(dashboard.firstChild);dashboard.append(legacy);
-        const root=document.createElement('div');root.id='ccRoot';root.innerHTML=`<nav class="cc-tabs" role="tablist" aria-label="Visão do painel"><button role="tab" data-view="geral" aria-selected="true" class="active"><i class="fas fa-chart-simple"></i> Operação geral</button><button role="tab" data-view="carteira" aria-selected="false"><i class="fas fa-folder"></i> Por carteira</button><button role="tab" data-view="corretor" aria-selected="false"><i class="fas fa-users"></i> Por corretor</button></nav><div id="ccContent" aria-live="polite">${empty('Carregando operação…')}</div>`;dashboard.prepend(root);
+        const root=document.createElement('div');root.id='ccRoot';root.innerHTML=`<div id="ccContent" aria-live="polite">${empty('Carregando operação…')}</div>`;dashboard.prepend(root);
+        for(const id of ['tab-listas','tab-corretores']){const panel=$(id),legacy=document.createElement('div');legacy.hidden=true;legacy.id=id+'-legacy';while(panel.firstChild)legacy.append(panel.firstChild);panel.append(legacy);}
+        const newUser=document.createElement('dialog');newUser.id='ccNewUser';newUser.className='cc-attention-dialog';newUser.setAttribute('aria-label','Cadastrar corretor');
+        newUser.innerHTML='<button type="button" id="ccCloseNewUser" aria-label="Fechar cadastro">×</button>';
+        newUser.append($('tab-corretores-legacy').querySelector('.form-card'));document.body.append(newUser);
+        $('ccCloseNewUser').onclick=()=>newUser.close();
+
         const overlay=document.createElement('div');overlay.id='ccOverlay';overlay.hidden=true;overlay.innerHTML=`<aside class="cc-drawer" role="dialog" aria-modal="true" aria-labelledby="ccDrawerTitle"><header><div><h2 id="ccDrawerTitle"></h2><p id="ccDrawerSubtitle"></p></div><button id="ccDrawerClose" aria-label="Fechar detalhes">×</button></header><nav id="ccDrawerTabs" role="tablist" aria-label="Detalhes"></nav><div id="ccDrawerContent"></div></aside>`;document.body.append(overlay);
         $('ccDrawerClose').onclick=close;overlay.addEventListener('click',e=>{if(e.target===overlay)close();});
         // Mova os controles existentes para preservar listeners, tema e menu da conta.
@@ -237,7 +256,11 @@
         attentionDialog.addEventListener('close',()=>{state.attentionOpen=false;});
         attentionDialog.addEventListener('click',event=>{if(event.target!==attentionDialog)return;const rect=attentionDialog.getBoundingClientRect();if(event.clientX<rect.left||event.clientX>rect.right||event.clientY<rect.top||event.clientY>rect.bottom)attentionDialog.close();});
 
-        document.querySelectorAll('.nav-tab[data-tab]').forEach(tab=>tab.addEventListener('click',()=>{$('ccPageTitle').textContent=tab.textContent.trim();}));
+        document.querySelectorAll('.nav-tab[data-tab]').forEach(tab=>tab.addEventListener('click',()=>{
+            $('ccPageTitle').textContent=tab.textContent.trim();
+            const view={dashboard:'geral',listas:'carteira',corretores:'corretor'}[tab.dataset.tab];
+            if(view){state.view=view;$('tab-'+tab.dataset.tab).prepend(root);render();if(view==='corretor')loadActivity();}
+        }));
         document.addEventListener('submit',async e=>{
             if(e.target.id!=='ccHealthFilter')return;e.preventDefault();
             const de=$('ccHealthFrom').value,ate=$('ccHealthTo').value;
@@ -245,26 +268,38 @@
             if(!e.target.reportValidity())return;
             await filterHealth('custom',de,ate);
         });
-        document.addEventListener('click',e=>{
+        document.addEventListener('click',async e=>{
             const b=e.target.closest('button');if(!b)return;
-            if(b.dataset.healthJump){state.view='geral';render();$('ccHealthPeriod')?.focus();$('ccHealth')?.scrollIntoView({block:'nearest'});}
+            if(b.dataset.healthJump){navigate('dashboard');$('ccHealthPeriod')?.focus();$('ccHealth')?.scrollIntoView({block:'nearest'});}
             if(b.hasAttribute('data-clear-user-filter')){state.userAttention=false;render();}
-            if(b.dataset.view){state.view=b.dataset.view;render();}
+            if(b.dataset.view){navigate(({geral:'dashboard',carteira:'listas',corretor:'corretores'})[b.dataset.view]);}
             if(b.dataset.wallet)open('wallet',Number(b.dataset.wallet));
             if(b.dataset.user)open('user',Number(b.dataset.user));
             if(b.dataset.drawerTab)open(state.drawer.type,state.drawer.id,b.dataset.drawerTab);
             if(b.hasAttribute('data-retry-drawer'))renderDrawer();
-            if(b.dataset.hubPage){state.hubPage=Number(b.dataset.hubPage);renderHub();$('ccHubMount').querySelector('.cc-hub-pagination button:not(:disabled)')?.focus();}
+            if(b.dataset.hubPage){state[b.dataset.hubGroup==='inactive'?'inactivePage':'hubPage']=Number(b.dataset.hubPage);renderHub();$('ccHubMount').querySelector('.cc-hub-pagination button:not(:disabled)')?.focus();}
+            if(b.hasAttribute('data-new-user')){newUser.showModal();$('novoNome').focus();}
+            if(b.dataset.uploadMode){navigate('upload');document.querySelector(`[data-modo-upload="${b.dataset.uploadMode}"]`)?.click();}
+            if(b.dataset.teamPage){state.teamPage=Number(b.dataset.teamPage);render();}
+            if(b.dataset.callPage)loadActivity(Number(b.dataset.callPage));
+            if(b.dataset.walletActivity){
+                const wallet=state.wallets.find(w=>w.lista_id===Number(b.dataset.walletActivity));if(!wallet)return;
+                if(!window.confirm(wallet.inativa_manual?'Tornar esta carteira visível aos corretores novamente?':'Inativar esta carteira? Ela ficará oculta e indisponível aos corretores.'))return;
+                b.disabled=true;
+                try{await ApiClient.patch(`/api/admin/listas/${wallet.lista_id}/atividade`,{inativa_manual:!wallet.inativa_manual});await refresh();}
+                catch(error){window.alert(error.message);}finally{b.disabled=false;}
+            }
             if(b.dataset.page)contacts(Number(b.dataset.page));
             if(b.dataset.edit){const u=state.users.find(u=>u.id===Number(b.dataset.edit));close();actions.editar?.(u);}
             if(b.dataset.active){const u=state.users.find(u=>u.id===Number(b.dataset.active));close();actions.atividade?.(u);}
             if(b.dataset.access)open('user',Number(b.dataset.access),'acesso');
             if(b.dataset.manageWallet){const w=state.wallets.find(w=>w.lista_id===Number(b.dataset.manageWallet));close();actions.lista?.(w);}
             if(b.dataset.nav)navigate(b.dataset.nav);
-            if(b.dataset.attention){if(state.attentionOpen){attentionDialog.close();document.querySelector('.nav-tab[data-tab="dashboard"]')?.click();}state.search='';state.hubPage=1;state.userAttention=b.dataset.attention==='users';state.view=b.dataset.attention==='wallets'?'carteira':'corretor';state.filter=b.dataset.attention==='wallets'?'atencao':'todas';render();}
+            if(b.dataset.attention){if(state.attentionOpen){attentionDialog.close();}state.search='';state.hubPage=1;state.userAttention=b.dataset.attention==='users';state.teamPage=1;state.filter=b.dataset.attention==='wallets'?'atencao':'todas';navigate(b.dataset.attention==='wallets'?'listas':'corretores');}
             if(b.dataset.tag){if(state.attentionOpen)attentionDialog.close();const scope=b.dataset.scope;const wallet=scope==='wallet'?state.drawer?.id:'';const user=b.dataset.global?'':scope==='user'?state.drawer?.id:'';close();actions.tag?.(b.dataset.tag,labels[b.dataset.tag]||b.dataset.tag,wallet,user,b.closest('#ccHealth')?{de:state.healthFrom,ate:state.healthTo}:{});}
         });
-        document.addEventListener('input',e=>{if(e.target.id==='ccSearch'){state.search=e.target.value;state.hubPage=1;const cursor=e.target.selectionStart;renderHub();$('ccSearch').focus();$('ccSearch').setSelectionRange(cursor,cursor);}if(e.target.id==='ccContactSearch'){clearTimeout(contactTimer);contactTimer=setTimeout(()=>contacts(1),250);}});
+        document.addEventListener('toggle',e=>{if(e.target.id==='ccInactiveWallets')state.inactiveOpen=e.target.open;},true);
+        document.addEventListener('input',e=>{if(e.target.id==='ccSearch'){state.search=e.target.value;state.hubPage=1;state.inactivePage=1;const cursor=e.target.selectionStart;renderHub();$('ccSearch').focus();$('ccSearch').setSelectionRange(cursor,cursor);}if(e.target.id==='ccContactSearch'){clearTimeout(contactTimer);contactTimer=setTimeout(()=>contacts(1),250);}});
         document.addEventListener('change',async e=>{if(e.target.id==='ccWalletFilter'){state.filter=e.target.value;state.hubPage=1;renderHub();}if(e.target.id==='ccHealthPeriod'){
                 if(!e.target.value){await filterHealth('');render();}
                 else{document.querySelector('.cc-health-dates').hidden=false;$('ccHealthFrom').disabled=false;$('ccHealthTo').disabled=false;$('ccHealthFrom').focus();}

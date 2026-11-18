@@ -601,3 +601,12 @@ Frontend reorganizado em Operação geral, Por carteira e Por corretor: frontend
   pode ser avaliada após cadastro do usuário; operação local requer computador ligado.
 - Docker não está disponível neste ambiente. Build da imagem, revisão visual e pareamento real pendentes.
 - Validação concluída: 40 testes Node aprovados, sintaxe JavaScript, IDs/arquivos do HTML e git diff --check. Nenhum teste usou banco ou gateway de produção.
+
+## 18/11/2026 — Páginas de carteiras/equipe e atividade de contato
+- Removidas tabs internas do centro de comando. Carteiras e Corretores exibem as respectivas visões na navegação existente. Cadastro/edição e manutenção preservam os handlers originais.
+- Carteiras têm hubs ativos e inativos (recolhido), busca, paginação, criação e atualização. Conclusão é calculada com total > 0 e nenhum lead novo, excluindo teste. Concluídas continuam visíveis aos corretores; inativação manual oculta carteira, contatos e estatísticas do corretor sem redistribuir nem apagar dados. Reativar restaura visibilidade.
+- Schema adiciona listas.inativa_manual e eventos_contato, aplicado pelo inicializador existente. Não foi executado manualmente no banco de produção.
+- POST /api/corretor/eventos-contato valida proprietário, carteira visível, tipo e UUID idempotente. Captura cliques em Ligar, WhatsApp e qualificação sem bloquear a ação. Falhas de coleta não fabricam eventos nem impedem prospecção.
+- GET /api/admin/equipe/atividade: log paginado e cliques por corretor nos últimos 30 dias, média de clientes únicos acionados por corretor/dia com atividade, média entre requalificações de clientes diferentes pelo mesmo corretor no mesmo dia e intervalo entre Ligar e primeira qualificação/WhatsApp posterior. Não confirma chamada atendida nem grava áudio. Chamadas sem encerramento não entram na média; métricas sem amostra mostram travessão.
+- Coleta de cliques começa após publicação; histórico de requalificações usa registros existentes. Manutenção da equipe pagina 10 corretores.
+- Preferências Claro/Escuro/Automático permanecem compartilhadas. Não há build/lint/TypeScript configurados; testes Node, sintaxe e diff são as verificações disponíveis. Revisão visual e integração com PostgreSQL real permanecem pendentes.

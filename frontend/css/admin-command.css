@@ -571,3 +571,22 @@ html.admin-desktop-theme[data-theme="light"] { color-scheme:light; }
     :root[data-theme="light"] .admin-command .admin-nav .nav-tab.active { background:linear-gradient(145deg,#35383e,#17191e); color:#fff; }
     .admin-command .admin-main { padding-bottom:calc(100px + env(safe-area-inset-bottom)); }
 }
+
+/* Carteiras e equipe agora são páginas próprias da navegação. */
+.admin-command [id$="-legacy"][hidden] { display:none!important; }
+.cc-inactive-wallets { margin-top:22px; }
+.cc-inactive-wallets > summary { padding:16px; color:var(--theme-muted); background:var(--theme-control); border:1px solid var(--theme-border); border-radius:14px; cursor:pointer; font-weight:600; }
+.cc-inactive-wallets[open] > summary { margin-bottom:12px; }
+.cc-wallet-shell { display:flex; flex-direction:column; min-width:0; }
+.admin-command .cc-wallet-shell .cc-wallet { flex:1; width:100%; }
+.admin-command .cc-wallet-activity { align-self:flex-end; margin-top:8px; font-size:11px; }
+.cc-call-counts { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px; }
+.cc-call-counts span { padding:8px 10px; border-radius:10px; background:var(--theme-control); color:var(--theme-muted); font-size:12px; }
+.cc-call-counts b { color:var(--theme-accent); margin-left:6px; }
+.cc-activity-metrics { display:grid; gap:16px; }
+.cc-activity-metrics article { display:flex; flex-direction:column; gap:6px; padding:16px; border:1px solid var(--theme-border); border-radius:14px; background:var(--theme-control); }
+.cc-activity-metrics strong { color:var(--theme-accent); font-size:25px; }
+.cc-activity-metrics span { font-size:13px; }
+.cc-activity-metrics small { color:var(--theme-muted); font-size:11px; line-height:1.5; }
+#ccNewUser > .form-card { border:0; box-shadow:none; background:transparent; }
+#ccCloseNewUser { display:block; margin-left:auto; min-height:40px; min-width:40px; border-radius:50%; }

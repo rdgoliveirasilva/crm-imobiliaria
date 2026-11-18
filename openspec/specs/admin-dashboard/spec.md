@@ -81,3 +81,12 @@ Setas da saúde possuem somente a superfície recortada e brilho discreto, sem c
 - Rolagem restrita aos itens, preservando marca/rodapé em telas baixas. Tema permanece acessível.
 - Testes cobrem persistência, armazenamento bloqueado, breakpoint, nomes acessíveis e logout.
   Conferência visual em navegador pendente.
+
+### 18/11/2026 — Carteiras/equipe em páginas próprias e eventos de contato
+- Centro de comando sem tabs internas. Destinos Carteiras e Corretores passam a hospedar os respectivos painéis, mantendo ações existentes.
+- Hub ativo e hub inativo recolhido, paginação independente; busca compartilhada, + para criar e atualizar para o modo existente de importação.
+- Carteira concluída (total não teste > 0 e nenhum novo) permanece visível ao corretor. Estado manual listas.inativa_manual oculta consultas e bloqueia acesso/qualificação pelo corretor; não altera responsáveis nem resultados. Reativação restaura acesso.
+- Corretores: log real de cliques de ligação com paginação, três médias e manutenção paginada em 10. Testes são excluídos das métricas de contato.
+- Eventos autenticados com UUID único e vínculo de propriedade; horário de recebimento no servidor. Média de contatos usa clientes únicos por corretor/dia com atividade. Duração é intervalo de uso até o primeiro clique posterior de qualificação/WhatsApp, não duração telefônica. Requalificação usa intervalos do mesmo corretor/dia entre clientes diferentes, com histórico de qualificação ordenado por lead.
+- Sem amostras, médias ficam indisponíveis; não há reconstrução fictícia de ligações anteriores. Schema aditivo executado pelo inicializador normal, não manualmente durante desenvolvimento.
+- Validação por testes Node e sintaxe; revisão visual e execução das consultas em PostgreSQL real pendentes.

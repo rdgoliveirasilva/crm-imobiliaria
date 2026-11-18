@@ -85,3 +85,14 @@ test('qualificação confirmada limpa cliente anterior e busca próximo sem agua
     assert.equal(context.leadAtual, null);
     assert.deepEqual(calls, ['saved', 'waiting', 'next']);
 });
+test('telemetria de qualificação ocorre no clique e não na atualização dos contadores',async()=>{
+ const source=fs.readFileSync(path.join(__dirname,'../../frontend/js/prospeccao.js'),'utf8');
+ const before=source.slice(source.indexOf('const tag = btn.dataset.tag;'),source.indexOf('async function handleTagClick'));
+ assert.doesNotMatch(before,/record\('qualificacao'/);
+ const handler=source.slice(source.indexOf('async function handleTagClick'),source.indexOf('async function handleTagClick')+500);
+ const calls=[];
+ const prefix=handler.slice(0,handler.indexOf("if (tag === 'agendado'"));
+ const context={leadAtual:{id:31},processando:false,window:{ContatoEvents:{record:(...args)=>calls.push(args)}}};
+ vm.runInNewContext(prefix+'}\nhandleTagClick({dataset:{tag:"mensagem_enviada"}});',context);
+ assert.deepEqual(calls,[['qualificacao',31]]);
+});

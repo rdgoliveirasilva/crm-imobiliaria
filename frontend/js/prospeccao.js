@@ -125,6 +125,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
+        if (btnModalWhatsApp) btnModalWhatsApp.addEventListener('click', () => { if (leadAtual) window.ContatoEvents?.record('whatsapp', leadAtual.id); });
         if (btnFecharLigar) btnFecharLigar.addEventListener('click', () => modalLigar.style.display = 'none');
         if (modalLigar) {
             modalLigar.addEventListener('click', (e) => {
@@ -502,6 +503,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function handleLigar() {
         if (!leadAtual) return;
 
+        window.ContatoEvents?.record('ligacao', leadAtual.id);
         const res = Acoes.ligar(leadAtual.telefone);
         if (!res.ok) {
             mostrarToast(res.erro || 'Telefone inválido.', 'error');
@@ -530,6 +532,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function handleWhatsApp() {
         if (!leadAtual) return;
 
+        window.ContatoEvents?.record('whatsapp', leadAtual.id);
         const nomeCorretor = AuthSession.getItem('sr_usuario') || 'Corretor';
         const res = Acoes.abrirWhatsApp(leadAtual, nomeCorretor);
 
@@ -569,6 +572,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!leadAtual || processando) return;
 
         const tag = btn.dataset.tag;
+        window.ContatoEvents?.record('qualificacao', leadAtual.id);
 
         if (tag === 'agendado' || tag === 'retornar_depois') {
             abrirModalAgendamento({
@@ -985,6 +989,7 @@ document.addEventListener('DOMContentLoaded', () => {
         editor.querySelectorAll('.tag-opcao').forEach(opc => {
             opc.addEventListener('click', async () => {
                 const novoResultado = opc.dataset.novoResultado;
+                window.ContatoEvents?.record('qualificacao', leadId);
 
                 if (novoResultado === resultadoAtual) {
                     editor.remove();
