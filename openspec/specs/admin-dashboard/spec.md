@@ -72,3 +72,12 @@ Setas da saúde possuem somente a superfície recortada e brilho discreto, sem c
 - Desktop sem mudança. Na página WhatsApp, os dois destinos permanecem diretos, sem menu redundante.
 - Testes de navegação cobrem ações originais, destaque e fechamento na mudança para desktop.
   Revisão visual no navegador pendente.
+
+### 18/11/2026 — Sidebar desktop recolhível
+- Sidebar flutuante arredondada em cores do tema, marca Logo + Prospect, sem subtítulo da imobiliária.
+- Recolher/expandir mantém ícones acessíveis com title/aria-label e salva preferência local compartilhada.
+- Minha Conta e Sair no rodapé; logout reaproveita ApiClient.logout. Avatar e relógio ocultos/removidos no desktop.
+- Mobile mantém a navbar atual; sidebar só ativa acima de 900px no admin e 1024px no corretor.
+- Rolagem restrita aos itens, preservando marca/rodapé em telas baixas. Tema permanece acessível.
+- Testes cobrem persistência, armazenamento bloqueado, breakpoint, nomes acessíveis e logout.
+  Conferência visual em navegador pendente.

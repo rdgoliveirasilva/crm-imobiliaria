@@ -237,9 +237,6 @@
         attentionDialog.addEventListener('close',()=>{state.attentionOpen=false;});
         attentionDialog.addEventListener('click',event=>{if(event.target!==attentionDialog)return;const rect=attentionDialog.getBoundingClientRect();if(event.clientX<rect.left||event.clientX>rect.right||event.clientY<rect.top||event.clientY>rect.bottom)attentionDialog.close();});
 
-        const clock=document.createElement('time');clock.className='cc-sidebar-clock';header.append(clock);
-        function updateClock(){const now=new Date();clock.dateTime=now.toISOString();clock.textContent=now.toLocaleDateString('pt-BR')+' · '+now.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});}
-        updateClock();setInterval(updateClock,30000);
         document.querySelectorAll('.nav-tab[data-tab]').forEach(tab=>tab.addEventListener('click',()=>{$('ccPageTitle').textContent=tab.textContent.trim();}));
         document.addEventListener('submit',async e=>{
             if(e.target.id!=='ccHealthFilter')return;e.preventDefault();
