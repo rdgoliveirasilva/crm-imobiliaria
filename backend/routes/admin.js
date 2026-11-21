@@ -22,6 +22,7 @@ async function categoriaCadastrada(client, valor) {
     if (!result.rows.length) { const e = new Error('Cadastre a categoria na aba Categorias antes de usá-la.'); e.status = 400; throw e; }
     return result.rows[0].nome;
 }
+const { atualizarResponsaveis } = require('../services/listaBatch');
 const { qualificationPeriod } = require('../services/qualificationPeriod');
 const router = express.Router();
 
@@ -1065,12 +1066,9 @@ router.get('/dashboard/carteiras', async (req, res) => {
             ORDER BY criado_em DESC
         `);
 
-        const carteiras = [];
-
-        for (const lista of listasResult.rows) {
-            const porCorretorResult = await pool.query(`
+        const porCorretorResult = await pool.query(`
                 SELECT
-                    u.id,
+                    l.lista_id, u.id,
                     u.nome,
                     u.usuario,
                     COUNT(l.id) AS recebeu,
@@ -1079,11 +1077,18 @@ router.get('/dashboard/carteiras', async (req, res) => {
                     COUNT(l.id) FILTER (WHERE l.status = 'descartado')  AS descartou
                 FROM usuarios u
                 INNER JOIN leads l ON l.corretor_id = u.id
-                WHERE l.lista_id = $1 ${naoTeste('l')}
-                GROUP BY u.id
+                WHERE TRUE ${naoTeste('l')}
+                GROUP BY l.lista_id, u.id
                 ORDER BY u.nome ASC
-            `, [lista.id]);
+            `);
 
+        const porLista = new Map();
+        for (const row of porCorretorResult.rows) {
+            if (!porLista.has(row.lista_id)) porLista.set(row.lista_id, []);
+            porLista.get(row.lista_id).push(row);
+        }
+        const carteiras = [];
+        for (const lista of listasResult.rows) {
             carteiras.push({
                 lista_id: lista.id,
                 inativa_manual: lista.inativa_manual,
@@ -1091,7 +1096,7 @@ router.get('/dashboard/carteiras', async (req, res) => {
                 nome: lista.nome,
                 total: lista.total,
                 criado_em: lista.criado_em,
-                corretores: porCorretorResult.rows.map(c => ({
+                corretores: (porLista.get(lista.id) || []).map(c => ({
                     id: c.id,
                     nome: c.nome,
                     usuario: c.usuario,
@@ -1138,7 +1143,7 @@ router.get('/listas/:id/corretores', async (req, res) => {
                 COUNT(l.id) FILTER (WHERE l.lista_id = $1 AND l.status IN ('qualificado', 'descartado')) AS qualificados_na_lista,
                 COUNT(l.id) FILTER (WHERE l.lista_id = $1) AS total_na_lista
             FROM usuarios u
-            LEFT JOIN leads l ON l.corretor_id = u.id
+            LEFT JOIN leads l ON l.corretor_id = u.id AND l.lista_id = $1
             WHERE u.tipo IN ('corretor', 'teste') AND u.ativo = TRUE
             GROUP BY u.id
             ORDER BY u.nome ASC
@@ -1230,12 +1235,14 @@ router.patch('/listas/:id/corretores', async (req, res) => {
 
         if (orfaos.length && idsNovos.length) {
             let idx = 0;
+            const atribuicoes = [];
             for (const orfao of orfaos) {
                 const novoCorretor = idsNovos[idx % idsNovos.length];
-                await client.query('UPDATE leads SET corretor_id = $1 WHERE id = $2', [novoCorretor, orfao.id]);
+                atribuicoes.push([orfao.id, novoCorretor]);
                 idx++;
                 redistribuidos++;
             }
+            await atualizarResponsaveis(client, atribuicoes);
         }
 
         const pendentesResult = await client.query(
@@ -1262,12 +1269,14 @@ router.patch('/listas/:id/corretores', async (req, res) => {
 
                 if (paraRedistribuir.length && candidatos.length) {
                     let idx = 0;
+                    const atribuicoes = [];
                     for (const leadId of paraRedistribuir) {
                         const novoCorretor = candidatos[idx % candidatos.length];
-                        await client.query('UPDATE leads SET corretor_id = $1 WHERE id = $2', [novoCorretor, leadId]);
+                        atribuicoes.push([leadId, novoCorretor]);
                         idx++;
                         redistribuidos++;
                     }
+                    await atualizarResponsaveis(client, atribuicoes);
                 }
             }
 
@@ -1281,12 +1290,14 @@ router.patch('/listas/:id/corretores', async (req, res) => {
 
                 if (pendentesDosRemovidos.length) {
                     let idx = 0;
+                    const atribuicoes = [];
                     for (const p of pendentesDosRemovidos) {
                         const novoCorretor = idsNovos[idx % idsNovos.length];
-                        await client.query('UPDATE leads SET corretor_id = $1 WHERE id = $2', [novoCorretor, p.id]);
+                        atribuicoes.push([p.id, novoCorretor]);
                         idx++;
                         redistribuidos++;
                     }
+                    await atualizarResponsaveis(client, atribuicoes);
                 }
             }
         }
@@ -1314,15 +1325,11 @@ router.patch('/listas/:id/mensagem', async (req, res) => {
         const listaId = Number(req.params.id);
         const { mensagemWhatsapp } = req.body || {};
 
-        const lista = await pool.query('SELECT id FROM listas WHERE id = $1', [listaId]);
-        if (!lista.rows.length) {
-            return res.status(404).json({ erro: 'Lista não encontrada.' });
-        }
-
-        await pool.query(
-            'UPDATE listas SET mensagem_whatsapp = $1 WHERE id = $2',
+        const result = await pool.query(
+            'UPDATE listas SET mensagem_whatsapp = $1 WHERE id = $2 RETURNING id',
             [mensagemWhatsapp || null, listaId]
         );
+        if (!result.rows.length) return res.status(404).json({ erro: 'Lista não encontrada.' });
 
         res.json({ ok: true });
 

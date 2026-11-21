@@ -242,6 +242,7 @@
         newUser.innerHTML='<button type="button" id="ccCloseNewUser" aria-label="Fechar cadastro">×</button>';
         newUser.append($('tab-corretores-legacy').querySelector('.form-card'));document.body.append(newUser);
         $('ccCloseNewUser').onclick=()=>newUser.close();
+        document.body.classList.add('cc-ready');
 
         const overlay=document.createElement('div');overlay.id='ccOverlay';overlay.hidden=true;overlay.innerHTML=`<aside class="cc-drawer" role="dialog" aria-modal="true" aria-labelledby="ccDrawerTitle"><header><div><h2 id="ccDrawerTitle"></h2><p id="ccDrawerSubtitle"></p></div><button id="ccDrawerClose" aria-label="Fechar detalhes">×</button></header><nav id="ccDrawerTabs" role="tablist" aria-label="Detalhes"></nav><div id="ccDrawerContent"></div></aside>`;document.body.append(overlay);
         $('ccDrawerClose').onclick=close;overlay.addEventListener('click',e=>{if(e.target===overlay)close();});
@@ -326,6 +327,7 @@
             c.options.scales.y.grid.color=tokens.getPropertyValue('--theme-chart-grid').trim();c.update('none');
         }
     });
+    window.addEventListener('prospect:charts-ready',()=>{if(state.kpis)render();});
     window.AdminCommand={connect(value){actions=value;},refresh,close};
     document.addEventListener('DOMContentLoaded',mount);
 })();

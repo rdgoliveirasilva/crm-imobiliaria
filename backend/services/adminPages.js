@@ -5,13 +5,12 @@ const pages = {'/admin-carteiras.html':['listas','Carteiras'], '/admin-corretore
 function renderPage(admin, account, page, title) {
     if (page === 'conta') {
         const header=admin.match(/<header class="app-header">[\s\S]*?<\/header>/)[0];
-        const nav=admin.match(/<nav class="admin-nav"[\s\S]*?<\/nav>/)[0].replace('nav-tab active','nav-tab');
         return account.replace('<html lang="pt-BR">','<html lang="pt-BR" class="admin-desktop-theme">')
             .replace(/<title>.*?<\/title>/,'<title>Prospect - Minha Conta</title>')
             .replace(/<link rel="stylesheet" href="css\/(corretor-theme|corretor-pages-mobile)\.css">/g,'')
             .replace('</head>', '<link rel="stylesheet" href="css/corretor-theme-tokens.css"><link rel="stylesheet" href="css/admin-command.css"><link rel="stylesheet" href="css/desktop-sidebar.css"><link rel="stylesheet" href="css/admin-account.css"></head>')
-            .replace(/<body class="[^"]*">/,'<body class="conta-page admin-page admin-command">')
-            .replace(/<header class="app-header">[\s\S]*?<\/header>/,header+nav)
+            .replace(/<body class="[^"]*">/,'<body class="conta-page admin-page admin-command cc-ready"><script src="js/admin-boot.js"></script>')
+            .replace(/<header class="app-header">[\s\S]*?<\/header>/,header.replace('nav-tab active','nav-tab'))
             .replace('<main class="app-main">','<main class="admin-main">')
             .replace('</body>','<script src="js/admin-account.js"></script><script src="js/admin-mobile-nav.js"></script><script src="js/desktop-sidebar.js"></script></body>');
     }

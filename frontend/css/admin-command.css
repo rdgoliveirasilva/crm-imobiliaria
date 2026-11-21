@@ -590,3 +590,8 @@ html.admin-desktop-theme[data-theme="light"] { color-scheme:light; }
 .cc-activity-metrics small { color:var(--theme-muted); font-size:11px; line-height:1.5; }
 #ccNewUser > .form-card { border:0; box-shadow:none; background:transparent; }
 #ccCloseNewUser { display:block; margin-left:auto; min-height:40px; min-width:40px; border-radius:50%; }
+/* O markup legado é apenas suporte aos formulários: nunca deve piscar no primeiro paint. */
+.admin-command:not(.cc-ready) .tab-panel > * { display:none!important; }
+.admin-command:not(.cc-ready) .tab-panel.active::before { content:'Carregando informações…'; display:block; padding:24px 0; color:var(--theme-muted); font-size:14px; }
+.admin-command:not(.cc-ready) .header-user { visibility:hidden; }
+.admin-command .tab-panel { animation:none; }

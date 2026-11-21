@@ -1,0 +1,55 @@
+/* Hub de imóveis: mesmas superfícies e cores do centro de comando. */
+#tab-empreendimentos > [hidden] { display:none!important; }
+.eh-metrics { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); border-block:1px solid var(--theme-border); margin-bottom:28px; }
+.eh-metrics article { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:20px 18px; min-width:0; }
+.eh-metrics article + article { border-left:1px solid var(--theme-border); }
+.eh-metrics strong { font-size:13px; display:block; color:var(--theme-text); }
+.eh-metrics small { display:block; margin-top:5px; font-size:11px; color:var(--theme-muted); }
+.eh-metrics b { font-size:30px; color:var(--theme-text); }
+.eh-hub > header { flex-wrap:wrap; gap:18px; padding-bottom:20px; border-bottom:1px solid var(--theme-border); }
+.eh-hub .cc-tools { flex-wrap:wrap; }
+.eh-hub select { max-width:210px; min-height:44px; }
+.eh-hub .cc-search { min-height:44px; }
+.eh-hub #ehNew { min-height:44px; background:linear-gradient(110deg,#1479ff,#225ee9); color:white; }
+.admin-command .eh-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:18px; margin-top:22px; }
+.admin-command .eh-card { padding:0; border:1px solid var(--theme-border); border-radius:18px; overflow:hidden; background:var(--theme-card); text-align:left; min-width:0; transition:transform .18s,border-color .18s,box-shadow .18s; }
+.admin-command .eh-card:hover { transform:translateY(-3px); border-color:var(--theme-accent); box-shadow:0 8px 26px #1479ff20; }
+.eh-card:focus-visible { outline:2px solid var(--theme-accent); outline-offset:3px; }
+.eh-cover { position:relative; aspect-ratio:1.75; background:var(--theme-control); display:grid; place-items:center; }
+.eh-cover img { width:100%; height:100%; position:absolute; inset:0; object-fit:cover; }
+.eh-no-image { color:var(--theme-muted); font-size:40px; }
+.eh-status { position:absolute; top:12px; left:12px; padding:6px 10px; border-radius:20px; background:#354258; color:#fff; font-size:11px; font-weight:600; }
+.eh-status.published { background:#087f57; }
+.eh-arrow { position:absolute; top:12px; right:12px; display:grid; place-items:center; width:30px; height:30px; border-radius:50%; background:#fff; color:#1479ff; font-size:19px; }
+.eh-card-body { padding:16px; }
+.eh-card-body h3 { color:var(--theme-text); font-size:15px; line-height:1.45; margin:0 0 12px; overflow-wrap:anywhere; }
+.eh-chips { display:flex; flex-wrap:wrap; gap:8px; color:var(--theme-muted); }
+.eh-chips span { display:inline-flex; align-items:center; gap:7px; padding:6px 9px; border:1px solid var(--theme-border); background:var(--theme-control); border-radius:14px; font-size:11px; overflow-wrap:anywhere; min-width:0; }
+.eh-import { margin-top:22px; color:var(--theme-muted); }
+.eh-import summary { cursor:pointer; padding:16px; border:1px solid var(--theme-border); border-radius:14px; }
+.eh-import .emp-importer-card { margin-top:16px; }
+.eh-drawer-open { overflow:hidden; }
+.admin-command .eh-drawer { position:fixed; inset:0 0 0 auto; margin:0; width:min(560px,100%); height:100dvh; max-width:100%; max-height:100dvh; padding:24px 24px max(24px,env(safe-area-inset-bottom)); box-sizing:border-box; border:0; border-left:1px solid var(--theme-accent); border-radius:0; background:linear-gradient(145deg,var(--theme-card),var(--theme-surface)); color:var(--theme-text); box-shadow:-20px 0 70px #0005; overflow-y:auto; }
+.eh-drawer[open] { animation:ehEnter .18s ease-out; }
+.eh-drawer::backdrop { background:#01081488; backdrop-filter:blur(3px); }
+.eh-drawer header { display:flex; justify-content:space-between; align-items:flex-start; gap:16px; margin-bottom:20px; }
+.eh-drawer h2 { font-size:21px; line-height:1.4; overflow-wrap:anywhere; margin:0 0 8px; }
+.eh-status-static { color:var(--theme-muted); font-size:12px; }
+.eh-detail-image { display:block; width:100%; max-height:340px; object-fit:contain; background:var(--theme-control); border-radius:16px; }
+.eh-image-error { color:var(--theme-muted); padding:30px 12px; text-align:center; }
+.eh-detail-actions { display:flex; flex-wrap:wrap; gap:10px; margin:18px 0; }
+.eh-drawer button,.eh-drawer a { display:inline-flex; align-items:center; justify-content:center; gap:8px; border:1px solid var(--theme-border); border-radius:12px; padding:10px 14px; min-height:44px; font:inherit; font-size:13px; color:var(--theme-text); background:var(--theme-control); cursor:pointer; }
+.eh-drawer .eh-publish { background:#1479ff; color:white; }
+.eh-drawer button:disabled { opacity:.6; cursor:wait; }
+.eh-facts { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; margin:24px 0; }
+.eh-facts dt { font-size:11px; color:var(--theme-muted); margin-bottom:5px; }
+.eh-facts dd { font-size:13px; margin:0; overflow-wrap:anywhere; }
+.eh-drawer section { border-top:1px solid var(--theme-border); padding:18px 0; }
+.eh-drawer h3 { font-size:14px; margin:0 0 10px; }
+.eh-text { font-size:13px; line-height:1.65; white-space:pre-wrap; overflow-wrap:anywhere; color:var(--theme-muted); }
+.eh-drawer .eh-delete { color:var(--theme-danger); margin-top:20px; }
+@keyframes ehEnter { from { transform:translateX(30px); opacity:.5; } to { transform:none; opacity:1; } }
+@media(max-width:1350px) { .admin-command .eh-grid { grid-template-columns:repeat(3,minmax(0,1fr)); } .eh-metrics { grid-template-columns:repeat(2,minmax(0,1fr)); } .eh-metrics article:nth-child(3) { border-left:0; } }
+@media(max-width:900px) { .admin-command .eh-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media(max-width:540px) { .admin-command .eh-grid { grid-template-columns:1fr; } .eh-metrics article { padding:15px 10px; gap:8px; } .eh-metrics strong { font-size:11px; } .eh-metrics b { font-size:24px; } .eh-hub .cc-tools { width:100%; } .eh-hub select { flex:1; max-width:100%; min-width:0; } .eh-hub #ehNew { width:100%; } .admin-command .eh-drawer { padding:18px 16px max(24px,env(safe-area-inset-bottom)); } }
+@media(prefers-reduced-motion:reduce) { .eh-drawer[open] { animation:none; } .admin-command .eh-card { transition:none; } }

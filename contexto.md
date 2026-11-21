@@ -616,3 +616,9 @@ Frontend reorganizado em Operação geral, Por carteira e Por corretor: frontend
 - Novas rotas HTML: /admin-carteiras.html, /admin-corretores.html, /admin-empreendimentos.html e /admin-conta.html. backend/services/adminPages.js renderiza os templates existentes com destino inicial fixo; navegação usa links reais e histórico do navegador, sem alternar visões no clique da sidebar. Formulários compartilhados mantidos para evitar duplicação de regras e IDs.
 - Minha Conta administrativa reutiliza conta.js, /api/me e alteração de senha, com sidebar/cápsula mobile e tema compartilhados. conta.html encaminha administradores à nova página; corretor mantém experiência existente. Guard cobre todos os destinos admin-*; autorização de APIs continua no backend.
 - Rotas renderizadas verificadas com testes de destinos, painel ativo, IDs únicos e guard, sem conectar ao banco. Revisão visual em navegador pendente.
+
+## 21/11/2026 — Hub visual de empreendimentos e otimizações do admin
+- frontend/js/admin-properties.js e css/admin-properties.css implementam hub de capas, filtros bairro/construtora, busca e indicadores reais; fase Entregue define Prontos.
+- Detalhes abrem em painel lateral nativo dialog. Editar reutiliza formulário existente; publicar/despublicar e excluir preservam endpoints/regras. Drive permanece recolhível no hub. Dados cadastrados não foram migrados nem alterados.
+- Incluídas correções de carregamento anteriores: sidebar montada no HTML, aplicação antecipada de geometria, legado oculto no primeiro paint, Chart.js assíncrono, formulários carregados sob demanda, consultas de carteiras agregadas e atualizações de responsáveis em lotes transacionais.
+- Validação local por sintaxe e testes; sem medição de desempenho em produção nem revisão visual em navegador.

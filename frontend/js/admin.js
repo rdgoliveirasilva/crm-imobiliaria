@@ -381,6 +381,7 @@ const btnToggleTipoText = $('btnToggleTipoText');
 
             if (alvo === 'dashboard')  atualizarDashboard();
             if (alvo === 'upload') {
+                carregarCategorias();
                 renderizarSeletorCorretores();
                 carregarListasParaAtualizacao();
             }
@@ -1396,102 +1397,20 @@ function atualizarBotaoStatusEmp(status) {
         const vazio = document.getElementById('empVazio');
         const badge = document.getElementById('empBadgeTotal');
         if (!grid) return;
+        window.AdminProperties.prepare({create:()=>abrirModalEmpreendimento(),edit:abrirModalEmpreendimento,remove:excluirEmpreendimento,notify:mostrarToast});
 
         try {
             const { empreendimentos } = await ApiClient.get('/api/admin/empreendimentos');
 
             if (badge) badge.textContent = empreendimentos.length;
-
-            if (!empreendimentos.length) {
-                grid.innerHTML = '';
-                if (vazio) vazio.style.display = 'block';
-                return;
-            }
-
-            if (vazio) vazio.style.display = 'none';
-
-        grid.innerHTML = empreendimentos.map(e => {
-            // Monta as infos estruturadas com ícone + label
-            const quartosTxt = e.dormitorios
-                ? `<i class="fas fa-bed"></i> ${escapeHtml(e.dormitorios)}`
-                : '';
-
-            const metragemTxt = e.metragens
-                ? `<i class="fas fa-ruler-combined"></i> ${escapeHtml(e.metragens)}`
-                : '';
-
-            const vagasTxt = e.vagas
-                ? `<i class="fas fa-car"></i> ${escapeHtml(e.vagas)}`
-                : '';
-
-            return `
-                <article class="emp-card" data-id="${e.id}">
-                    <div class="emp-card-cover">
-                        ${e.capa_url
-                            ? `<img src="${e.capa_url}" alt="${escapeHtml(e.nome)}">`
-                            : `<i class="fas fa-building placeholder"></i>`
-                        }
-                        <span class="emp-card-status ${e.status}">${e.status}</span>
-                    </div>
-                    <div class="emp-card-body">
-                        <div class="emp-card-body-head">
-                            <h4>${escapeHtml(e.nome)}</h4>
-                            <button class="emp-card-delete" data-id="${e.id}" title="Excluir" type="button">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </div>
-
-                        ${e.construtora ? `
-                            <div class="emp-card-info">
-                                <i class="fas fa-industry"></i>
-                                ${escapeHtml(e.construtora)}
-                            </div>
-                        ` : ''}
-
-                        ${(e.cidade || e.estado) ? `
-                            <div class="emp-card-info">
-                                <i class="fas fa-map-marker-alt"></i>
-                                ${escapeHtml([e.cidade, e.estado].filter(Boolean).join('/'))}
-                            </div>
-                        ` : ''}
-
-                        ${(quartosTxt || metragemTxt || vagasTxt) ? `
-                            <div class="emp-card-meta">
-                                ${quartosTxt  ? `<span class="emp-card-chip">${quartosTxt}</span>`  : ''}
-                                ${metragemTxt ? `<span class="emp-card-chip">${metragemTxt}</span>` : ''}
-                                ${vagasTxt    ? `<span class="emp-card-chip">${vagasTxt}</span>`    : ''}
-                            </div>
-                        ` : ''}
-
-                        ${e.descricao ? `
-                            <p class="emp-card-desc">${escapeHtml(e.descricao)}</p>
-                        ` : ''}
-                    </div>
-                </article>
-            `;
-        }).join('');
-
-        // Listeners: botão de excluir em cada card
-        grid.querySelectorAll('.emp-card-delete').forEach(btn => {
-            btn.addEventListener('click', (ev) => {
-                ev.stopPropagation();
-                const id = Number(btn.dataset.id);
-                const emp = empreendimentos.find(e => e.id === id);
-                if (emp) excluirEmpreendimento(emp.id, emp.nome);
+            window.AdminProperties.update(empreendimentos, {
+                create: () => abrirModalEmpreendimento(), edit: abrirModalEmpreendimento,
+                remove: excluirEmpreendimento, notify: mostrarToast
             });
-        });
-
-        // Listeners: clicar no card abre o modal de edição
-        grid.querySelectorAll('.emp-card').forEach(card => {
-            card.addEventListener('click', () => {
-                const id = Number(card.dataset.id);
-                const emp = empreendimentos.find(e => e.id === id);
-                if (emp) abrirModalEmpreendimento(emp);
-            });
-        });
 
         } catch (err) {
             console.error('[empreendimentos] erro:', err);
+            window.AdminProperties.fail(renderizarEmpreendimentos);
             mostrarToast('Erro ao carregar empreendimentos.', 'error');
         }
     }
@@ -3260,17 +3179,27 @@ fecharCustomSelectLista();
         await carregarGerenciarLista();
     }
 
-    async function carregarGerenciarLista() {
+    async function carregarGerenciarLista({ somenteContagens = false } = {}) {
         if (!listaSelecionadaAtual) return;
 
         const listaId = listaSelecionadaAtual.id;
 
         try {
-            const { lista, corretores } = await ApiClient.get(`/api/admin/listas/${listaId}/corretores`);
+            const [{ lista, corretores }] = await Promise.all([ApiClient.get(`/api/admin/listas/${listaId}/corretores`), somenteContagens ? Promise.resolve() : carregarCategorias()]);
 
+            if (listaSelecionadaAtual?.id !== listaId) return;
+            if (somenteContagens) {
+                for (const c of corretores) {
+                    const item = gerenciarListaCorretores.querySelector(`[data-corretor-id="${c.id}"]`);
+                    if (item) {
+                        item.querySelector('.pend strong').textContent = c.pendentes_na_lista;
+                        item.querySelector('.qual strong').textContent = c.qualificados_na_lista;
+                    }
+                }
+                return;
+            }
             gerenciarListaNome.textContent = `${lista.nome} · escolha quem participa`;
 
-            await carregarCategorias();
             $('gerenciarCategoria').value = lista.categoria || 'Sem categoria';
             if (gerenciarMensagem) {
                 gerenciarMensagem.value = lista.mensagem_whatsapp || '';
@@ -3339,9 +3268,7 @@ fecharCustomSelectLista();
 
             mostrarToast(`✅ ${partes.join(' · ') || 'Salvo'}`, 'success');
 
-            await carregarGerenciarLista();
-
-            renderizarListas();
+            carregarGerenciarLista({ somenteContagens: true });
             atualizarDashboard();
 
         } catch (err) {
@@ -3753,11 +3680,9 @@ if (btnToggleTipo) {
         blocoTexto.style.display = 'none';
 
         // 🔑 Carrega tudo em paralelo (o que sobrar de duplicado a gente resolve)
-        await Promise.all([
-            renderizarSeletorCorretores(),   // GET /api/admin/corretores
-            renderizarListas(),              // GET /api/admin/listas
-            initDashboardV2()                // GET /api/admin/dashboard + /graficos + /carteiras
-        ]);
+        // Os formulários carregam seus dados quando abertos, não durante cada navegação.
+        if (window.AdminCommand) initDashboardV2();
+        else await Promise.all([renderizarSeletorCorretores(), renderizarListas(), initDashboardV2()]);
 
         // Google Drive — analisar pasta
         const btnAnalisarDrive = $('btnAnalisarDrive');

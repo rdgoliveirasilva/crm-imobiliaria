@@ -46,10 +46,12 @@
     <link rel="stylesheet" href="css/admin-command.css">
 
     <!-- Chart.js (gráficos do dashboard) -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script async src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" onload="window.dispatchEvent(new Event('prospect:charts-ready'))"></script>
     <link rel="stylesheet" href="css/desktop-sidebar.css">
+    <link rel="stylesheet" href="css/admin-properties.css">
 </head>
 <body class="admin-page admin-command" data-admin-page="dashboard">
+    <script src="js/admin-boot.js"></script>
 
     <!-- =====================================================
          HEADER
@@ -71,6 +73,14 @@
                 </div>
             </div>
 
+    <nav class="admin-nav" aria-label="Navegação administrativa">
+        <div class="admin-nav-inner">
+            <a class="nav-tab active" data-tab="dashboard" href="admin.html"><i class="fas fa-chart-line"></i><span>Centro de comando</span></a>
+            <a class="nav-tab" data-tab="listas" href="admin-carteiras.html"><i class="fas fa-folder-open"></i><span>Carteiras</span></a>
+            <a class="nav-tab" data-tab="corretores" href="admin-corretores.html"><i class="fas fa-users"></i><span>Corretores</span></a>
+            <a class="nav-tab" data-tab="empreendimentos" href="admin-empreendimentos.html"><i class="fas fa-building"></i><span>Empreendimentos</span></a>
+        </div>
+    </nav>
             <div class="header-user">
                 <div class="user-info">
                     <span class="user-greeting">Bem vindo</span>
@@ -94,14 +104,7 @@
     <!-- =====================================================
          NAVEGAÇÃO POR ABAS
          ===================================================== -->
-    <nav class="admin-nav" aria-label="Navegação administrativa">
-        <div class="admin-nav-inner">
-            <a class="nav-tab active" data-tab="dashboard" href="admin.html"><i class="fas fa-chart-line"></i><span>Centro de comando</span></a>
-            <a class="nav-tab" data-tab="listas" href="admin-carteiras.html"><i class="fas fa-folder-open"></i><span>Carteiras</span></a>
-            <a class="nav-tab" data-tab="corretores" href="admin-corretores.html"><i class="fas fa-users"></i><span>Corretores</span></a>
-            <a class="nav-tab" data-tab="empreendimentos" href="admin-empreendimentos.html"><i class="fas fa-building"></i><span>Empreendimentos</span></a>
-        </div>
-    </nav>
+
     <div hidden aria-hidden="true">
         <button class="nav-tab" data-tab="upload">Atualizar ou criar carteira</button>
         <button class="nav-tab" data-tab="categorias">Categorias</button>
@@ -1235,6 +1238,7 @@
     <script src="js/api-client.js"></script>
     <script src="js/avatar.js"></script>
     <script src="js/admin-command.js"></script>
+    <script src="js/admin-properties.js"></script>
     <script src="js/admin.js"></script>
 
     <script src="js/admin-mobile-nav.js"></script>

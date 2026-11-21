@@ -96,3 +96,16 @@ Setas da saúde possuem somente a superfície recortada e brilho discreto, sem c
 - Carteiras mantém criar, atualizar e categorias como ações internas. Filtros acionados por alertas são transportados por parâmetro de URL.
 - Minha Conta do admin tem destino próprio, tokens de tema e navegação desktop/mobile. Campos e APIs de perfil/senha preservados; corretor não recebe esse layout.
 - Testes cobrem respostas das rotas, títulos, painel ativo único, IDs únicos, quatro links e redirecionamento/autorização do guard. Sem teste visual em navegador.
+
+### 21/11/2026 — Carregamento inicial e manutenção de carteiras
+- Navegação já pertence ao header no HTML; geometria recolhida/desktop aplicada antes do conteúdo. Markup legado não aparece antes da montagem, e Chart.js carrega sem bloquear a montagem do painel.
+- Inicialização não consulta listas e seletor de corretores ocultos; os formulários carregam ao abrir. Categorias e participantes carregam em paralelo; atualização após salvar participantes modifica somente contagens para não sobrescrever a mensagem em edição.
+- Dashboard/carteiras usa três consultas independentemente da quantidade de listas, substituindo uma consulta por lista. Gerenciamento restringe o join à carteira selecionada.
+- Redistribuição mantém o algoritmo e transação existentes, gravando pares lead/corretor em lote por fase com UNNEST. Mensagem usa UPDATE RETURNING em uma consulta.
+- Testes locais validam agrupamento, lote de 10000 pares e atualização de mensagem; não medem latência de produção. Revisão visual e medição no ambiente publicado pendentes.
+
+### 21/11/2026 — Hub de empreendimentos e detalhes laterais
+- Cards com capas reais, status de publicação, construtora e bairro; busca local sem acentos e filtros combinados. Indicadores globais: total, construtoras/bairros distintos não vazios e fase Entregue.
+- Clique no card abre dialog nativo estilizado como slide over à direita; mobile ocupa a largura disponível. Exibe campos existentes, capa sem recorte, comodidades, observações e book. Sem galeria fictícia.
+- Editar abre o formulário existente somente após ação explícita. Publicar/despublicar usa o endpoint atual e atualiza a tela após confirmação; excluir mantém confirmação existente. Importador Drive preservado em seção recolhível.
+- Temas compartilhados, navegação por teclado/Escape do dialog, imagens lazy nos cards, URLs HTTP(S) e dados escapados. Testes cobrem indicadores, filtros e segurança de conteúdo; revisão visual em navegador pendente.
