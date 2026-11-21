@@ -39,3 +39,20 @@ test('importação libera o top layer para confirmação e retoma somente quando
  api.setImport(dialog);const resume=api.pauseImport();assert.equal(dialog.open,false);resume();assert.equal(dialog.open,true);assert.equal(closed,1);assert.equal(opened,1);
  api.closeImport();assert.equal(dialog.open,false);api.pauseImport()();assert.equal(opened,1);
 });
+test('montagem do hub acessa o botão de cadastro dentro do importador ainda desconectado',()=>{
+ let detached=false;const nodes=new Map();
+ function node(){return {style:{},classList:{add(){},remove(){}},hidden:false,events:{},setAttribute(){},addEventListener(k,fn){this.events[k]=fn;},querySelector(){return node();},querySelectorAll(){return [];},append(...children){if(children.includes(importer))detached=true;},prepend(){}};}
+ const button=node(),cardHeader=node(),importer=node();
+ importer.querySelector=selector=>selector==='#btnNovoEmpreendimento'?button:cardHeader;
+ const page=node();page.querySelector=selector=>selector==='.emp-importer-card'?importer:node();
+ nodes.set('tab-empreendimentos',page);
+ const body=node();body.append=()=>{detached=false;};
+ const scope={window:{},URL,document:{body,createElement:node,getElementById(id){
+  if(id==='btnNovoEmpreendimento')return detached?null:button;
+  if(!nodes.has(id))nodes.set(id,node());return nodes.get(id);
+ }}};
+ vm.runInNewContext(source,scope);
+ assert.doesNotThrow(()=>scope.window.AdminProperties.prepare({}));
+ assert.equal(button.hidden,true);assert.equal(nodes.get('empVazio').style.display,'none');
+ assert.equal(nodes.get('empGrid').textContent,'Carregando empreendimentos…');
+});

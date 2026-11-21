@@ -46,12 +46,12 @@ async function carregarAtividade(pool, pagina = 1) {
     ) SELECT AVG(EXTRACT(EPOCH FROM criado_em - anterior)) FILTER (WHERE lead_id != lead_anterior) AS segundos,
         COUNT(*) FILTER (WHERE lead_id != lead_anterior)::int AS amostras FROM intervalos`);
     const total = Number(metrics.rows[0].total_ligacoes);
-    const paginas = Math.max(1, Math.ceil(total / 10)); const atual = Math.min(pagina, paginas);
+    const paginas = Math.max(1, Math.ceil(total / 5)); const atual = Math.min(pagina, paginas);
     const log = await pool.query(`${EVENTOS} SELECT e.id, e.corretor_nome, l.nome AS contato_nome, e.criado_em,
         CASE WHEN e.proximo_tipo IN ('whatsapp','qualificacao') THEN EXTRACT(EPOCH FROM e.proxima_data - e.criado_em) END AS segundos,
         e.proximo_tipo AS encerramento
         FROM eventos e JOIN leads l ON l.id = e.lead_id WHERE e.tipo = 'ligacao'
-        ORDER BY e.criado_em DESC, e.id DESC LIMIT 10 OFFSET $1`, [(atual - 1) * 10]);
+        ORDER BY e.criado_em DESC, e.id DESC LIMIT 5 OFFSET $1`, [(atual - 1) * 5]);
     const porCorretor = await pool.query(`${EVENTOS} SELECT corretor_id, corretor_nome, COUNT(*)::int AS cliques FROM eventos WHERE tipo = 'ligacao' GROUP BY 1,2 ORDER BY cliques DESC,corretor_nome`);
     const number = value => value === null || value === undefined ? null : Number(value);
     return { periodoDias:30, totalLigacoes:total, ligacoesFinalizadas:Number(metrics.rows[0].ligacoes_finalizadas),

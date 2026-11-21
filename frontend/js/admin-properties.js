@@ -25,7 +25,7 @@ window.AdminProperties = (() => {
         choice.innerHTML='<header><h2 id="ehAddTitle">Adicionar empreendimento</h2><button type="button" data-close aria-label="Fechar">×</button></header><p>Como deseja cadastrar?</p><div class="eh-add-options"><button type="button" id="ehChooseImport"><i class="fab fa-google-drive"></i><strong>Importar</strong><span>Extrair informações dos PDFs do Google Drive.</span></button><button type="button" id="ehChooseManual"><i class="fas fa-pen"></i><strong>Manual</strong><span>Preencher os dados do empreendimento.</span></button></div>';
         importDialog=document.createElement('dialog');importDialog.className='eh-add-dialog eh-import-dialog';importDialog.setAttribute('aria-labelledby','ehImportTitle');
         importDialog.innerHTML='<header><h2 id="ehImportTitle">Importar do Google Drive</h2><button type="button" data-close aria-label="Fechar importação">×</button></header>';
-        importDialog.append(importer);importer.querySelector('.card-header').hidden=true;$('btnNovoEmpreendimento').hidden=true;
+        importDialog.append(importer);importer.querySelector('.card-header').hidden=true;importer.querySelector('#btnNovoEmpreendimento').hidden=true;
         document.body.append(choice,importDialog);
         for(const modal of [choice,importDialog]) {
             modal.querySelector('[data-close]').onclick=()=>modal.close();

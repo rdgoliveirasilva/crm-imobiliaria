@@ -115,3 +115,8 @@ Setas da saúde possuem somente a superfície recortada e brilho discreto, sem c
 - Importação fecha temporariamente o dialog para a confirmação existente e retoma em seguida; revisão fecha o dialog antes do editor. Handler de importar não acumula listeners ao repetir análise.
 - Hub pagina oito itens após aplicar filtros, reinicia ao buscar/filtrar e limita a página após excluir. Controles seguem tokens de tema e mobile; indicadores continuam considerando a base completa.
 - Testes de paginação e ciclo de confirmação; revisão visual no navegador pendente.
+
+### 21/11/2026 — Correções de montagem e tamanho do log
+- Log de ligações usa cinco registros por página no backend, incluindo cálculo de páginas e deslocamento.
+- Montagem do hub consulta o botão manual pelo próprio importador enquanto ele ainda está desconectado do documento; evita interrupção antes de buscar empreendimentos. Estado vazio começa oculto no HTML e só aparece após resposta sem registros.
+- Regressões cobrem montagem com importador desconectado e paginação de ligações.

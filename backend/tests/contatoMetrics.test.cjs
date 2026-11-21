@@ -28,3 +28,15 @@ test('métricas sem atividade permanecem vazias e páginas são limitadas',async
  assert.match(sql[1].query,/lead_id != lead_anterior/);
  await assert.rejects(carregarAtividade(pool,0),{status:400});
 });
+test('log pagina cinco registros e calcula deslocamento e última página',async()=>{
+ for(const [requested,expectedPage,offset] of [[1,1,0],[2,2,5],[99,3,10]]){
+  let step=0;const queries=[];
+  const result=await carregarAtividade({async query(sql,args){queries.push({sql,args});step++;
+   if(step===1)return {rows:[{total_ligacoes:12,ligacoes_finalizadas:0}]};
+   if(step===2)return {rows:[{segundos:null,amostras:0}]};
+   if(step===3){assert.match(sql,/LIMIT 5 OFFSET \$1/);return {rows:Array.from({length:Math.min(5,12-offset)},(_,i)=>({id:offset+i+1}))};}
+   return {rows:[]};
+  }},requested);
+  assert.equal(result.paginas,3);assert.equal(result.pagina,expectedPage);assert.deepEqual(queries[2].args,[offset]);assert.ok(result.log.length<=5);
+ }
+});
