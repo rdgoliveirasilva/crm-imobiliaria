@@ -90,3 +90,9 @@ Setas da saúde possuem somente a superfície recortada e brilho discreto, sem c
 - Eventos autenticados com UUID único e vínculo de propriedade; horário de recebimento no servidor. Média de contatos usa clientes únicos por corretor/dia com atividade. Duração é intervalo de uso até o primeiro clique posterior de qualificação/WhatsApp, não duração telefônica. Requalificação usa intervalos do mesmo corretor/dia entre clientes diferentes, com histórico de qualificação ordenado por lead.
 - Sem amostras, médias ficam indisponíveis; não há reconstrução fictícia de ligações anteriores. Schema aditivo executado pelo inicializador normal, não manualmente durante desenvolvimento.
 - Validação por testes Node e sintaxe; revisão visual e execução das consultas em PostgreSQL real pendentes.
+
+### 21/11/2026 — Páginas independentes e conta administrativa
+- Navegação principal usa links para Centro de comando, Carteiras, Corretores e Empreendimentos, sem alternância de visão via sidebar. Destinos próprios suportam abertura direta/recarregamento e histórico; templates e formulários são compartilhados pelo renderizador adminPages, antes dos arquivos estáticos.
+- Carteiras mantém criar, atualizar e categorias como ações internas. Filtros acionados por alertas são transportados por parâmetro de URL.
+- Minha Conta do admin tem destino próprio, tokens de tema e navegação desktop/mobile. Campos e APIs de perfil/senha preservados; corretor não recebe esse layout.
+- Testes cobrem respostas das rotas, títulos, painel ativo único, IDs únicos, quatro links e redirecionamento/autorização do guard. Sem teste visual em navegador.

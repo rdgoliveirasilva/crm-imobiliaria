@@ -74,6 +74,7 @@ app.get('/api/debug-tz', (req, res) => {
    ========================================================= */
 
 const frontendPath = path.join(__dirname, '..', 'frontend');
+require('./services/adminPages').registerAdminPages(app, frontendPath);
 app.use(express.static(frontendPath));
 
 app.use((req, res, next) => {

@@ -369,9 +369,10 @@ const btnToggleTipoText = $('btnToggleTipoText');
        ========================================================= */
     navTabs.forEach(tab => {
         tab.addEventListener('click', () => {
+            if (tab.hasAttribute('href')) return;
             const alvo = tab.dataset.tab;
 
-            navTabs.forEach(t => t.classList.remove('active'));
+            navTabs.forEach(t => { if (!t.hasAttribute('href')) t.classList.remove('active'); });
             tabPanels.forEach(p => p.classList.remove('active'));
 
             tab.classList.add('active');
@@ -4828,5 +4829,6 @@ statsListaAtual = {};
             })
     });
     init();
+    if (document.body.dataset.adminPage === 'empreendimentos') renderizarEmpreendimentos();
 
 });

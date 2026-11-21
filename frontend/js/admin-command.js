@@ -113,7 +113,7 @@
         state[key]=Math.max(1,Math.min(state[key],pages));const current=state[key],start=(current-1)*pageSize;
         list=list.slice(start,start+pageSize);
         const pagination=`<nav class="cc-pagination cc-hub-pagination" aria-label="Paginação de carteiras ${group==='inactive'?'inativas':'ativas'}"><span>${total?start+1:0}–${Math.min(start+pageSize,total)} de ${total} carteiras</span><div><button data-hub-group="${group}" data-hub-page="${current-1}" ${current===1?'disabled':''} aria-label="Página anterior">‹</button><strong>${current} / ${pages}</strong><button data-hub-group="${group}" data-hub-page="${current+1}" ${current===pages?'disabled':''} aria-label="Próxima página">›</button></div></nav>`;
-        const tools=group==='active'?`<div class="cc-tools"><label class="cc-search"><i class="fas fa-search"></i><input id="ccSearch" placeholder="Buscar carteira..." value="${esc(state.search)}" aria-label="Buscar carteira"></label><select id="ccWalletFilter" aria-label="Situação das carteiras"><option value="todas" ${state.filter==='todas'?'selected':''}>Todas</option><option value="atencao" ${state.filter==='atencao'?'selected':''}>Atenção</option></select><button data-upload-mode="nova" title="Nova carteira" aria-label="Nova carteira">＋</button><button data-upload-mode="atualizar" title="Atualizar carteira existente" aria-label="Atualizar carteira existente"><i class="fas fa-rotate"></i></button></div>`:'';
+        const tools=group==='active'?`<div class="cc-tools"><label class="cc-search"><i class="fas fa-search"></i><input id="ccSearch" placeholder="Buscar carteira..." value="${esc(state.search)}" aria-label="Buscar carteira"></label><select id="ccWalletFilter" aria-label="Situação das carteiras"><option value="todas" ${state.filter==='todas'?'selected':''}>Todas</option><option value="atencao" ${state.filter==='atencao'?'selected':''}>Atenção</option></select><button data-nav="categorias" title="Gerenciar categorias" aria-label="Gerenciar categorias"><i class="fas fa-tags"></i></button><button data-upload-mode="nova" title="Nova carteira" aria-label="Nova carteira">＋</button><button data-upload-mode="atualizar" title="Atualizar carteira existente" aria-label="Atualizar carteira existente"><i class="fas fa-rotate"></i></button></div>`:'';
         const body=`<div class="cc-wallet-grid">${list.map((w,i)=>{const n=walletNumbers(w);return `<div class="cc-wallet-shell"><button class="cc-wallet" data-wallet="${w.lista_id}" style="--wallet:${colors[i%3]}"><div class="cc-wallet-title"><i class="fas fa-folder"></i><span><strong>${esc(w.nome)}</strong><small>${w.inativa_manual?'Inativada pelo gestor · oculta dos corretores':inactiveWallet(w)?'Concluída · visível aos corretores':`${fmt(n.total)} contatos`}</small></span><b>→</b></div><div class="cc-wallet-body"><div class="cc-ring" style="--progress:${n.progress}%"><div><strong>${n.progress}%</strong><small>Trabalhado</small></div></div><dl><div><dt>Trabalhados</dt><dd>${fmt(n.worked)}</dd></div><div><dt>Pendentes</dt><dd>${fmt(n.pending)}</dd></div><div><dt>Total</dt><dd>${fmt(n.total)}</dd></div></dl></div></button><button class="cc-wallet-activity" data-wallet-activity="${w.lista_id}">${w.inativa_manual?'Reativar visibilidade':'Inativar carteira'}</button></div>`;}).join('')}</div>`;
         return `<section class="cc-panel cc-hub"><header><div><h2><i class="fas fa-folder-open"></i> Carteiras ${group==='inactive'?'inativas':'ativas'}</h2><p>${group==='inactive'?'Concluídas ou inativadas manualmente.':'Selecione uma carteira para equipe, contatos e evolução.'}</p></div>${tools}</header>${list.length?body:empty('Nenhuma carteira encontrada.')}${pagination}</section>`;
     }
@@ -222,13 +222,22 @@
         }catch(error){updateAttention(false);if(!state.kpis)$('ccContent').innerHTML=empty('Não foi possível carregar o painel. Recarregue a página para tentar novamente.');}finally{state.busy=null;}})();
         return state.busy;
     }
-    function navigate(tab) {close();document.querySelector(`.nav-tab[data-tab="${tab}"]`)?.click();}
+    function navigate(tab) {
+        close();
+        const routes={dashboard:'admin.html',listas:'admin-carteiras.html',corretores:'admin-corretores.html',empreendimentos:'admin-empreendimentos.html'};
+        if(routes[tab]) { window.location.assign(routes[tab]+(tab==='listas'&&state.filter==='atencao'?'?atencao=1':tab==='corretores'&&state.userAttention?'?atencao=1':'')); return; }
+        document.querySelector(`.nav-tab[data-tab="${tab}"]`)?.click();
+    }
     function mount() {
         const dashboard=$('tab-dashboard');if(!dashboard)return;
         const header=document.querySelector('.header-inner');header.insertBefore(document.querySelector('.admin-nav'),document.querySelector('.header-user'));
         const legacy=document.createElement('div');legacy.hidden=true;legacy.id='ccLegacy';while(dashboard.firstChild)legacy.append(dashboard.firstChild);dashboard.append(legacy);
         const root=document.createElement('div');root.id='ccRoot';root.innerHTML=`<div id="ccContent" aria-live="polite">${empty('Carregando operação…')}</div>`;dashboard.prepend(root);
         for(const id of ['tab-listas','tab-corretores']){const panel=$(id),legacy=document.createElement('div');legacy.hidden=true;legacy.id=id+'-legacy';while(panel.firstChild)legacy.append(panel.firstChild);panel.append(legacy);}
+        const page=document.body.dataset.adminPage||'dashboard';
+        if(new URLSearchParams(window.location.search).get('atencao')==='1'){if(page==='listas')state.filter='atencao';if(page==='corretores')state.userAttention=true;}
+        state.view=({dashboard:'geral',listas:'carteira',corretores:'corretor'})[page]||'geral';
+        if(page==='listas'||page==='corretores')$('tab-'+page).prepend(root);
         const newUser=document.createElement('dialog');newUser.id='ccNewUser';newUser.className='cc-attention-dialog';newUser.setAttribute('aria-label','Cadastrar corretor');
         newUser.innerHTML='<button type="button" id="ccCloseNewUser" aria-label="Fechar cadastro">×</button>';
         newUser.append($('tab-corretores-legacy').querySelector('.form-card'));document.body.append(newUser);
@@ -240,7 +249,7 @@
         const account=document.querySelector('.header-user');
         account.querySelector('.user-info').hidden=true;
         const toolbar=document.createElement('header');toolbar.className='cc-top cc-account-toolbar';
-        toolbar.innerHTML='<h1 id="ccPageTitle">Centro de comando</h1>';
+        toolbar.innerHTML='<h1 id="ccPageTitle">'+({dashboard:'Centro de comando',listas:'Carteiras',corretores:'Corretores',empreendimentos:'Empreendimentos'})[page]+'</h1>';
         toolbar.append(account);document.querySelector('.admin-main').prepend(toolbar);
         const attentionButton=document.createElement('button');attentionButton.type='button';attentionButton.id='ccAttentionToggle';
         attentionButton.className='cc-attention-toggle';attentionButton.disabled=true;attentionButton.dataset.status='unknown';
@@ -256,10 +265,8 @@
         attentionDialog.addEventListener('close',()=>{state.attentionOpen=false;});
         attentionDialog.addEventListener('click',event=>{if(event.target!==attentionDialog)return;const rect=attentionDialog.getBoundingClientRect();if(event.clientX<rect.left||event.clientX>rect.right||event.clientY<rect.top||event.clientY>rect.bottom)attentionDialog.close();});
 
-        document.querySelectorAll('.nav-tab[data-tab]').forEach(tab=>tab.addEventListener('click',()=>{
+        document.querySelectorAll('button.nav-tab[data-tab]').forEach(tab=>tab.addEventListener('click',()=>{
             $('ccPageTitle').textContent=tab.textContent.trim();
-            const view={dashboard:'geral',listas:'carteira',corretores:'corretor'}[tab.dataset.tab];
-            if(view){state.view=view;$('tab-'+tab.dataset.tab).prepend(root);render();if(view==='corretor')loadActivity();}
         }));
         document.addEventListener('submit',async e=>{
             if(e.target.id!=='ccHealthFilter')return;e.preventDefault();

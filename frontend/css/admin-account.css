@@ -1,0 +1,21 @@
+/* Minha Conta administrativa usa os mesmos tokens e breakpoints do painel. */
+.admin-command.conta-page { display:block; background:var(--theme-page); color:var(--theme-text); }
+.admin-command.conta-page::before,.admin-command.conta-page .app-header::before { display:none; }
+.admin-command.conta-page .conta-wrapper { width:100%; max-width:960px; margin:24px auto; }
+.admin-command.conta-page .conta-card { background:var(--theme-card); border-color:var(--theme-border); box-shadow:0 10px 28px #00000010; }
+.admin-command.conta-page .conta-header { background:var(--theme-control); border-color:var(--theme-border); }
+.admin-command.conta-page :is(.conta-header h2,.conta-body label) { color:var(--theme-text); }
+.admin-command.conta-page :is(.conta-header p,.form-hint,.conta-footer a) { color:var(--theme-muted); }
+.admin-command.conta-page .conta-body input { background:var(--theme-page); color:var(--theme-text); border-color:var(--theme-border); font-size:16px; }
+.admin-command.conta-page .conta-body input:focus { border-color:var(--theme-accent); background:var(--theme-page); }
+.admin-command.conta-page .conta-body input:disabled { background:var(--theme-control); color:var(--theme-muted); opacity:1; }
+.admin-command.conta-page .conta-body input::placeholder { color:var(--theme-muted); }
+.admin-command.conta-page .conta-icon { background:var(--theme-control); color:var(--theme-accent); }
+.admin-command.conta-page .toggle-password { color:var(--theme-muted); }
+.admin-command.conta-page .conta-body .form-error { color:var(--theme-danger); }
+.admin-command.conta-page .header-inner { max-width:none; }
+@media(max-width:900px) {
+ .admin-command.conta-page .conta-wrapper { grid-template-columns:1fr; margin-top:18px; }
+ .admin-command.conta-page .conta-body,.admin-command.conta-page .conta-header { padding:18px 16px; }
+ .admin-command.conta-page .conta-footer { margin-bottom:24px; }
+}

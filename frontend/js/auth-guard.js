@@ -20,7 +20,7 @@
     const pagina = (window.location.pathname.split('/').pop() || '').toLowerCase();
 
     // Admin tentando acessar área de corretor? Volta pro login (limpa)
-    if (pagina === 'admin.html' && tipo !== 'admin') {
+    if ((pagina === 'admin.html' || pagina.startsWith('admin-')) && tipo !== 'admin') {
         AuthSession.clear();
         window.location.replace('index.html');
         return;
@@ -32,6 +32,8 @@
         window.location.replace('index.html');
         return;
     }
+
+    if (pagina === 'conta.html' && tipo === 'admin') { window.location.replace('admin-conta.html'); return; }
 
     // Guarda um marcador de "página validada"
     // pra o auth.js do index saber que essa página rodou de fato

@@ -26,6 +26,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     const footer = document.createElement('div'); footer.className = 'ps-sidebar-footer';
     footer.innerHTML = '<a href="conta.html" title="Minha Conta" aria-label="Minha Conta"><i class="fas fa-user-gear" aria-hidden="true"></i><span>Minha Conta</span></a><button type="button" title="Sair" aria-label="Sair"><i class="fas fa-right-from-bracket" aria-hidden="true"></i><span>Sair</span></button>';
+    if (admin) footer.querySelector('a').href = 'admin-conta.html';
     footer.querySelector('button').addEventListener('click', () => ApiClient.logout());
     header.append(footer);
     function apply() {
