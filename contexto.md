@@ -622,3 +622,6 @@ Frontend reorganizado em Operação geral, Por carteira e Por corretor: frontend
 - Detalhes abrem em painel lateral nativo dialog. Editar reutiliza formulário existente; publicar/despublicar e excluir preservam endpoints/regras. Drive permanece recolhível no hub. Dados cadastrados não foram migrados nem alterados.
 - Incluídas correções de carregamento anteriores: sidebar montada no HTML, aplicação antecipada de geometria, legado oculto no primeiro paint, Chart.js assíncrono, formulários carregados sob demanda, consultas de carteiras agregadas e atualizações de responsáveis em lotes transacionais.
 - Validação local por sintaxe e testes; sem medição de desempenho em produção nem revisão visual em navegador.
+
+## 21/11/2026 — Adicionar empreendimentos e paginação
+Botão Adicionar agora abre escolha entre Manual e Importar. Google Drive usa modal próprio, reaproveitando os controles originais; não há mais área de importação sob o hub. Hub limita a oito cards por página, com filtros aplicados antes do recorte. Confirmação/revisão da importação liberam o top layer para os modais existentes.

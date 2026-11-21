@@ -109,3 +109,9 @@ Setas da saúde possuem somente a superfície recortada e brilho discreto, sem c
 - Clique no card abre dialog nativo estilizado como slide over à direita; mobile ocupa a largura disponível. Exibe campos existentes, capa sem recorte, comodidades, observações e book. Sem galeria fictícia.
 - Editar abre o formulário existente somente após ação explícita. Publicar/despublicar usa o endpoint atual e atualiza a tela após confirmação; excluir mantém confirmação existente. Importador Drive preservado em seção recolhível.
 - Temas compartilhados, navegação por teclado/Escape do dialog, imagens lazy nos cards, URLs HTTP(S) e dados escapados. Testes cobrem indicadores, filtros e segurança de conteúdo; revisão visual em navegador pendente.
+
+### 21/11/2026 — Cadastro por escolha e paginação do hub
+- Adicionar empreendimento abre escolha Importar / Manual. Manual abre o formulário existente; Importar abre dialog com os controles originais do Google Drive, removidos da área abaixo do hub.
+- Importação fecha temporariamente o dialog para a confirmação existente e retoma em seguida; revisão fecha o dialog antes do editor. Handler de importar não acumula listeners ao repetir análise.
+- Hub pagina oito itens após aplicar filtros, reinicia ao buscar/filtrar e limita a página após excluir. Controles seguem tokens de tema e mobile; indicadores continuam considerando a base completa.
+- Testes de paginação e ciclo de confirmação; revisão visual no navegador pendente.

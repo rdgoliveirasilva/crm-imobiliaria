@@ -16,8 +16,26 @@ test('busca ignora acentos e combina bairro e construtora sem alterar dados',()=
  assert.equal(hub.filter(items,'','','').length,4);assert.equal(items[0].status,'rascunho');
 });
 test('detalhes não permitem URLs executáveis e escapam dados cadastrados',()=>{
- const safe={window:{},URL};vm.runInNewContext(source.replace('return { update, filter, totals, fail','return { esc, url, update, filter, totals, fail'),safe);
+ const safe={window:{},URL};vm.runInNewContext(source.replace('return { update, filter, totals, paginate','return { esc, url, update, filter, totals, paginate'),safe);
  assert.equal(safe.window.AdminProperties.url('javascript:alert(1)'),'');
  assert.equal(safe.window.AdminProperties.url('https://example.com/book.pdf'),'https://example.com/book.pdf');
  assert.equal(safe.window.AdminProperties.esc('<img src=x onerror=alert(1)>'),'&lt;img src=x onerror=alert(1)&gt;');
+});
+
+test('paginação mostra oito por página, filtra antes do recorte e ajusta remoções',()=>{
+ const rows=Array.from({length:19},(_,id)=>({id,nome:'Imóvel '+id,bairro:id<9?'Centro':'Sul'}));
+ const first=hub.paginate(rows,1),last=hub.paginate(rows,3);
+ assert.equal(first.items.length,8);assert.equal(first.pages,3);assert.equal(first.items[7].id,7);
+ assert.equal(last.items.length,3);assert.equal(last.items[0].id,16);
+ const filtered=hub.paginate(hub.filter(rows,'','Centro',''),3);
+ assert.equal(filtered.page,2);assert.equal(filtered.items.length,1);assert.equal(filtered.items[0].id,8);
+ const empty=hub.paginate([],3);assert.equal(empty.page,1);assert.equal(empty.total,0);assert.equal(empty.items.length,0);
+});
+test('importação libera o top layer para confirmação e retoma somente quando estava aberta',()=>{
+ const classes=new Set();const scope={window:{},URL,document:{body:{classList:{add:c=>classes.add(c)}}}};
+ vm.runInNewContext(source.replace('return { update, filter, totals, paginate','return { setImport(d){importDialog=d;}, update, filter, totals, paginate'),scope);
+ const api=scope.window.AdminProperties;let closed=0,opened=0;
+ const dialog={open:true,close(){this.open=false;closed++;},showModal(){this.open=true;opened++;}};
+ api.setImport(dialog);const resume=api.pauseImport();assert.equal(dialog.open,false);resume();assert.equal(dialog.open,true);assert.equal(closed,1);assert.equal(opened,1);
+ api.closeImport();assert.equal(dialog.open,false);api.pauseImport()();assert.equal(opened,1);
 });

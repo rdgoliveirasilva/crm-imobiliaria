@@ -581,7 +581,7 @@ const btnToggleTipoText = $('btnToggleTipoText');
 
             // ✅ Anexa o listener AQUI, toda vez que o preview é (re)renderizado
             btnImportar.onclick = null;
-            btnImportar.addEventListener('click', importarPdfsDrive);
+            btnImportar.onclick = importarPdfsDrive;
         }
     }
 
@@ -631,6 +631,8 @@ const btnToggleTipoText = $('btnToggleTipoText');
             return;
         }
 
+        // Fecha temporariamente o top layer para a confirmação existente ficar acessível.
+        const retomarImportacao = window.AdminProperties?.pauseImport();
         // Confirma
         const confirmar = await new Promise(resolve => {
             abrirConfirm(
@@ -648,6 +650,7 @@ const btnToggleTipoText = $('btnToggleTipoText');
             }, 200);
         });
 
+        retomarImportacao?.();
         if (!confirmar) return;
 
         // Feedback visual
@@ -688,6 +691,7 @@ function abrirTelaRevisao(resposta) {
         return;
     }
 
+    window.AdminProperties?.closeImport();
     fecharPreviewDrive();
     const importerCard = document.querySelector('.emp-importer-card');
     if (importerCard) importerCard.style.display = 'none';
