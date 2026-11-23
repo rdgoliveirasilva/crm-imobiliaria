@@ -334,7 +334,6 @@ function labelTag(tag) {
        INICIAR PROSPECÇÃO
        ========================================================= */
     $('mobileIniciarProspeccao')?.addEventListener('click', iniciarProspeccao);
-    $('desktopIniciarProspeccao')?.addEventListener('click', iniciarProspeccao);
 
     function iniciarProspeccao() {
         const listaId = carteiraAtiva ? carteiraAtiva.id : '';

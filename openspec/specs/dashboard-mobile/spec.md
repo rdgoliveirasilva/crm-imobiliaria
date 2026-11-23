@@ -62,3 +62,10 @@ A coluna lateral SHALL alinhar seu conteúdo ao início e impedir encolhimento d
 - Rolagem restrita aos itens, preservando marca/rodapé em telas baixas. Tema permanece acessível.
 - Testes cobrem persistência, armazenamento bloqueado, breakpoint, nomes acessíveis e logout.
   Conferência visual em navegador pendente.
+
+### 23/11/2026 — Dashboard e vitrine do corretor
+- Tema movido no HTML para junto do seletor de carteiras, com controle e persistência existentes. Seis indicadores secundários passam a faixas tabulares responsivas; IDs/ações dos drill-downs preservados.
+- Ilustração do edifício é link acessível para empreendimentos, com rotação no hover e respeito a reduced-motion. Prospecção removida apenas da sidebar desktop; CTA superior e navegação mobile mantidos.
+- Vitrine usa sidebar compartilhada, temas desktop/mobile, indicadores reais, grid de capas e paginação local de oito após os filtros. Filtros de construtora/cidade/bairro/entrega/renda preservados.
+- Detalhes em dialog lateral nativo, com Escape/foco e book; nenhuma ação administrativa nem chamada a endpoints admin. Consulta continua exclusivamente /api/corretor/empreendimentos (somente publicados).
+- Testes de marcação, paginação e ausência de operações administrativas; sintaxe validada. Revisão visual em navegador pendente.

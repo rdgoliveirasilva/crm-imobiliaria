@@ -9,6 +9,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let todosEmpreendimentos = [];
     let empreendimentoAtual = null;
     let filtroVerTodos = false;
+    let paginaAtual = 1, listaFiltrada = [], focoAnterior;
 
     /* =========================================================
        ELEMENTOS
@@ -121,6 +122,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const { empreendimentos } = await ApiClient.get('/api/corretor/empreendimentos');
             todosEmpreendimentos = empreendimentos || [];
+            renderizarIndicadores();
             empLoading.style.display = 'none';
 
             if (!todosEmpreendimentos.length) {
@@ -188,93 +190,41 @@ document.addEventListener('DOMContentLoaded', () => {
        RENDERIZAR GRID
        ========================================================= */
 
-    function renderizarEmpreendimentos(lista) {
+    function renderizarEmpreendimentos(lista, pagina = 1) {
+        listaFiltrada = lista;
+        const paginas = Math.max(1, Math.ceil(lista.length / 8));
+        paginaAtual = Math.max(1, Math.min(pagina, paginas));
+        const inicio = (paginaAtual - 1) * 8;
         empTotalCount.textContent = lista.length;
-        if (!lista.length) {
-            empGridVitrine.innerHTML = '';
-            empVazio.style.display = 'block';
-            empVazioMensagem.textContent = 'Nenhum empreendimento corresponde aos filtros.';
-            return;
-        }
-
-        empVazio.style.display = 'none';
-
-        const grupos = {};
-        lista.forEach(emp => {
-            const construtora = (emp.construtora || 'Outros').trim();
-            if (!grupos[construtora]) grupos[construtora] = [];
-            grupos[construtora].push(emp);
-        });
-
-        const construtorasOrdenadas = Object.keys(grupos).sort();
-
-        empGridVitrine.innerHTML = construtorasOrdenadas.map(construtora => {
-            const emps = grupos[construtora];
-            const deveLimitar = !filtroVerTodos && emps.length > 4;
-            const empsExibidos = deveLimitar ? emps.slice(0, 4) : emps;
-
-            const cards = empsExibidos.map(e => {
-                const quartos = e.dormitorios ? `<span class="emp-vitrine-chip"><i class="fas fa-bed"></i> ${escapeHtml(e.dormitorios)}</span>` : '';
-                const metragem = e.metragens ? `<span class="emp-vitrine-chip"><i class="fas fa-ruler-combined"></i> ${escapeHtml(e.metragens)}</span>` : '';
-                const vagas = e.vagas ? `<span class="emp-vitrine-chip"><i class="fas fa-car"></i> ${escapeHtml(e.vagas)}</span>` : '';
-                
-                let textoRenda = e.renda_presumida || '';
-                if (textoRenda && !textoRenda.toLowerCase().includes('renda')) textoRenda = 'Renda a partir de ' + textoRenda;
-                const rendaTag = textoRenda ? `<div class="emp-card-renda-tag">${escapeHtml(textoRenda)}</div>` : '';
-
-                return `
-                    <article class="emp-vitrine-card" data-id="${e.id}">
-                        <div class="emp-vitrine-cover">
-                            ${rendaTag}
-                            ${e.capa_url ? `<img src="${e.capa_url}" alt="${escapeHtml(e.nome)}" loading="lazy">` : `<i class="fas fa-building placeholder-icon"></i>`}
-                        </div>
-                        <div class="emp-vitrine-body">
-                            <h3 class="emp-vitrine-nome">${escapeHtml(e.nome)}</h3>
-                            ${(e.cidade || e.estado || e.bairro) ? `<div class="emp-vitrine-info"><i class="fas fa-map-marker-alt"></i> ${escapeHtml([e.bairro, e.cidade, e.estado].filter(Boolean).join(' · '))}</div>` : ''}
-                            ${(quartos || metragem || vagas) ? `<div class="emp-vitrine-chips">${quartos}${metragem}${vagas}</div>` : ''}
-                            ${e.descricao ? `<p class="emp-vitrine-desc">${escapeHtml(e.descricao)}</p>` : ''}
-                            <span class="emp-vitrine-book">Ver empreendimento <i class="fas fa-arrow-right"></i></span>
-                        </div>
-                    </article>
-                `;
-            }).join('');
-
-            return `
-                <section class="emp-grupo">
-                    <header class="emp-grupo-head">
-                        <h3 class="emp-grupo-titulo">
-                            ${escapeHtml(construtora)}
-                            <span class="emp-grupo-count">${emps.length} empreendimentos</span>
-                        </h3>
-                        ${deveLimitar ? `<button class="emp-grupo-ver-todos" data-construtora="${escapeHtml(construtora)}" type="button">Ver todos <i class="fas fa-arrow-right"></i></button>` : ''}
-                    </header>
-                    <div class="emp-grid-vitrine">
-                        ${cards}
-                    </div>
-                </section>
-            `;
-        }).join('');
-
-        empGridVitrine.querySelectorAll('.emp-vitrine-card').forEach(card => {
-            card.addEventListener('click', () => {
-                const id = Number(card.dataset.id);
-                const emp = todosEmpreendimentos.find(e => e.id === id);
-                if (emp) abrirDetalhesEmp(emp);
-            });
-        });
-
-        empGridVitrine.querySelectorAll('.emp-grupo-ver-todos').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                filtroVerTodos = true;
-                if (empFiltroConstrutora) {
-                    empFiltroConstrutora.value = btn.dataset.construtora;
-                    atualizarTriggers();
-                    aplicarFiltros();
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                }
-            });
-        });
+        empVazio.style.display = lista.length ? 'none' : 'block';
+        empVazioMensagem.textContent = 'Nenhum empreendimento corresponde aos filtros.';
+        empGridVitrine.innerHTML = lista.slice(inicio, inicio + 8).map(e => `
+            <button type="button" class="emp-vitrine-card" data-id="${e.id}" aria-label="Ver ${escapeHtml(e.nome)}">
+                <div class="emp-vitrine-cover">
+                    ${e.capa_url ? `<img src="${escapeHtml(e.capa_url)}" alt="${escapeHtml(e.nome)}" loading="lazy" decoding="async">` : '<i class="fas fa-building placeholder-icon"></i>'}
+                    <span class="broker-property-status">Disponível</span><span class="broker-property-arrow" aria-hidden="true">➜</span>
+                </div>
+                <div class="emp-vitrine-body"><h3 class="emp-vitrine-nome">${escapeHtml(e.nome)}</h3>
+                    <div class="emp-vitrine-chips"><span class="emp-vitrine-chip"><i class="fas fa-building"></i> ${escapeHtml(e.construtora || 'Construtora não informada')}</span><span class="emp-vitrine-chip"><i class="fas fa-location-dot"></i> ${escapeHtml(e.bairro || e.cidade || 'Local não informado')}</span></div>
+                </div>
+            </button>`).join('');
+        $('brokerPropertyPagination').innerHTML = `<span>${lista.length ? inicio + 1 : 0}–${Math.min(inicio + 8, lista.length)} de ${lista.length} empreendimentos</span><div><button type="button" data-page="${paginaAtual-1}" ${paginaAtual===1?'disabled':''} aria-label="Página anterior">‹</button><strong>${paginaAtual} / ${paginas}</strong><button type="button" data-page="${paginaAtual+1}" ${paginaAtual===paginas?'disabled':''} aria-label="Próxima página">›</button></div>`;
+        empGridVitrine.querySelectorAll('.emp-vitrine-card').forEach(card => card.addEventListener('click', () => {
+            const emp = todosEmpreendimentos.find(e => e.id === Number(card.dataset.id));
+            if (emp) abrirDetalhesEmp(emp);
+        }));
+        empGridVitrine.querySelectorAll('img').forEach(img=>img.addEventListener('error',()=>{img.hidden=true;},{once:true}));
+    }
+    $('brokerPropertyPagination').addEventListener('click', event => {
+        const button = event.target.closest('[data-page]');
+        if (!button || button.disabled) return;
+        renderizarEmpreendimentos(listaFiltrada, Number(button.dataset.page));
+        $('brokerPropertyPagination').querySelector('button:not(:disabled)')?.focus();
+    });
+    function renderizarIndicadores() {
+        const distintos = key => new Set(todosEmpreendimentos.map(e=>e[key]?.trim()).filter(Boolean)).size;
+        const dados = [['Empreendimentos',todosEmpreendimentos.length],['Construtoras',distintos('construtora')],['Bairros',distintos('bairro')],['Prontos',todosEmpreendimentos.filter(e=>e.fase==='Entregue').length]];
+        $('brokerPropertyMetrics').innerHTML=dados.map(([label,total])=>`<article><span>${label}</span><strong>${total.toLocaleString('pt-BR')}</strong></article>`).join('');
     }
 
     /* =========================================================
@@ -432,6 +382,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function abrirDetalhesEmp(emp) {
         empreendimentoAtual = emp;
+        empDetalheCapa.alt = emp.nome || 'Empreendimento';
+        empDetalheCapa.onerror = () => { empDetalheCapa.style.display='none';empDetalheCapaVazia.style.display='flex'; };
         empDetalheNome.textContent = emp.nome || '—';
         empDetalheConstrutora.innerHTML = emp.construtora ? `<i class="fas fa-industry"></i> ${escapeHtml(emp.construtora)}` : '';
 
@@ -486,11 +438,13 @@ document.addEventListener('DOMContentLoaded', () => {
             btnAbrirBook.setAttribute('disabled', 'true');
         }
 
-        modalEmpCorretor.style.display = 'flex';
+        focoAnterior = document.activeElement;
+        modalEmpCorretor.showModal();
+        document.body.classList.add('broker-details-open');
     }
 
     function fecharDetalhesEmp() {
-        modalEmpCorretor.style.display = 'none';
+        modalEmpCorretor.close();
         empreendimentoAtual = null;
     }
 
@@ -498,12 +452,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (btnFecharDetalheEmpFooter) btnFecharDetalheEmpFooter.addEventListener('click', fecharDetalhesEmp);
     if (modalEmpCorretor) {
         modalEmpCorretor.addEventListener('click', (e) => {
-            if (e.target === modalEmpCorretor) fecharDetalhesEmp();
+            if (e.target === modalEmpCorretor) { const r=modalEmpCorretor.getBoundingClientRect(); if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom) fecharDetalhesEmp(); }
         });
     }
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && modalEmpCorretor?.style.display === 'flex') fecharDetalhesEmp();
-    });
+    modalEmpCorretor.addEventListener('close',()=>{document.body.classList.remove('broker-details-open');empreendimentoAtual=null;focoAnterior?.focus();});
 
     carregarEmpreendimentos();
 });

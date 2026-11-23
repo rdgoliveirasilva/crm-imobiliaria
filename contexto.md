@@ -625,3 +625,6 @@ Frontend reorganizado em Operação geral, Por carteira e Por corretor: frontend
 
 ## 21/11/2026 — Adicionar empreendimentos e paginação
 Botão Adicionar agora abre escolha entre Manual e Importar. Google Drive usa modal próprio, reaproveitando os controles originais; não há mais área de importação sob o hub. Hub limita a oito cards por página, com filtros aplicados antes do recorte. Confirmação/revisão da importação liberam o top layer para os modais existentes.
+
+## 23/11/2026 — Refinamento do corretor
+Dashboard: tema junto ao seletor, indicadores secundários tabulares, edifício com link à vitrine/hover e sidebar sem Prospecção. Vitrine do corretor: temas desktop/mobile, sidebar compartilhada, cards e indicadores com dados publicados, paginação de oito e detalhes laterais somente leitura. Filtros existentes preservados. Estilos em frontend/css/broker-refresh.css; APIs/regras de negócio sem mudança. Correções anteriores do log com cinco registros e montagem do admin já estavam no commit 24e6e13 ao iniciar esta tarefa.
