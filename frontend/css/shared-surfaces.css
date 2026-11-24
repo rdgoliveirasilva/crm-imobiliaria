@@ -59,8 +59,13 @@ body.prospeccao-page .prospect-history .historico-item-tag.danger { background:v
  body.mobile-premium.prospeccao-page .broker-prospect-workspace > * { max-width:1500px; }
  body.mobile-premium.prospeccao-page .broker-prospect-workspace .app-main { display:grid; grid-template-columns:minmax(0,1.05fr) minmax(0,1fr); align-items:start; gap:20px; max-width:1500px; overflow:visible; }
  body.prospeccao-page :is(#leadState,#waitingState) { grid-column:1; grid-row:1; min-width:0; }
- body.prospeccao-page .prospect-history { grid-column:2; grid-row:1; }
- body.prospeccao-page .prospect-history .historico-lista { max-height:620px; overflow:auto; scrollbar-width:thin; padding:2px; }
+ body.prospeccao-page .prospect-history { grid-column:2; grid-row:1; align-self:stretch; contain:size; position:relative; min-height:400px; }
+ body.prospeccao-page .prospect-history > summary { height:76px; box-sizing:border-box; padding:16px 20px; }
+ body.prospeccao-page .prospect-history-content { position:absolute; inset:76px 0 0; display:flex; flex-direction:column; min-height:0; box-sizing:border-box; }
+ body.prospeccao-page .prospect-history-content > * { flex-shrink:0; }
+ body.prospeccao-page .prospect-history .historico-lista { flex:1 1 0; min-height:0; max-height:none; align-content:start; overflow:auto; scrollbar-width:thin; padding:2px; }
+ body.prospeccao-page #historyPagination { margin-top:auto; padding-top:16px; border-top:1px solid var(--theme-border); }
+ body.mobile-premium.prospeccao-page .result-list { grid-template-columns:minmax(0,1fr); }
  body.mobile-premium.prospeccao-page .lead-card { padding:22px; }
  body.mobile-premium.prospeccao-page .lead-identity h2 { font-size:clamp(20px,1.6vw,28px); }
  body.mobile-premium.prospeccao-page .result-tag { padding:12px; font-size:13px; }

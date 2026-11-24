@@ -643,3 +643,6 @@ frontend/js/property-hub.js renderiza os mesmos cards e campos do slide over par
 
 ## 24/11/2026 — Histórico de prospecção integrado
 Prospecção divide a área desktop entre ficha e histórico; mobile usa details inicialmente recolhido. Busca e paginação de 30 registros reutilizam /api/corretor/leads-por-status com carteira e corretor autenticado, descartando respostas obsoletas. Clique no cliente usa /api/corretor/lead/:id e preenche a ficha existente para novo contato; Voltar à fila retoma próximo lead sem registrar resultado. Requalificação/agenda continuam pelo fluxo existente de resultado, que verifica titularidade e registra histórico. Levar para esteira é placeholder desativado. Tema fica no cabeçalho junto ao título. 82 testes aprovados; revisão visual em navegador pendente.
+
+## 24/11/2026 — Alinhamento da ficha e histórico desktop
+Resultados da prospecção voltam a uma coluna no desktop. Histórico acompanha a altura da ficha por alinhamento de grid e contenção de tamanho; lista possui rolagem interna e paginação permanece no rodapé. Mobile preservado. 82 testes existentes aprovados; aparência em navegador não verificada nesta alteração.
