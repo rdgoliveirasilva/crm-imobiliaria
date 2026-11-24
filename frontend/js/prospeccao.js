@@ -843,17 +843,17 @@ document.addEventListener('DOMContentLoaded', () => {
                             class="historico-item-tag ${classeCor} tag-editavel"
                             data-lead-id="${item.id}"
                             data-resultado="${item.resultado}"
-                            title="Clique para alterar"
+                            title="Requalificar cliente"
                             type="button"
                         >
                             <span>${escapeHtml(tagParaTexto(item.resultado))}</span>
-                            <i class="fas fa-pen"></i>
+                            <span class="history-requalify"><i class="fas fa-pen" aria-hidden="true"></i> Requalificar</span>
                         </button>
                         <button type="button" class="history-pipeline" disabled title="Em breve"><i class="fas fa-layer-group" aria-hidden="true"></i> Levar para esteira <small>Em breve</small></button>
                     </div>
                     <div class="historico-item-info">
                         <span><i class="fas fa-phone"></i> ${escapeHtml(Acoes.formatarTelefone(item.telefone))}</span>
-                        <span><i class="fas fa-clock"></i> ${data}</span>
+                        <span class="history-qualified-at"><i class="fas fa-clock" aria-hidden="true"></i> Qualificado em: ${data}</span>
                     </div>
                     ${linhaAgendamento}
                     ${item.observacao
@@ -876,7 +876,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         btn.dataset.resultado = novaTag;
         btn.className = `historico-item-tag ${tagCor(novaTag)} tag-editavel`;
-        btn.innerHTML = `<span>${escapeHtml(tagParaTexto(novaTag))}</span> <i class="fas fa-pen"></i>`;
+        btn.innerHTML = `<span>${escapeHtml(tagParaTexto(novaTag))}</span><span class="history-requalify"><i class="fas fa-pen" aria-hidden="true"></i> Requalificar</span>`;
 
         const ehDescartado = ['sem_interesse', 'telefone_invalido', 'sem_resposta'].includes(novaTag);
         card.classList.toggle('descartado', ehDescartado);

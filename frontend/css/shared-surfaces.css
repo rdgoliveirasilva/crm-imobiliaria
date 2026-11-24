@@ -40,8 +40,8 @@ body.prospeccao-page .prospect-history { min-width:0; border:1px solid var(--the
 #historicoResumo { font-size:12px; color:var(--theme-muted); margin:0 0 14px; }
 .prospect-history-search { display:flex; align-items:center; gap:8px; padding:8px 12px; border:1px solid var(--theme-border); border-radius:12px; background:var(--theme-surface); color:var(--theme-accent); margin-bottom:16px; }
 .prospect-history-search input { width:100%; min-width:0; min-height:28px; border:0; background:transparent; color:var(--theme-text); font:inherit; font-size:13px; }
-body.prospeccao-page .prospect-history .historico-lista { display:grid; gap:10px; }
-body.prospeccao-page .prospect-history .historico-item { background:var(--theme-card); color:var(--theme-text); border:1px solid var(--theme-border); padding:14px; border-radius:14px; cursor:pointer; }
+body.prospeccao-page .prospect-history .historico-lista { display:grid; grid-auto-rows:max-content; align-content:start; gap:12px; }
+body.prospeccao-page .prospect-history .historico-item { background:var(--theme-card); color:var(--theme-text); border:1px solid var(--theme-border); padding:16px; border-radius:14px; cursor:pointer; height:auto; min-height:max-content; flex-shrink:0; overflow:visible; }
 body.prospeccao-page .prospect-history .historico-item:hover { border-color:var(--theme-accent); }
 body.prospeccao-page .prospect-history .historico-item-top { display:flex; flex-wrap:wrap; align-items:center; gap:8px; }
 body.prospeccao-page .history-open-lead { flex:1 1 100%; text-align:left; font:inherit; font-size:14px; font-weight:700; padding:0; border:0; background:transparent; color:var(--theme-text); cursor:pointer; overflow-wrap:anywhere; }
@@ -57,7 +57,7 @@ body.prospeccao-page .prospect-history .historico-item-tag.danger { background:v
 #historicoLista[aria-busy="true"] { opacity:.6; pointer-events:none; }
 @media(min-width:1025px) {
  body.mobile-premium.prospeccao-page .broker-prospect-workspace > * { max-width:1500px; }
- body.mobile-premium.prospeccao-page .broker-prospect-workspace .app-main { display:grid; grid-template-columns:minmax(0,1.05fr) minmax(0,1fr); align-items:start; gap:20px; max-width:1500px; overflow:visible; }
+ body.mobile-premium.prospeccao-page .broker-prospect-workspace .app-main { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); align-items:start; gap:20px; max-width:1500px; overflow:visible; }
  body.prospeccao-page :is(#leadState,#waitingState) { grid-column:1; grid-row:1; min-width:0; }
  body.prospeccao-page .prospect-history { grid-column:2; grid-row:1; align-self:stretch; contain:size; position:relative; min-height:400px; }
  body.prospeccao-page .prospect-history > summary { height:76px; box-sizing:border-box; padding:16px 20px; }
@@ -66,7 +66,7 @@ body.prospeccao-page .prospect-history .historico-item-tag.danger { background:v
  body.prospeccao-page .prospect-history .historico-lista { flex:1 1 0; min-height:0; max-height:none; align-content:start; overflow:auto; scrollbar-width:thin; padding:2px; }
  body.prospeccao-page #historyPagination { margin-top:auto; padding-top:16px; border-top:1px solid var(--theme-border); }
  body.mobile-premium.prospeccao-page .result-list { grid-template-columns:minmax(0,1fr); }
- body.mobile-premium.prospeccao-page .lead-card { padding:22px; }
+ body.mobile-premium.prospeccao-page .lead-card { padding:22px; margin-bottom:0; }
  body.mobile-premium.prospeccao-page .lead-identity h2 { font-size:clamp(20px,1.6vw,28px); }
  body.mobile-premium.prospeccao-page .result-tag { padding:12px; font-size:13px; }
 }
@@ -76,3 +76,15 @@ body.prospeccao-page .prospect-history .historico-item-tag.danger { background:v
  body.prospeccao-page .prospect-history-content { padding:0 16px 16px; }
  body.prospeccao-page .prospect-history .historico-lista { max-height:65dvh; overflow:auto; }
 }
+
+/* Cards completos: ações e metadados nunca cedem altura à lista rolável. */
+body.prospeccao-page .prospect-history .historico-item > * { flex-shrink:0; }
+body.prospeccao-page .prospect-history .historico-item-top { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; align-items:stretch; }
+body.prospeccao-page .prospect-history .history-open-lead { grid-column:1 / -1; min-height:32px; white-space:normal; }
+body.prospeccao-page .prospect-history .historico-item-tag { display:flex; flex-direction:column; align-items:flex-start; justify-content:center; gap:6px; min-height:48px; padding:10px 12px; border-radius:10px; max-width:100%; overflow-wrap:anywhere; text-align:left; }
+body.prospeccao-page .prospect-history .history-requalify { display:flex; gap:6px; align-items:center; font-size:11px; font-weight:600; text-transform:none; }
+body.prospeccao-page .prospect-history .history-pipeline { min-height:48px; padding:10px 12px; white-space:normal; }
+body.prospeccao-page .prospect-history .historico-item-info { display:flex; flex-direction:column; align-items:flex-start; gap:8px; margin-top:6px; line-height:1.5; }
+body.prospeccao-page .prospect-history .historico-item-info span { white-space:normal; }
+body.prospeccao-page .prospect-history .historico-item:hover { transform:none; }
+@media(max-width:380px) { body.prospeccao-page .prospect-history .historico-item-top { grid-template-columns:minmax(0,1fr); } }

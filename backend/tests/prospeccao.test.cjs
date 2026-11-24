@@ -122,3 +122,15 @@ test('abrir cliente do histórico preenche a ficha sem gravar qualificação',as
  vm.createContext(context);vm.runInContext(source.slice(start,end),context);await context.abrirLeadEspecifico(42);
  assert.equal(context.leadAtual,selected);assert.equal(context.observacao.value,'Retorno combinado');assert.equal(context.leadNome.textContent,'Cliente');assert.equal(resume.hidden,false);assert.equal(context.processando,false);
 });
+
+test('ficha do histórico mostra data, telefone e ação explícita de requalificar',()=>{
+ const source=fs.readFileSync(path.join(__dirname,'../../frontend/js/prospeccao.js'),'utf8');
+ const start=source.indexOf('function renderizarListaLeads('),end=source.indexOf('function atualizarCardHistorico(',start);
+ const list={innerHTML:''};
+ const context={historicoLista:list,tagCor:()=> 'warning',tagParaTexto:()=> 'Mensagem enviada',parseDataSegura:value=>new Date(value),parseDataAgendamento:value=>new Date(value),escapeHtml:value=>String(value),Acoes:{formatarTelefone:value=>value}};
+ vm.createContext(context);vm.runInContext(source.slice(start,end),context);
+ context.renderizarListaLeads([{id:7,nome:'Cliente com nome completo',telefone:'16999999999',resultado:'mensagem_enviada',decidido_em:'2026-11-24T12:00:00Z',observacao:'Retornar após o almoço'}]);
+ assert.match(list.innerHTML,/Qualificado em: 24\/11\/26/);
+ assert.match(list.innerHTML,/history-requalify/);assert.match(list.innerHTML,/> Requalificar<\/span>/);
+ assert.match(list.innerHTML,/16999999999/);assert.match(list.innerHTML,/Retornar após o almoço/);assert.match(list.innerHTML,/data-open-lead="7"/);
+});

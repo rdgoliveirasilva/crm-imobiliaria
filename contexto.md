@@ -646,3 +646,6 @@ Prospecção divide a área desktop entre ficha e histórico; mobile usa details
 
 ## 24/11/2026 — Alinhamento da ficha e histórico desktop
 Resultados da prospecção voltam a uma coluna no desktop. Histórico acompanha a altura da ficha por alinhamento de grid e contenção de tamanho; lista possui rolagem interna e paginação permanece no rodapé. Mobile preservado. 82 testes existentes aprovados; aparência em navegador não verificada nesta alteração.
+
+## 24/11/2026 — Correção de compressão dos cards do histórico
+Colunas desktop com larguras iguais; lead-card sem margem inferior para alinhar a base com o histórico. Histórico usa grid-auto-rows:max-content e cards sem encolhimento, evitando que os 30 registros sejam comprimidos na altura da lista rolável. Ações em áreas separadas, botão Requalificar explícito e data identificada como Qualificado em. 83 testes aprovados, incluindo conteúdo da ficha; revisão visual em navegador pendente.
