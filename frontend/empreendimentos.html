@@ -90,42 +90,17 @@
         </section>
 
         <div id="brokerPropertyMetrics" class="broker-property-metrics"></div>
-        <section class="broker-property-hub"><h2>Hub de Empreendimentos</h2>
+        <section class="broker-property-hub"><header class="broker-property-heading"><h2><i class="fas fa-building" aria-hidden="true"></i> Hub de Empreendimentos</h2><p>Visualize e filtre os empreendimentos disponíveis.</p></header>
         <!-- =========================================================
              BARRA DE FILTROS CUSTOMIZADA
              ========================================================= -->
-        <section class="emp-filtros">
-            
-            <div class="emp-filtro-busca">
+        <section class="emp-filtros" aria-label="Filtros de empreendimentos">
+            <div class="broker-property-primary-filters">
+<div class="emp-filtro-busca">
                 <i class="fas fa-search"></i>
-                <input type="text" id="empBusca" placeholder="Buscar por nome, construtora..." autocomplete="off">
+                <input type="text" id="empBusca" aria-label="Buscar empreendimento" placeholder="Buscar empreendimento..." autocomplete="off">
             </div>
-
-            <div class="emp-filtros-selects">
-                
-                <!-- Construtora -->
-                <div class="emp-custom-select" id="customFiltroConstrutora">
-                    <input type="hidden" id="empFiltroConstrutora" value="">
-                    <button type="button" class="emp-custom-trigger" id="triggerFiltroConstrutora">
-                        <i class="fas fa-industry emp-custom-icon"></i>
-                        <span class="emp-custom-text" id="textFiltroConstrutora">Todas as construtoras</span>
-                        <i class="fas fa-chevron-down emp-custom-arrow"></i>
-                    </button>
-                    <div class="emp-custom-menu" id="menuFiltroConstrutora"></div>
-                </div>
-
-                <!-- Cidade -->
-                <div class="emp-custom-select" id="customFiltroCidade">
-                    <input type="hidden" id="empFiltroCidade" value="">
-                    <button type="button" class="emp-custom-trigger" id="triggerFiltroCidade">
-                        <i class="fas fa-map-marker-alt emp-custom-icon"></i>
-                        <span class="emp-custom-text" id="textFiltroCidade">Todas as cidades</span>
-                        <i class="fas fa-chevron-down emp-custom-arrow"></i>
-                    </button>
-                    <div class="emp-custom-menu" id="menuFiltroCidade"></div>
-                </div>
-
-                <!-- Bairro -->
+<!-- Bairro -->
                 <div class="emp-custom-select" id="customFiltroBairro">
                     <input type="hidden" id="empFiltroBairro" value="">
                     <button type="button" class="emp-custom-trigger" id="triggerFiltroBairro">
@@ -135,8 +110,31 @@
                     </button>
                     <div class="emp-custom-menu" id="menuFiltroBairro"></div>
                 </div>
-
-                <!-- Entrega (Input com máscara MM/AAAA) -->
+<!-- Construtora -->
+                <div class="emp-custom-select" id="customFiltroConstrutora">
+                    <input type="hidden" id="empFiltroConstrutora" value="">
+                    <button type="button" class="emp-custom-trigger" id="triggerFiltroConstrutora">
+                        <i class="fas fa-industry emp-custom-icon"></i>
+                        <span class="emp-custom-text" id="textFiltroConstrutora">Todas as construtoras</span>
+                        <i class="fas fa-chevron-down emp-custom-arrow"></i>
+                    </button>
+                    <div class="emp-custom-menu" id="menuFiltroConstrutora"></div>
+                </div>
+            </div>
+            <details class="broker-property-more-filters">
+                <summary>Mais filtros</summary>
+                <div class="emp-filtros-selects">
+<!-- Cidade -->
+                <div class="emp-custom-select" id="customFiltroCidade">
+                    <input type="hidden" id="empFiltroCidade" value="">
+                    <button type="button" class="emp-custom-trigger" id="triggerFiltroCidade">
+                        <i class="fas fa-map-marker-alt emp-custom-icon"></i>
+                        <span class="emp-custom-text" id="textFiltroCidade">Todas as cidades</span>
+                        <i class="fas fa-chevron-down emp-custom-arrow"></i>
+                    </button>
+                    <div class="emp-custom-menu" id="menuFiltroCidade"></div>
+                </div>
+<!-- Entrega (Input com máscara MM/AAAA) -->
                 <div class="emp-filtro-input" style="flex: 1; min-width: 160px;">
                     <i class="fas fa-calendar-check"></i>
                     <input type="text" id="empFiltroEntrega" maxlength="7" placeholder="Qualquer entrega (MM/AAAA)" autocomplete="off">
@@ -147,13 +145,12 @@
                     <i class="fas fa-money-bill-wave"></i>
                     <input type="text" id="empFiltroRenda" maxlength="18" placeholder="Qualquer renda" autocomplete="off">
                 </div>
-
-                <button class="emp-filtro-limpar" id="empLimparFiltros" type="button" style="display:none;">
+                </div>
+            </details>
+<button class="emp-filtro-limpar" id="empLimparFiltros" type="button" style="display:none;">
                     <i class="fas fa-times"></i>
                     <span>Limpar Filtros</span>
                 </button>
-
-            </div>
         </section>
 
         <section class="emp-grid-vitrine" id="empGridVitrine"></section>

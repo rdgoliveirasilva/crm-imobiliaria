@@ -223,8 +223,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     function renderizarIndicadores() {
         const distintos = key => new Set(todosEmpreendimentos.map(e=>e[key]?.trim()).filter(Boolean)).size;
-        const dados = [['Empreendimentos',todosEmpreendimentos.length],['Construtoras',distintos('construtora')],['Bairros',distintos('bairro')],['Prontos',todosEmpreendimentos.filter(e=>e.fase==='Entregue').length]];
-        $('brokerPropertyMetrics').innerHTML=dados.map(([label,total])=>`<article><span>${label}</span><strong>${total.toLocaleString('pt-BR')}</strong></article>`).join('');
+        const dados = [['Empreendimentos total',todosEmpreendimentos.length,'Disponíveis na plataforma'],['Construtoras total',distintos('construtora'),'Vinculadas aos empreendimentos'],['Bairros total',distintos('bairro'),'Com empreendimentos'],['Prontos',todosEmpreendimentos.filter(e=>e.fase==='Entregue').length,'Fase: Entregue']];
+        $('brokerPropertyMetrics').innerHTML=dados.map(([label,total,descricao])=>`<article><div><b>${label}</b><small>${descricao}</small></div><strong>${total.toLocaleString('pt-BR')}</strong></article>`).join('');
     }
 
     /* =========================================================

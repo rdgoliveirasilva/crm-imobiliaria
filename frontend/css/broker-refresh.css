@@ -142,3 +142,45 @@ body.ps-desktop.broker-inner-shell .header-brand-text :is(h1,.mobile-brand) { wh
  body.mobile-premium.prospeccao-page .tag-label { overflow-wrap:anywhere; }
  body.mobile-premium.prospeccao-page .historico-bar { margin-bottom:0; }
 }
+/* Hub consultivo: mesma escala e distribuição do hub administrativo. */
+body.empreendimentos-page .broker-property-heading { margin-bottom:20px; }
+body.empreendimentos-page .broker-property-heading h2 { margin:0; font-size:17px; line-height:1.4; color:var(--theme-text); }
+body.empreendimentos-page .broker-property-heading h2 i { color:var(--theme-accent); margin-right:8px; }
+body.empreendimentos-page .broker-property-heading p { margin:4px 0 0; font-size:12px; line-height:1.6; color:var(--theme-muted); }
+body.empreendimentos-page .broker-property-metrics { margin:0 0 28px; }
+body.empreendimentos-page .broker-property-metrics article { padding:20px 18px; gap:16px; min-width:0; }
+body.empreendimentos-page .broker-property-metrics b { display:block; font-size:13px; color:var(--theme-text); }
+body.empreendimentos-page .broker-property-metrics small { display:block; margin-top:5px; font-size:11px; color:var(--theme-muted); }
+body.empreendimentos-page .broker-property-metrics strong { font-size:30px; }
+body.empreendimentos-page .emp-filtros { display:flex; flex-direction:column; gap:12px; margin:0; background:transparent; }
+body.empreendimentos-page .broker-property-primary-filters { display:grid; grid-template-columns:minmax(0,1.1fr) repeat(2,minmax(0,1fr)); align-items:center; gap:10px; }
+body.empreendimentos-page .broker-property-primary-filters > * { min-width:0; width:100%; }
+body.empreendimentos-page .emp-filtro-busca { background:transparent; border:0; box-shadow:none; }
+body.empreendimentos-page .emp-filtro-busca input,
+body.empreendimentos-page .emp-custom-trigger,
+body.empreendimentos-page .emp-filtro-input { min-height:44px; border:1px solid var(--theme-border); border-radius:9px; background:var(--theme-surface); color:var(--theme-text); font-size:12px; font-weight:400; box-sizing:border-box; }
+body.empreendimentos-page .emp-custom-trigger { padding:9px 12px; }
+body.empreendimentos-page .emp-custom-text { font-size:12px; white-space:normal; overflow-wrap:anywhere; }
+body.empreendimentos-page .broker-property-primary-filters .emp-custom-icon { display:none; }
+body.empreendimentos-page .emp-filtro-busca input { padding:9px 12px 9px 36px; }
+body.empreendimentos-page .emp-filtro-busca i { left:12px; color:var(--theme-accent); }
+body.empreendimentos-page .broker-property-more-filters summary { width:fit-content; padding:10px 0; cursor:pointer; font-size:12px; color:var(--theme-muted); }
+body.empreendimentos-page .broker-property-more-filters[open] summary { margin-bottom:8px; }
+body.empreendimentos-page #empGridVitrine { margin-top:22px; }
+body.empreendimentos-page .emp-vitrine-card { margin:0; padding:0; transition:transform .18s,border-color .18s,box-shadow .18s; }
+body.empreendimentos-page .emp-vitrine-card:hover { transform:translateY(-3px); }
+body.empreendimentos-page .emp-vitrine-card:focus-visible { outline:2px solid var(--theme-accent); outline-offset:3px; }
+body.empreendimentos-page .emp-vitrine-nome { margin:0 0 12px; font-size:15px; }
+body.empreendimentos-page .emp-vitrine-chip { padding:6px 9px; border-radius:14px; font-size:11px; color:var(--theme-muted); }
+@media(min-width:1351px) { body.empreendimentos-page #empGridVitrine { grid-template-columns:repeat(4,minmax(0,1fr)); } }
+@media(min-width:901px) and (max-width:1350px) { body.empreendimentos-page #empGridVitrine { grid-template-columns:repeat(3,minmax(0,1fr)); } }
+@media(min-width:541px) and (max-width:900px) { body.empreendimentos-page #empGridVitrine { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media(max-width:1350px) { body.empreendimentos-page .broker-property-metrics { grid-template-columns:repeat(2,minmax(0,1fr)); } body.empreendimentos-page .broker-property-metrics article:nth-child(3) { border-left:0; } }
+@media(max-width:640px) {
+ body.empreendimentos-page .broker-property-primary-filters { grid-template-columns:repeat(2,minmax(0,1fr)); }
+ body.empreendimentos-page .broker-property-primary-filters .emp-filtro-busca { grid-column:1 / -1; }
+ body.empreendimentos-page .broker-property-metrics article { padding:15px 10px; gap:8px; }
+ body.empreendimentos-page .broker-property-metrics b { font-size:11px; }
+ body.empreendimentos-page .broker-property-metrics strong { font-size:24px; }
+}
+@media(prefers-reduced-motion:reduce) { body.empreendimentos-page .emp-vitrine-card { transition:none; } body.empreendimentos-page .emp-vitrine-card:hover { transform:none; } }

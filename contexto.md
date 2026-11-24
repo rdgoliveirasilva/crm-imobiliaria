@@ -634,3 +634,6 @@ Navegação/tema compartilhados nas páginas internas por frontend/js/broker-she
 
 ## 24/11/2026 — Geometria da prospecção desktop
 Shell agrupa título, progresso, carteira/tema e main em broker-prospect-workspace, movendo os elementos existentes sem recriar IDs ou eventos. Acima de 1024px, conteúdo centralizado com limite de 1040px dentro da área livre da sidebar, qualificações em duas colunas. Mobile mantém display:contents no agrupador. Removido botão voltar legado do cabeçalho interno (display:flex anulava hidden e comprimia a marca); navegação Início permanece. Validação: sintaxe JS, diff e 78 testes aprovados, incluindo preservação dos nós/eventos no agrupamento. Revisão visual em navegador pendente.
+
+## 24/11/2026 — Hub consultivo alinhado ao admin
+Empreendimentos do corretor usa cabeçalho semântico, busca/bairro/construtora compactos e filtros de cidade/entrega/renda em Mais filtros. Indicadores recebem descrições; cards seguem escala e breakpoints do admin. Mantidos IDs, eventos, paginação de oito, APIs públicas existentes e detalhes consultivos, sem controles administrativos. Sintaxe e 78 testes aprovados; revisão visual no navegador pendente.
