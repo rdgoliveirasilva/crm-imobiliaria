@@ -60,5 +60,5 @@ test('prospecção agrupa os controles existentes sem recriar o cliente ou perde
  ready();
  const workspace=body.children.find(node=>node.className==='broker-prospect-workspace');
  assert.ok(workspace);assert.deepEqual(workspace.children.slice(1),[progress,selector,main]);
- assert.equal(main.clientHandler,clientHandler);assert.equal(theme.parent,selector);assert.equal(back.parent,null);
+ assert.equal(main.clientHandler,clientHandler);assert.equal(theme.parent,account);assert.equal(back.parent,null);
 });

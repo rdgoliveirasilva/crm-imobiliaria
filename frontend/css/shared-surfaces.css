@@ -28,3 +28,46 @@ body .eh-card .eh-card-body h3 { font-size:15px; line-height:1.45; margin:0 0 12
 @media(prefers-reduced-motion:reduce) { body.admin-command .eh-hub .eh-card:hover,body.empreendimentos-page .broker-property-hub .eh-card:hover { transform:none; } }
 body.mobile-premium .kpi-grid-2 > .kpi-card,
 body.mobile-premium .kpi-primary { background:var(--metric-surface); }
+/* Prospecção com histórico integrado; modais de chamada/agendamento permanecem independentes. */
+body.prospeccao-page :is(.historico-bar,#waitingHistorico) { display:none!important; }
+body.prospeccao-page .prospect-history { min-width:0; border:1px solid var(--theme-border); border-radius:22px; background:var(--metric-surface); color:var(--theme-text); align-self:start; }
+.prospect-history > summary { display:flex; align-items:center; gap:10px; padding:20px; font-size:18px; font-weight:700; cursor:pointer; list-style:none; }
+.prospect-history > summary::-webkit-details-marker { display:none; }
+.prospect-history > summary > i { color:var(--theme-accent); }
+.prospect-history .history-chevron { margin-left:auto; font-size:12px; }
+.prospect-history[open] .history-chevron { transform:rotate(180deg); }
+.prospect-history-content { padding:0 20px 20px; }
+#historicoResumo { font-size:12px; color:var(--theme-muted); margin:0 0 14px; }
+.prospect-history-search { display:flex; align-items:center; gap:8px; padding:8px 12px; border:1px solid var(--theme-border); border-radius:12px; background:var(--theme-surface); color:var(--theme-accent); margin-bottom:16px; }
+.prospect-history-search input { width:100%; min-width:0; min-height:28px; border:0; background:transparent; color:var(--theme-text); font:inherit; font-size:13px; }
+body.prospeccao-page .prospect-history .historico-lista { display:grid; gap:10px; }
+body.prospeccao-page .prospect-history .historico-item { background:var(--theme-card); color:var(--theme-text); border:1px solid var(--theme-border); padding:14px; border-radius:14px; cursor:pointer; }
+body.prospeccao-page .prospect-history .historico-item:hover { border-color:var(--theme-accent); }
+body.prospeccao-page .prospect-history .historico-item-top { display:flex; flex-wrap:wrap; align-items:center; gap:8px; }
+body.prospeccao-page .history-open-lead { flex:1 1 100%; text-align:left; font:inherit; font-size:14px; font-weight:700; padding:0; border:0; background:transparent; color:var(--theme-text); cursor:pointer; overflow-wrap:anywhere; }
+body.prospeccao-page .history-pipeline,body.prospeccao-page .resume-prospecting { min-height:38px; padding:7px 10px; border:1px solid var(--theme-border); border-radius:10px; background:var(--theme-control); color:var(--theme-muted); font:inherit; font-size:11px; }
+.history-pipeline small { display:block; font-size:10px; }
+body.prospeccao-page .resume-prospecting { margin-bottom:16px; color:var(--theme-accent); cursor:pointer; }
+body.prospeccao-page .resume-prospecting[hidden] { display:none; }
+body.prospeccao-page .prospect-history :is(.historico-item-info,.historico-item-obs,.historico-item-agendamento) { color:var(--theme-muted); font-size:12px; overflow-wrap:anywhere; }
+body.prospeccao-page .prospect-history .historico-item-tag { white-space:normal; font-size:10px; }
+body.prospeccao-page .prospect-history .historico-item-tag.success { background:var(--theme-success-bg); color:var(--theme-success); }
+body.prospeccao-page .prospect-history .historico-item-tag.warning { background:var(--theme-warning-bg); color:var(--theme-warning); }
+body.prospeccao-page .prospect-history .historico-item-tag.danger { background:var(--theme-danger-bg); color:var(--theme-danger); }
+#historicoLista[aria-busy="true"] { opacity:.6; pointer-events:none; }
+@media(min-width:1025px) {
+ body.mobile-premium.prospeccao-page .broker-prospect-workspace > * { max-width:1500px; }
+ body.mobile-premium.prospeccao-page .broker-prospect-workspace .app-main { display:grid; grid-template-columns:minmax(0,1.05fr) minmax(0,1fr); align-items:start; gap:20px; max-width:1500px; overflow:visible; }
+ body.prospeccao-page :is(#leadState,#waitingState) { grid-column:1; grid-row:1; min-width:0; }
+ body.prospeccao-page .prospect-history { grid-column:2; grid-row:1; }
+ body.prospeccao-page .prospect-history .historico-lista { max-height:620px; overflow:auto; scrollbar-width:thin; padding:2px; }
+ body.mobile-premium.prospeccao-page .lead-card { padding:22px; }
+ body.mobile-premium.prospeccao-page .lead-identity h2 { font-size:clamp(20px,1.6vw,28px); }
+ body.mobile-premium.prospeccao-page .result-tag { padding:12px; font-size:13px; }
+}
+@media(max-width:1024px) {
+ body.prospeccao-page .prospect-history { margin-top:20px; }
+ body.prospeccao-page .prospect-history > summary { font-size:16px; padding:16px; }
+ body.prospeccao-page .prospect-history-content { padding:0 16px 16px; }
+ body.prospeccao-page .prospect-history .historico-lista { max-height:65dvh; overflow:auto; }
+}

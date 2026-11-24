@@ -163,8 +163,9 @@
 
             <article class="lead-card">
 
+                <button type="button" id="resumeProspecting" class="resume-prospecting" hidden>← Voltar à fila de prospecção</button>
                 <header class="lead-identity">
-                    <h2 id="leadNome">—</h2>
+                    <h2 id="leadNome" tabindex="-1">—</h2>
                     <p class="lead-phone" id="leadTelefone">—</p>
                     <span class="lead-origem" id="leadOrigem">—</span>
                 </header>
@@ -244,6 +245,17 @@
 
         </section>
 
+
+        <details id="prospectHistory" class="prospect-history">
+            <summary><i class="fas fa-history" aria-hidden="true"></i> Histórico de prospecção <i class="fas fa-chevron-down history-chevron" aria-hidden="true"></i></summary>
+            <div class="prospect-history-content">
+                <p id="historicoResumo" aria-live="polite">Clientes que você já qualificou nesta carteira.</p>
+                <label class="prospect-history-search"><i class="fas fa-search" aria-hidden="true"></i><input id="historySearch" type="search" placeholder="Buscar por nome ou telefone" aria-label="Buscar no histórico de prospecção"></label>
+                <div id="historicoLista" class="historico-lista"></div>
+                <div id="historicoVazio" class="historico-vazio" style="display:none"><p>Nenhum cliente encontrado.</p></div>
+                <nav id="historyPagination" class="broker-property-pagination" aria-label="Páginas do histórico"></nav>
+            </div>
+        </details>
     </main>
     <nav class="mobile-only mobile-bottom-nav" aria-label="Navegação principal">
         <a href="corretor.html"><i class="fas fa-house"></i><span>Início</span></a>
@@ -256,28 +268,6 @@
     <!-- =====================================================
          MODAL — HISTÓRICO DE QUALIFICADOS
          ===================================================== -->
-    <div class="modal-overlay" id="modalHistorico" style="display: none;">
-        <div class="modal-card">
-            <header class="modal-header">
-                <div>
-                    <h2><i class="fas fa-history"></i> Meus clientes qualificados</h2>
-                    <p id="historicoResumo">0 clientes</p>
-                </div>
-                <button class="modal-close" id="btnFecharHistorico" aria-label="Fechar">
-                    <i class="fas fa-times"></i>
-                </button>
-            </header>
-
-            <div class="modal-body">
-                <div id="historicoLista" class="historico-lista"></div>
-                <div id="historicoVazio" class="historico-vazio" style="display: none;">
-                    <i class="fas fa-inbox"></i>
-                    <p>Você ainda não qualificou nenhum cliente.</p>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <!-- =====================================================
          MODAL — LIGAR (fallback desktop)
          ===================================================== -->

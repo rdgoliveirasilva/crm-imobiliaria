@@ -19,6 +19,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let minhasCarteiras = [];
     let agendamentoPendente = null;
     let leadsDaCarteiraAtual = [];
+    let historyPage = 1, historyRequest = 0, historyTimer, leadRequest = 0;
     let agendamentosNotificados = {};
 
     const LS_CARTEIRA_ATIVA = 'sr_carteira_ativa';
@@ -49,6 +50,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const resultList           = $('resultList');
     const observacao           = $('observacao');
 
+    const btnHistoricoEspera = $('btnHistoricoEspera');
     const btnHistorico         = $('btnHistorico');
     const historicoCount       = $('historicoCount');
     const modalHistorico       = $('modalHistorico');
@@ -344,6 +346,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (listaId && !nova) return;
         visaoGeral = !listaId;
 
+        historyPage=1; $('historySearch').value='';
         carteiraAtiva = nova;
         salvarCarteiraAtivaLocalStorage(listaId);
         atualizarBotaoCarteira();
@@ -372,6 +375,10 @@ document.addEventListener('DOMContentLoaded', () => {
        PRÓXIMO LEAD
        ========================================================= */
     async function carregarProximoLead() {
+        const request=++leadRequest;
+        processando=true;
+        $('resumeProspecting').hidden=true;
+        void abrirHistorico();
         try {
             removerBadgeAgendamento();
 
@@ -381,6 +388,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             const { lead } = await ApiClient.get(url);
+            if(request!==leadRequest)return;
 
             if (!lead) {
                 await carregarMinhasCarteiras();
@@ -413,10 +421,11 @@ document.addEventListener('DOMContentLoaded', () => {
             void atualizarEstatisticas();
 
         } catch (err) {
+            if(request!==leadRequest)return;
             console.error('[prospeccao] erro ao carregar lead:', err);
             mostrarToast(err.message || 'Erro ao carregar.', 'error');
         } finally {
-            processando = false;
+            if(request===leadRequest)processando = false;
         }
     }
 
@@ -762,47 +771,40 @@ document.addEventListener('DOMContentLoaded', () => {
        HISTÓRICO — ABRE O MODAL COM OS LEADS DA CARTEIRA ATIVA
        ========================================================= */
     async function abrirHistorico() {
-        if (modalHistorico) modalHistorico.style.display = 'flex';
-
         if (!historicoLista) return;
-
-        historicoLista.innerHTML = `
-            <div class="historico-loading">
-                <i class="fas fa-circle-notch fa-spin"></i>
-                <p>Carregando...</p>
-            </div>
-        `;
-        if (historicoVazio) historicoVazio.style.display = 'none';
-        if (historicoResumo) historicoResumo.textContent = 'Carregando...';
-
+        const request = ++historyRequest;
+        const params = new URLSearchParams({status:'trabalhados', pagina:String(historyPage), busca:$('historySearch').value.trim()});
+        if(carteiraAtiva?.id) params.set('lista_id',carteiraAtiva.id);
+        historicoLista.setAttribute('aria-busy','true');
+        $('historyPagination').querySelectorAll('button').forEach(button=>button.disabled=true);
         try {
-            const dados = await ApiClient.get(carteiraAtiva
-                ? `/api/corretor/historico/carteiras/${carteiraAtiva.id}`
-                : '/api/corretor/leads-por-status?status=trabalhados');
-            const leads = dados.leads || [];
-            const lista = dados.lista || { nome: 'Todas as carteiras' };
-
-            leadsDaCarteiraAtual = leads || [];
-
-            if (!leads.length) {
-                historicoLista.innerHTML = '';
-                if (historicoVazio) historicoVazio.style.display = 'block';
-                if (historicoResumo) historicoResumo.textContent = `${lista.nome} · 0 clientes`;
-                return;
-            }
-
-            if (historicoVazio) historicoVazio.style.display = 'none';
-            if (historicoResumo) historicoResumo.textContent = `${lista.nome} · ${leads.length} cliente${leads.length > 1 ? 's' : ''}`;
-
-            renderizarListaLeads(leads);
-
-        } catch (err) {
-            console.error('[historico] erro:', err);
-            historicoLista.innerHTML = '';
-            if (historicoVazio) historicoVazio.style.display = 'block';
-            if (historicoResumo) historicoResumo.textContent = 'Erro ao carregar.';
-        }
+            const dados=await ApiClient.get('/api/corretor/leads-por-status?'+params);
+            if(request!==historyRequest)return;
+            historyPage=dados.pagina;
+            leadsDaCarteiraAtual=dados.leads || [];
+            renderizarListaLeads(leadsDaCarteiraAtual);
+            historicoVazio.style.display=dados.total?'none':'block';
+            historicoResumo.textContent=`${carteiraAtiva?.nome || 'Todas as carteiras'} · ${dados.total} clientes`;
+            $('historyPagination').innerHTML=`<span>${dados.total?(historyPage-1)*30+1:0}–${Math.min(historyPage*30,dados.total)} de ${dados.total}</span><div><button type="button" data-history-page="${historyPage-1}" ${historyPage<=1?'disabled':''} aria-label="Página anterior">‹</button><strong>${historyPage} / ${dados.paginas}</strong><button type="button" data-history-page="${historyPage+1}" ${historyPage>=dados.paginas?'disabled':''} aria-label="Próxima página">›</button></div>`;
+        } catch(err) {
+            if(request!==historyRequest)return;
+            leadsDaCarteiraAtual=[];historicoLista.innerHTML='';historicoVazio.style.display='none';
+            historicoResumo.textContent='Não foi possível carregar o histórico.';
+            $('historyPagination').innerHTML='<button type="button" data-history-page="1">Tentar novamente</button>';
+        } finally { if(request===historyRequest)historicoLista.setAttribute('aria-busy','false'); }
     }
+
+    $('resumeProspecting').addEventListener('click',()=>{if(!processando)void carregarProximoLead();});
+    const historyMedia=window.matchMedia('(min-width:1025px)');
+    function syncHistoryLayout(){ $('prospectHistory').open=historyMedia.matches; }
+    historyMedia.addEventListener('change',syncHistoryLayout);syncHistoryLayout();
+    $('historySearch').addEventListener('input',()=>{clearTimeout(historyTimer);++historyRequest;historyTimer=setTimeout(()=>{historyPage=1;void abrirHistorico();},250);});
+    $('historyPagination').addEventListener('click',event=>{const button=event.target.closest('[data-history-page]');if(!button||button.disabled)return;historyPage=Number(button.dataset.historyPage);void abrirHistorico();});
+    historicoLista.addEventListener('click',event=>{
+        if(event.target.closest('.tag-editavel,.history-pipeline'))return;
+        const card=event.target.closest('.historico-item');
+        if(card&&!processando)void abrirLeadEspecifico(Number(card.dataset.leadId));
+    });
 
     function renderizarListaLeads(leads) {
         if (!historicoLista) return;
@@ -836,7 +838,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return `
                 <div class="historico-item ${ehDescartado ? 'descartado' : ''}" data-lead-id="${item.id}">
                     <div class="historico-item-top">
-                        <span class="historico-item-nome">${escapeHtml(item.nome)}</span>
+                        <button type="button" class="historico-item-nome history-open-lead" data-open-lead="${item.id}">${escapeHtml(item.nome)}</button>
                         <button
                             class="historico-item-tag ${classeCor} tag-editavel"
                             data-lead-id="${item.id}"
@@ -847,6 +849,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             <span>${escapeHtml(tagParaTexto(item.resultado))}</span>
                             <i class="fas fa-pen"></i>
                         </button>
+                        <button type="button" class="history-pipeline" disabled title="Em breve"><i class="fas fa-layer-group" aria-hidden="true"></i> Levar para esteira <small>Em breve</small></button>
                     </div>
                     <div class="historico-item-info">
                         <span><i class="fas fa-phone"></i> ${escapeHtml(Acoes.formatarTelefone(item.telefone))}</span>
@@ -1129,10 +1132,15 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function abrirLeadEspecifico(leadId) {
+        if(processando)return;
+        processando=true;
+        const request=++leadRequest;
         try {
             const { lead } = await ApiClient.get(`/api/corretor/lead/${leadId}`);
+            if(request!==leadRequest)return;
 
             if (!lead) {
+                processando=false;
                 mostrarToast('Lead não encontrado.', 'error');
                 return;
             }
@@ -1144,7 +1152,9 @@ document.addEventListener('DOMContentLoaded', () => {
             if (leadTelefone) leadTelefone.textContent = Acoes.formatarTelefone(lead.telefone) || lead.telefone;
             if (leadOrigem)   leadOrigem.textContent = lead.lista_nome || 'SR Lançamentos';
 
+            removerBadgeAgendamento();
             mostrarBadgeAgendamento(lead);
+            $('resumeProspecting').hidden=false;
 
             if (resultList) {
                 resultList.querySelectorAll('.result-tag').forEach(btn => {
@@ -1156,11 +1166,14 @@ document.addEventListener('DOMContentLoaded', () => {
             if (callNotice) callNotice.style.display = 'none';
 
             mostrarTelaLead();
-            await atualizarEstatisticas();
+            void atualizarEstatisticas();
 
-            mostrarToast('Lead agendado aberto', 'info');
+            leadNome?.focus({preventScroll:true});
+            leadState?.scrollIntoView({block:'start',behavior:'auto'});
+            mostrarToast('Cliente aberto para novo contato', 'info');
 
         } catch (err) {
+            processando=false;
             console.error('[abrir-lead] erro:', err);
             mostrarToast(err.message || 'Erro ao abrir lead.', 'error');
         }

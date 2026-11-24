@@ -21,7 +21,7 @@
         const title=document.createElement('h1');title.textContent=body.classList.contains('prospeccao-page')?'Prospecção':body.classList.contains('conta-page')?'Minha Conta':'Empreendimentos';
         toolbar.append(title,account);main.before(toolbar);
         const selector=document.getElementById('carteiraSelectorWrap');
-        if(selector){main.before(selector);selector.append(document.getElementById('themeControl'));}
+        if(selector){main.before(selector);if(!body.classList.contains('prospeccao-page'))selector.append(document.getElementById('themeControl'));}
         if(body.classList.contains('prospeccao-page')){
             const workspace=document.createElement('div');workspace.className='broker-prospect-workspace';
             const progress=document.getElementById('progressBar');

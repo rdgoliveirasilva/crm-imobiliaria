@@ -96,3 +96,29 @@ test('telemetria de qualificação ocorre no clique e não na atualização dos 
  vm.runInNewContext(prefix+'}\nhandleTagClick({dataset:{tag:"mensagem_enviada"}});',context);
  assert.deepEqual(calls,[['qualificacao',31]]);
 });
+
+test('histórico integrado pagina no servidor e ignora respostas de carteiras anteriores', async()=>{
+ const source=fs.readFileSync(path.join(__dirname,'../../frontend/js/prospeccao.js'),'utf8');
+ const start=source.indexOf('async function abrirHistorico()');const end=source.indexOf("    $('resumeProspecting').addEventListener",start);
+ const requests=[],nodes={historySearch:{value:'Ana'},historyPagination:{querySelectorAll:()=>[],innerHTML:''}};
+ const context={historyRequest:0,historyPage:2,carteiraAtiva:{id:7,nome:'Mensal'},URLSearchParams,
+  $:id=>nodes[id],historicoLista:{setAttribute(){}},historicoVazio:{style:{}},historicoResumo:{},leadsDaCarteiraAtual:[],
+  renderizarListaLeads(leads){context.rendered=leads;},ApiClient:{get:url=>new Promise(resolve=>requests.push({url,resolve}))}};
+ vm.createContext(context);vm.runInContext(source.slice(start,end),context);
+ const older=context.abrirHistorico();context.carteiraAtiva={id:8,nome:'Campanha'};context.historyPage=1;const latest=context.abrirHistorico();
+ assert.match(requests[0].url,/pagina=2/);assert.match(requests[0].url,/lista_id=7/);assert.match(requests[1].url,/lista_id=8/);
+ requests[1].resolve({pagina:1,paginas:2,total:31,leads:[{id:99}]});await latest;
+ requests[0].resolve({pagina:2,paginas:2,total:60,leads:[{id:1}]});await older;
+ assert.equal(context.rendered[0].id,99);assert.match(context.historicoResumo.textContent,/Campanha/);assert.match(nodes.historyPagination.innerHTML,/1–30 de 31/);
+});
+
+test('abrir cliente do histórico preenche a ficha sem gravar qualificação',async()=>{
+ const source=fs.readFileSync(path.join(__dirname,'../../frontend/js/prospeccao.js'),'utf8');
+ const start=source.indexOf('async function abrirLeadEspecifico('),end=source.indexOf('function mostrarBadgeAgendamento(',start);
+ const selected={id:42,nome:'Cliente',telefone:'16999999999',lista_nome:'Mensal',observacao:'Retorno combinado',resultado:'em_atendimento'};
+ const resume={hidden:true},context={processando:false,leadRequest:0,leadAtual:null,$:()=>resume,
+ ApiClient:{get:async url=>{assert.equal(url,'/api/corretor/lead/42');return {lead:selected};}},
+ leadNome:{focus(){}},leadTelefone:{},leadOrigem:{},Acoes:{formatarTelefone:x=>x},removerBadgeAgendamento(){},mostrarBadgeAgendamento(){},resultList:null,observacao:{},callNotice:{style:{}},mostrarTelaLead(){},atualizarEstatisticas(){},leadState:{scrollIntoView(){}},mostrarToast(){},console};
+ vm.createContext(context);vm.runInContext(source.slice(start,end),context);await context.abrirLeadEspecifico(42);
+ assert.equal(context.leadAtual,selected);assert.equal(context.observacao.value,'Retorno combinado');assert.equal(context.leadNome.textContent,'Cliente');assert.equal(resume.hidden,false);assert.equal(context.processando,false);
+});
