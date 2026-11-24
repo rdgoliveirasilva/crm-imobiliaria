@@ -631,3 +631,6 @@ Dashboard: tema junto ao seletor, indicadores secundários tabulares, edifício 
 
 ## 24/11/2026 — Shell do corretor e correção da vitrine
 Navegação/tema compartilhados nas páginas internas por frontend/js/broker-shell.js. Conta admin remove esses assets na renderização para não duplicar sidebar. Vitrine passa a sobrescrever explicitamente regras legadas horizontais e largura de capa; conteúdo limitado e alinhado à sidebar. KPIs desktop em seis colunas. Tema usa top layer também para corretor. Sem alteração de APIs ou regras de negócio.
+
+## 24/11/2026 — Geometria da prospecção desktop
+Shell agrupa título, progresso, carteira/tema e main em broker-prospect-workspace, movendo os elementos existentes sem recriar IDs ou eventos. Acima de 1024px, conteúdo centralizado com limite de 1040px dentro da área livre da sidebar, qualificações em duas colunas. Mobile mantém display:contents no agrupador. Removido botão voltar legado do cabeçalho interno (display:flex anulava hidden e comprimia a marca); navegação Início permanece. Validação: sintaxe JS, diff e 78 testes aprovados, incluindo preservação dos nós/eventos no agrupamento. Revisão visual em navegador pendente.

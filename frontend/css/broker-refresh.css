@@ -109,3 +109,36 @@ body.conta-page.broker-inner-shell .conta-header { background:var(--theme-contro
 body.conta-page.broker-inner-shell :is(.conta-header h2,.conta-body label) { color:var(--theme-text); }
 body.conta-page.broker-inner-shell :is(.conta-header p,.form-hint) { color:var(--theme-muted); }
 body.conta-page.broker-inner-shell .conta-body input { background:var(--theme-page); border-color:var(--theme-border); color:var(--theme-text); }
+
+/* Área de trabalho da prospecção, independente da largura da sidebar. */
+.broker-prospect-workspace { display:contents; }
+body.ps-desktop.broker-inner-shell .header-brand-text { min-width:0; }
+body.ps-desktop.broker-inner-shell .header-brand-text :is(h1,.mobile-brand) { white-space:nowrap; }
+@media(min-width:1025px) {
+ body.mobile-premium.prospeccao-page .broker-prospect-workspace {
+  display:flex; flex-direction:column; gap:18px; box-sizing:border-box;
+  width:calc(100% - var(--sidebar-width)); margin-left:var(--sidebar-width);
+  padding:24px clamp(20px,3vw,48px) 40px; min-width:0;
+ }
+ body.mobile-premium.prospeccao-page .broker-prospect-workspace > * {
+  width:100%; max-width:1040px; margin:0 auto; box-sizing:border-box; min-width:0;
+ }
+ body.mobile-premium.prospeccao-page .broker-inner-toolbar { padding:0; }
+ body.mobile-premium.prospeccao-page .broker-prospect-workspace .app-main { width:100%; max-width:1040px; margin:0 auto; padding:0; }
+ body.mobile-premium.prospeccao-page .broker-prospect-workspace .progress-bar {
+  position:static; border:1px solid var(--theme-border); border-radius:16px;
+  background:var(--theme-surface); box-shadow:none;
+ }
+ body.mobile-premium.prospeccao-page .progress-inner { max-width:none; padding:14px 20px; box-sizing:border-box; }
+ body.mobile-premium.prospeccao-page .broker-prospect-workspace .carteira-selector-wrap {
+  position:relative; top:auto; padding:0; background:transparent; border:0; box-shadow:none;
+ }
+ body.mobile-premium.prospeccao-page .carteira-select { max-width:none; margin:0; }
+ body.mobile-premium.prospeccao-page .lead-card { padding:24px; }
+ body.mobile-premium.prospeccao-page .lead-identity h2 { font-size:clamp(22px,2vw,28px); overflow-wrap:anywhere; }
+ body.mobile-premium.prospeccao-page .lead-phone { font-size:20px; }
+ body.mobile-premium.prospeccao-page .result-list { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+ body.mobile-premium.prospeccao-page .result-tag { min-width:0; padding:14px 18px; }
+ body.mobile-premium.prospeccao-page .tag-label { overflow-wrap:anywhere; }
+ body.mobile-premium.prospeccao-page .historico-bar { margin-bottom:0; }
+}

@@ -42,3 +42,23 @@ test('shell do corretor não modifica a experiência administrativa',()=>{
  vm.runInNewContext(source,{AuthSession:{getItem:()=> 'corretor'},document:{documentElement:{classList:{add:value=>theme=value}},addEventListener:(name,fn)=>listener=fn}});
  assert.equal(theme,'corretor-desktop-theme');assert.equal(typeof listener,'function');
 });
+
+test('prospecção agrupa os controles existentes sem recriar o cliente ou perder seus eventos',()=>{
+ const source=fs.readFileSync(path.join(root,'js/broker-shell.js'),'utf8');
+ class Element {
+  constructor(){this.children=[];this.classList={add(){},contains:name=>name==='prospeccao-page'};}
+  append(...nodes){for(const node of nodes){node.remove();this.children.push(node);node.parent=this;}}
+  remove(){if(this.parent)this.parent.children=this.parent.children.filter(n=>n!==this);this.parent=null;}
+  before(node){node.remove();const index=this.parent.children.indexOf(this);this.parent.children.splice(index,0,node);node.parent=this.parent;}
+ }
+ const body=new Element(),main=new Element(),progress=new Element(),selector=new Element(),theme=new Element(),account=new Element(),header=new Element(),back=new Element();
+ body.append(header,progress,selector,main);header.append(back,account);account.append(theme);
+ const clientHandler=()=>{};main.clientHandler=clientHandler;
+ let ready;
+ const elements={'.header-inner':header,'.app-main':main,'.header-user':account,'.desktop-sidebar-nav':new Element(),'.mobile-bottom-nav':new Element()};
+ vm.runInNewContext(source,{AuthSession:{getItem:()=> 'corretor'},document:{body,documentElement:new Element(),addEventListener:(_,fn)=>ready=fn,createElement:()=>new Element(),querySelector:key=>elements[key],querySelectorAll:()=>[back],getElementById:id=>({progressBar:progress,carteiraSelectorWrap:selector,themeControl:theme})[id]}});
+ ready();
+ const workspace=body.children.find(node=>node.className==='broker-prospect-workspace');
+ assert.ok(workspace);assert.deepEqual(workspace.children.slice(1),[progress,selector,main]);
+ assert.equal(main.clientHandler,clientHandler);assert.equal(theme.parent,selector);assert.equal(back.parent,null);
+});

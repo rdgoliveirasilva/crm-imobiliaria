@@ -22,6 +22,12 @@
         toolbar.append(title,account);main.before(toolbar);
         const selector=document.getElementById('carteiraSelectorWrap');
         if(selector){main.before(selector);selector.append(document.getElementById('themeControl'));}
-        document.querySelectorAll('.header-inner .btn-back-header').forEach(button=>button.hidden=true);
+        if(body.classList.contains('prospeccao-page')){
+            const workspace=document.createElement('div');workspace.className='broker-prospect-workspace';
+            const progress=document.getElementById('progressBar');
+            main.before(workspace);
+            [toolbar,progress,selector,main].filter(Boolean).forEach(element=>workspace.append(element));
+        }
+        document.querySelectorAll('.header-inner .btn-back-header').forEach(button=>button.remove());
     });
 })();
