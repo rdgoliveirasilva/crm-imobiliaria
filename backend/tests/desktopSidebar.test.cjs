@@ -16,13 +16,13 @@ function fixture({admin=true, saved=null, blocked=false}={}) {
     const body=new Element(),header=new Element(),nav=new Element(),item=new Element();
     const icon=new Element(),label=new Element();item.childNodes=[icon,label];item.queries.i=icon;
     nav.querySelectorAll=()=>[item];if(admin)body.classes.add('admin-command');
-    let ready, mediaChange, storageChange, stored=saved, logout=0, query;
+    let ready=[], mediaChange, storageChange, stored=saved, logout=0, query;
     const media={matches:true,addEventListener:(name,fn)=>{mediaChange=fn;}};
     vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../../frontend/js/desktop-sidebar.js'),'utf8'),{
-        document:{body,addEventListener:(name,fn)=>{ready=fn;},querySelector:selector=>selector.includes('header-inner')?header:nav,createElement:()=>new Element()},
+        document:{body,getElementById:()=>null,addEventListener:(name,fn)=>{ready.push(fn);},querySelector:selector=>selector.includes('header-inner')?header:nav,createElement:()=>new Element()},
         localStorage:{getItem(){if(blocked)throw Error();return stored;},setItem(k,v){if(blocked)throw Error();stored=v;}},
         window:{matchMedia:q=>{query=q;return media;},addEventListener:(name,fn)=>{storageChange=fn;}},ApiClient:{logout:()=>{logout++;}}
-    });ready();
+    });ready.forEach(fn=>fn());
     return {body,header,item,get stored(){return stored;},get logout(){return logout;},query,
         resize(matches){media.matches=matches;mediaChange();},storage(value){storageChange({key:'prospect-sidebar-collapsed',newValue:value});}};
 }
@@ -45,4 +45,19 @@ test('armazenamento bloqueado não impede recolher ou expandir',()=>{
     const f=fixture({blocked:true});const toggle=f.header.childNodes[0];
     toggle.events.click();assert.equal(f.body.classes.has('ps-collapsed'),true);
     toggle.events.click();assert.equal(f.body.classes.has('ps-collapsed'),false);
+});
+
+test('tema acompanha Minha Conta no mobile e retorna ao local desktop sem recriar controle',()=>{
+ const callbacks=[];let change;
+ const home={append(node){node.parentNode=this;}},header={};
+ const control={parentNode:home,nextSibling:null};
+ const avatar={before(node){node.parentNode=header;}};
+ const media={matches:true,addEventListener:(name,fn)=>change=fn};
+ vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../../frontend/js/desktop-sidebar.js'),'utf8'),{
+  document:{body:{classList:{contains:()=>false}},querySelector:()=>null,addEventListener:(_,fn)=>callbacks.push(fn),getElementById:id=>id==='themeControl'?control:avatar},
+  window:{matchMedia:()=>media}
+ });
+ callbacks.forEach(fn=>fn());assert.equal(control.parentNode,header);
+ media.matches=false;change();assert.equal(control.parentNode,home);
+ media.matches=true;change();assert.equal(control.parentNode,header);
 });

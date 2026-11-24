@@ -36,21 +36,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Modal
     const modalEmpCorretor    = $('modalEmpCorretor');
-    const empDetalheNome      = $('empDetalheNome');
-    const empDetalheConstrutora = $('empDetalheConstrutora');
-    const empDetalheCapa      = $('empDetalheCapa');
-    const empDetalheCapaWrap  = $('empDetalheCapaWrap');
-    const empDetalheCapaVazia = $('empDetalheCapaVazia');
-    const empDetalheChips     = $('empDetalheChips');
-    const empDetalheLocalSeccao = $('empDetalheLocalSeccao');
-    const empDetalheLocal     = $('empDetalheLocal');
-    const empDetalheDescricaoSeccao = $('empDetalheDescricaoSeccao');
-    const empDetalheDescricao = $('empDetalheDescricao');
-    const empDetalheComodidadesSeccao = $('empDetalheComodidadesSeccao');
-    const empDetalheComodidades = $('empDetalheComodidades');
-    const btnAbrirBook        = $('btnAbrirBook');
-    const btnFecharDetalheEmp = $('btnFecharDetalheEmp');
-    const btnFecharDetalheEmpFooter = $('btnFecharDetalheEmpFooter');
     const toast               = $('toast');
 
     /* =========================================================
@@ -198,19 +183,10 @@ document.addEventListener('DOMContentLoaded', () => {
         empTotalCount.textContent = lista.length;
         empVazio.style.display = lista.length ? 'none' : 'block';
         empVazioMensagem.textContent = 'Nenhum empreendimento corresponde aos filtros.';
-        empGridVitrine.innerHTML = lista.slice(inicio, inicio + 8).map(e => `
-            <button type="button" class="emp-vitrine-card" data-id="${e.id}" aria-label="Ver ${escapeHtml(e.nome)}">
-                <div class="emp-vitrine-cover">
-                    ${e.capa_url ? `<img src="${escapeHtml(e.capa_url)}" alt="${escapeHtml(e.nome)}" loading="lazy" decoding="async">` : '<i class="fas fa-building placeholder-icon"></i>'}
-                    <span class="broker-property-status">Disponível</span><span class="broker-property-arrow" aria-hidden="true">➜</span>
-                </div>
-                <div class="emp-vitrine-body"><h3 class="emp-vitrine-nome">${escapeHtml(e.nome)}</h3>
-                    <div class="emp-vitrine-chips"><span class="emp-vitrine-chip"><i class="fas fa-building"></i> ${escapeHtml(e.construtora || 'Construtora não informada')}</span><span class="emp-vitrine-chip"><i class="fas fa-location-dot"></i> ${escapeHtml(e.bairro || e.cidade || 'Local não informado')}</span></div>
-                </div>
-            </button>`).join('');
+        empGridVitrine.innerHTML = lista.slice(inicio, inicio + 8).map(e=>PropertyHub.card({...e,status:"publicado"})).join('');
         $('brokerPropertyPagination').innerHTML = `<span>${lista.length ? inicio + 1 : 0}–${Math.min(inicio + 8, lista.length)} de ${lista.length} empreendimentos</span><div><button type="button" data-page="${paginaAtual-1}" ${paginaAtual===1?'disabled':''} aria-label="Página anterior">‹</button><strong>${paginaAtual} / ${paginas}</strong><button type="button" data-page="${paginaAtual+1}" ${paginaAtual===paginas?'disabled':''} aria-label="Próxima página">›</button></div>`;
-        empGridVitrine.querySelectorAll('.emp-vitrine-card').forEach(card => card.addEventListener('click', () => {
-            const emp = todosEmpreendimentos.find(e => e.id === Number(card.dataset.id));
+        empGridVitrine.querySelectorAll('.eh-card').forEach(card => card.addEventListener('click', () => {
+            const emp = todosEmpreendimentos.find(e => e.id === Number(card.dataset.property));
             if (emp) abrirDetalhesEmp(emp);
         }));
         empGridVitrine.querySelectorAll('img').forEach(img=>img.addEventListener('error',()=>{img.hidden=true;},{once:true}));
@@ -382,62 +358,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function abrirDetalhesEmp(emp) {
         empreendimentoAtual = emp;
-        empDetalheCapa.alt = emp.nome || 'Empreendimento';
-        empDetalheCapa.onerror = () => { empDetalheCapa.style.display='none';empDetalheCapaVazia.style.display='flex'; };
-        empDetalheNome.textContent = emp.nome || '—';
-        empDetalheConstrutora.innerHTML = emp.construtora ? `<i class="fas fa-industry"></i> ${escapeHtml(emp.construtora)}` : '';
-
-        if (emp.capa_url) {
-            empDetalheCapa.src = emp.capa_url;
-            empDetalheCapa.style.display = 'block';
-            empDetalheCapaVazia.style.display = 'none';
-        } else {
-            empDetalheCapa.style.display = 'none';
-            empDetalheCapaVazia.style.display = 'flex';
-        }
-
-        const chips = [];
-        if (emp.tipo_imovel) chips.push({ icone: 'fa-home', txt: emp.tipo_imovel });
-        if (emp.dormitorios) chips.push({ icone: 'fa-bed', txt: emp.dormitorios });
-        if (emp.metragens) chips.push({ icone: 'fa-ruler-combined', txt: emp.metragens });
-        if (emp.vagas) chips.push({ icone: 'fa-car', txt: emp.vagas });
-        if (emp.fase) chips.push({ icone: 'fa-hard-hat', txt: emp.fase });
-        if (emp.previsao_entrega) chips.push({ icone: 'fa-calendar-check', txt: emp.previsao_entrega }); 
-        if (emp.renda_presumida) chips.push({ icone: 'fa-money-bill-wave', txt: emp.renda_presumida });  
-
-        empDetalheChips.innerHTML = chips.map(c => `<span class="emp-detalhe-chip"><i class="fas ${c.icone}"></i> ${escapeHtml(c.txt)}</span>`).join('');
-
-        const localPartes = [emp.endereco, emp.bairro, emp.cidade, emp.estado].filter(Boolean);
-        if (localPartes.length) {
-            empDetalheLocalSeccao.style.display = 'block';
-            empDetalheLocal.textContent = localPartes.join(' · ');
-        } else {
-            empDetalheLocalSeccao.style.display = 'none';
-        }
-
-        if (emp.descricao) {
-            empDetalheDescricaoSeccao.style.display = 'block';
-            empDetalheDescricao.textContent = emp.descricao;
-        } else {
-            empDetalheDescricaoSeccao.style.display = 'none';
-        }
-
-        const comodidades = Array.isArray(emp.comodidades) ? emp.comodidades : [];
-        if (comodidades.length) {
-            empDetalheComodidadesSeccao.style.display = 'block';
-            empDetalheComodidades.innerHTML = comodidades.map(c => `<span class="emp-detalhe-comodidade"><i class="fas fa-check"></i> ${escapeHtml(c)}</span>`).join('');
-        } else {
-            empDetalheComodidadesSeccao.style.display = 'none';
-        }
-
-        if (emp.pdf_url) {
-            btnAbrirBook.href = emp.pdf_url;
-            btnAbrirBook.removeAttribute('disabled');
-        } else {
-            btnAbrirBook.href = '#';
-            btnAbrirBook.setAttribute('disabled', 'true');
-        }
-
+        modalEmpCorretor.innerHTML = PropertyHub.details({...emp,status:"publicado"});
+        modalEmpCorretor.querySelector('[data-action=close]').addEventListener('click', fecharDetalhesEmp);
+        const image=modalEmpCorretor.querySelector('img');
+        if(image) image.onerror=()=>{image.replaceWith(Object.assign(document.createElement('p'),{className:'eh-image-error',textContent:'Imagem indisponível'}));};
         focoAnterior = document.activeElement;
         modalEmpCorretor.showModal();
         document.body.classList.add('broker-details-open');
@@ -448,8 +372,6 @@ document.addEventListener('DOMContentLoaded', () => {
         empreendimentoAtual = null;
     }
 
-    if (btnFecharDetalheEmp) btnFecharDetalheEmp.addEventListener('click', fecharDetalhesEmp);
-    if (btnFecharDetalheEmpFooter) btnFecharDetalheEmpFooter.addEventListener('click', fecharDetalhesEmp);
     if (modalEmpCorretor) {
         modalEmpCorretor.addEventListener('click', (e) => {
             if (e.target === modalEmpCorretor) { const r=modalEmpCorretor.getBoundingClientRect(); if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom) fecharDetalhesEmp(); }

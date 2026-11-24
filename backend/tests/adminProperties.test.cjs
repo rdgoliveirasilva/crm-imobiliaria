@@ -56,3 +56,15 @@ test('montagem do hub acessa o botão de cadastro dentro do importador ainda des
  assert.equal(button.hidden,true);assert.equal(nodes.get('empVazio').style.display,'none');
  assert.equal(nodes.get('empGrid').textContent,'Carregando empreendimentos…');
 });
+
+test('admin e corretor compartilham os mesmos campos; somente admin recebe ações de manutenção',()=>{
+ const scope={window:{},URL};vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../../frontend/js/property-hub.js'),'utf8'),scope);
+ const property={nome:'<Imóvel>',status:'publicado',dormitorios:0,descricao:'Descrição',comodidades:['Piscina'],pdf_url:'https://example.com/book.pdf',capa_url:'javascript:alert(1)'};
+ const shared=scope.window.PropertyHub;
+ const broker=shared.details(property),admin=shared.details(property,true);
+ assert.doesNotMatch(broker,/data-action="(?:edit|publish|delete)"/);
+ for(const action of ['edit','publish','delete'])assert.ok(admin.includes(`data-action="${action}"`));
+ const withoutActions=admin.replace(/<button[^>]*data-action="(?:edit|publish|delete)"[^>]*>[\s\S]*?<\/button>/g,'');
+ assert.equal(withoutActions,broker);
+ assert.match(broker,/&lt;Imóvel&gt;/);assert.doesNotMatch(broker,/javascript:/);assert.match(broker,/Abrir book/);
+});

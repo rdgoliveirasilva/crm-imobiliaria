@@ -637,3 +637,6 @@ Shell agrupa título, progresso, carteira/tema e main em broker-prospect-workspa
 
 ## 24/11/2026 — Hub consultivo alinhado ao admin
 Empreendimentos do corretor usa cabeçalho semântico, busca/bairro/construtora compactos e filtros de cidade/entrega/renda em Mais filtros. Indicadores recebem descrições; cards seguem escala e breakpoints do admin. Mantidos IDs, eventos, paginação de oito, APIs públicas existentes e detalhes consultivos, sem controles administrativos. Sintaxe e 78 testes aprovados; revisão visual no navegador pendente.
+
+## 24/11/2026 — Componentes compartilhados de empreendimentos e indicadores
+frontend/js/property-hub.js renderiza os mesmos cards e campos do slide over para admin/corretor. O parâmetro administrativo acrescenta editar/publicar/despublicar/excluir; corretor mantém apenas leitura e book, usando dados do endpoint publicado existente. admin-properties.css atende ambas as visões e shared-surfaces.css elimina sobreposições de botões genéricos e unifica degradê dos KPIs. Filtros adicionais com fonte de 12px. desktop-sidebar.js move o controle de tema existente para antes do avatar no mobile e restaura posição desktop sem recriar eventos/preferências. Testes cobrem paridade de detalhes, exclusividade das ações, escape de conteúdo, paginação e posição responsiva do tema. Validação visual no navegador ainda pendente.

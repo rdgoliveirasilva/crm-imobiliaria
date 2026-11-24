@@ -48,3 +48,20 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     apply();
 });
+
+/* Reposiciona o mesmo controle, preservando preferência e eventos do tema. */
+document.addEventListener('DOMContentLoaded', () => {
+    if (document.body.classList.contains('admin-command')) return;
+    const control=document.getElementById('themeControl');
+    const avatar=document.getElementById('btnAvatar');
+    if(!control || !avatar) return;
+    const home=control.parentNode, next=control.nextSibling;
+    const mobile=window.matchMedia('(max-width: 1024px)');
+    function positionTheme(){
+        if(mobile.matches) avatar.before(control);
+        else if(next && next.parentNode===home) home.insertBefore(control,next);
+        else home.append(control);
+    }
+    mobile.addEventListener('change',positionTheme);
+    positionTheme();
+});

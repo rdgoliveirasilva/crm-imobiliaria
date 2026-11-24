@@ -1,0 +1,30 @@
+/* Uma superfície para indicadores de ambas as áreas. */
+:root { --metric-surface:linear-gradient(110deg,var(--theme-card),var(--theme-surface)); }
+body :is(.eh-metrics,.broker-property-metrics,.kpi-grid),
+body.admin-command #ccContent > .cc-metrics { background:var(--metric-surface); }
+body :is(.cc-drawer-metrics .cc-metric,.cc-activity-metrics article,.messages-card) { background:var(--metric-surface); }
+body :is(.eh-metrics,.broker-property-metrics) article { background:transparent; }
+/* Os cards usam a mesma superfície, sem fundos herdados do catálogo antigo. */
+body :is(.eh-card,.eh-drawer) { color:var(--theme-text); }
+body :is(.eh-card) { background:var(--theme-card); }
+body.empreendimentos-page .broker-property-more-filters :is(input,.emp-custom-text,.emp-custom-trigger) { font-size:12px; font-weight:400; line-height:1.4; }
+body.empreendimentos-page .broker-property-more-filters .emp-filtro-input input { padding:9px 12px 9px 36px; min-width:0; width:100%; box-sizing:border-box; }
+body.empreendimentos-page .broker-property-more-filters .emp-filtro-input i { font-size:13px; }
+@media(max-width:1024px) {
+ body.mobile-premium .header-user .theme-control { display:block; order:0; margin:0; flex:0 0 auto; }
+ body.mobile-premium .header-user .btn-avatar { order:1; }
+}
+/* Especificidade igual nas duas páginas vence botões genéricos dos painéis. */
+body.admin-command .eh-hub .eh-card,
+body.empreendimentos-page .broker-property-hub .eh-card {
+ display:block; width:100%; min-width:0; margin:0; padding:0; border:1px solid var(--theme-border);
+ border-radius:18px; overflow:hidden; background:var(--theme-card); color:var(--theme-text); text-align:left; font:inherit;
+}
+body.admin-command .eh-hub .eh-card:hover,
+body.empreendimentos-page .broker-property-hub .eh-card:hover { background:var(--theme-card); border-color:var(--theme-accent); transform:translateY(-3px); box-shadow:0 8px 26px #1479ff20; }
+body .eh-card .eh-cover { width:100%; height:auto; aspect-ratio:1.75; }
+body .eh-card .eh-card-body { padding:16px; }
+body .eh-card .eh-card-body h3 { font-size:15px; line-height:1.45; margin:0 0 12px; }
+@media(prefers-reduced-motion:reduce) { body.admin-command .eh-hub .eh-card:hover,body.empreendimentos-page .broker-property-hub .eh-card:hover { transform:none; } }
+body.mobile-premium .kpi-grid-2 > .kpi-card,
+body.mobile-premium .kpi-primary { background:var(--metric-surface); }
