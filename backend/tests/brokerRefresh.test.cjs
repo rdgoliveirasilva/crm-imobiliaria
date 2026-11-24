@@ -25,3 +25,20 @@ test('detalhes usam dialog consultivo e preservam filtros anteriores',()=>{
  for(const id of ['empFiltroRenda','empFiltroEntrega','empFiltroCidade','empFiltroBairro','empFiltroConstrutora','btnAbrirBook'])assert.ok(html.includes('id="'+id+'"'));
  const ids=Array.from(html.matchAll(/\bid="([^"]+)"/g),m=>m[1]);assert.equal(new Set(ids).size,ids.length);
 });
+test('páginas internas carregam shell, sidebar e estilos compartilhados sem duplicar conta admin',()=>{
+ for(const file of ['conta','prospeccao','empreendimentos']){
+  const html=fs.readFileSync(path.join(root,file+'.html'),'utf8');
+  for(const asset of ['js/broker-shell.js','js/desktop-sidebar.js','css/broker-refresh.css','css/corretor-desktop.css'])assert.ok(html.includes(asset),`${file}: ${asset}`);
+ }
+ const {renderPage}=require('../services/adminPages');
+ const admin=renderPage(fs.readFileSync(path.join(root,'admin.html'),'utf8'),fs.readFileSync(path.join(root,'conta.html'),'utf8'),'conta','Minha Conta');
+ assert.doesNotMatch(admin,/js\/broker-shell.js|css\/broker-refresh.css/);
+ assert.equal((admin.match(/src="js\/desktop-sidebar.js"/g)||[]).length,1);
+});
+test('shell do corretor não modifica a experiência administrativa',()=>{
+ const source=fs.readFileSync(path.join(root,'js/broker-shell.js'),'utf8');
+ vm.runInNewContext(source,{AuthSession:{getItem:()=> 'admin'},document:new Proxy({}, {get(){throw Error('Não deve alterar DOM do admin');}})});
+ let listener,theme;
+ vm.runInNewContext(source,{AuthSession:{getItem:()=> 'corretor'},document:{documentElement:{classList:{add:value=>theme=value}},addEventListener:(name,fn)=>listener=fn}});
+ assert.equal(theme,'corretor-desktop-theme');assert.equal(typeof listener,'function');
+});

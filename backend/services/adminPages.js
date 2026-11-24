@@ -5,7 +5,7 @@ const pages = {'/admin-carteiras.html':['listas','Carteiras'], '/admin-corretore
 function renderPage(admin, account, page, title) {
     if (page === 'conta') {
         const header=admin.match(/<header class="app-header">[\s\S]*?<\/header>/)[0];
-        return account.replace('<html lang="pt-BR">','<html lang="pt-BR" class="admin-desktop-theme">')
+        return account.replace(/<script src="js\/(broker-shell|desktop-sidebar)\.js"><\/script>/g,'').replace(/<link rel="stylesheet" href="css\/(broker-refresh|corretor-desktop|desktop-sidebar|corretor-theme-components|corretor-floating-nav)\.css"[^>]*>/g,'').replace('<html lang="pt-BR">','<html lang="pt-BR" class="admin-desktop-theme">')
             .replace(/<title>.*?<\/title>/,'<title>Prospect - Minha Conta</title>')
             .replace(/<link rel="stylesheet" href="css\/(corretor-theme|corretor-pages-mobile)\.css">/g,'')
             .replace('</head>', '<link rel="stylesheet" href="css/corretor-theme-tokens.css"><link rel="stylesheet" href="css/admin-command.css"><link rel="stylesheet" href="css/desktop-sidebar.css"><link rel="stylesheet" href="css/admin-account.css"></head>')

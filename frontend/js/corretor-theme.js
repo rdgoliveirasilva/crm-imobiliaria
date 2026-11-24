@@ -49,7 +49,7 @@
         const options = document.getElementById('themeOptions');
         if (!control || !toggle || !options) return;
         // O top layer evita que o scroll da sidebar recorte o seletor do admin.
-        const floating = root.classList.contains('admin-desktop-theme');
+        const floating = root.classList.contains('admin-desktop-theme') || root.classList.contains('corretor-desktop-theme');
         if (floating && options.showPopover) options.setAttribute('popover', 'manual');
         function positionOptions() {
             if (!floating || options.hidden) return;

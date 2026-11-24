@@ -628,3 +628,6 @@ Botão Adicionar agora abre escolha entre Manual e Importar. Google Drive usa mo
 
 ## 23/11/2026 — Refinamento do corretor
 Dashboard: tema junto ao seletor, indicadores secundários tabulares, edifício com link à vitrine/hover e sidebar sem Prospecção. Vitrine do corretor: temas desktop/mobile, sidebar compartilhada, cards e indicadores com dados publicados, paginação de oito e detalhes laterais somente leitura. Filtros existentes preservados. Estilos em frontend/css/broker-refresh.css; APIs/regras de negócio sem mudança. Correções anteriores do log com cinco registros e montagem do admin já estavam no commit 24e6e13 ao iniciar esta tarefa.
+
+## 24/11/2026 — Shell do corretor e correção da vitrine
+Navegação/tema compartilhados nas páginas internas por frontend/js/broker-shell.js. Conta admin remove esses assets na renderização para não duplicar sidebar. Vitrine passa a sobrescrever explicitamente regras legadas horizontais e largura de capa; conteúdo limitado e alinhado à sidebar. KPIs desktop em seis colunas. Tema usa top layer também para corretor. Sem alteração de APIs ou regras de negócio.

@@ -69,3 +69,10 @@ A coluna lateral SHALL alinhar seu conteúdo ao início e impedir encolhimento d
 - Vitrine usa sidebar compartilhada, temas desktop/mobile, indicadores reais, grid de capas e paginação local de oito após os filtros. Filtros de construtora/cidade/bairro/entrega/renda preservados.
 - Detalhes em dialog lateral nativo, com Escape/foco e book; nenhuma ação administrativa nem chamada a endpoints admin. Consulta continua exclusivamente /api/corretor/empreendimentos (somente publicados).
 - Testes de marcação, paginação e ausência de operações administrativas; sintaxe validada. Revisão visual em navegador pendente.
+
+### 24/11/2026 — Layout e navegação das páginas internas
+- Corrigida a herança dos cards horizontais antigos da vitrine: display em bloco, capa com largura total/aspecto fixo e conteúdo vertical. Área principal limitada e deslocada pela largura real da sidebar, incluindo estado recolhido.
+- broker-shell.js compartilha sidebar desktop e toolbar/tema em Prospecção, Minha Conta e Empreendimentos; conta administrativa exclui scripts/estilos do shell ao renderizar seu template.
+- Seletor de tema usa popover posicionado no viewport também no corretor, evitando recorte pela sidebar. Prospecção mantém tema junto ao seletor.
+- Seis KPIs permanecem lado a lado acima de 1024px, com texto/valor/descrição dentro de cada célula; mobile preserva adaptação.
+- Verificação por testes e sintaxe; revisão visual no navegador pendente.
