@@ -99,7 +99,7 @@ test('telemetria de qualificação ocorre no clique e não na atualização dos 
 
 test('histórico integrado pagina no servidor e ignora respostas de carteiras anteriores', async()=>{
  const source=fs.readFileSync(path.join(__dirname,'../../frontend/js/prospeccao.js'),'utf8');
- const start=source.indexOf('async function abrirHistorico()');const end=source.indexOf("    $('resumeProspecting').addEventListener",start);
+ const start=source.indexOf('async function abrirHistorico()');const end=source.indexOf('    async function levarParaEsteira',start);
  const requests=[],nodes={historySearch:{value:'Ana'},historyPagination:{querySelectorAll:()=>[],innerHTML:''}};
  const context={historyRequest:0,historyPage:2,carteiraAtiva:{id:7,nome:'Mensal'},URLSearchParams,
   $:id=>nodes[id],historicoLista:{setAttribute(){}},historicoVazio:{style:{}},historicoResumo:{},leadsDaCarteiraAtual:[],

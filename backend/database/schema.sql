@@ -217,3 +217,26 @@ CREATE TABLE IF NOT EXISTS eventos_contato (
 );
 CREATE INDEX IF NOT EXISTS idx_eventos_contato_corretor_data ON eventos_contato(corretor_id, criado_em, id);
 CREATE INDEX IF NOT EXISTS idx_eventos_contato_data ON eventos_contato(criado_em);
+-- Esteira: uma negociação por lead; recebimento expresso em percentual acumulado.
+CREATE TABLE IF NOT EXISTS negociacoes (
+ id SERIAL PRIMARY KEY,
+ lead_id INTEGER NOT NULL UNIQUE REFERENCES leads(id) ON DELETE CASCADE,
+ etapa SMALLINT NOT NULL DEFAULT 0 CHECK (etapa BETWEEN 0 AND 5),
+ comissao_recebida SMALLINT NOT NULL DEFAULT 0 CHECK (comissao_recebida IN (0,50,100)),
+ versao INTEGER NOT NULL DEFAULT 1,
+ vendido_em TIMESTAMPTZ,
+ concluido_em TIMESTAMPTZ,
+ criado_em TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+ atualizado_em TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+ CHECK ((etapa < 3 AND comissao_recebida=0) OR (etapa IN (3,4) AND comissao_recebida IN (0,50)) OR (etapa=5 AND comissao_recebida=100))
+);
+CREATE TABLE IF NOT EXISTS negociacao_eventos (
+ id SERIAL PRIMARY KEY,
+ negociacao_id INTEGER NOT NULL REFERENCES negociacoes(id) ON DELETE CASCADE,
+ usuario_id INTEGER REFERENCES usuarios(id) ON DELETE SET NULL,
+ etapa_anterior SMALLINT,
+ etapa SMALLINT NOT NULL,
+ comissao_recebida SMALLINT NOT NULL,
+ criado_em TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_negociacao_eventos_negociacao ON negociacao_eventos(negociacao_id, id);

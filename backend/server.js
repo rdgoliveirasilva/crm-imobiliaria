@@ -45,6 +45,8 @@ const {
 app.use('/api/admin/empreendimentos', empreendimentosAdmin);
 app.use('/api/corretor/empreendimentos', empreendimentosCorretor);
 
+app.use('/api/esteira', require('./routes/esteira')());
+
 // Admin (genérico — vem depois pra não engolir as rotas específicas)
 app.use('/api/admin/whatsapp', require('./routes/whatsapp')());
 app.use('/api/admin', require('./routes/admin'));

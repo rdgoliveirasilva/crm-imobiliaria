@@ -794,6 +794,13 @@ document.addEventListener('DOMContentLoaded', () => {
         } finally { if(request===historyRequest)historicoLista.setAttribute('aria-busy','false'); }
     }
 
+    async function levarParaEsteira(id,button){
+        if(!id||button.disabled)return;button.disabled=true;
+        try{await ApiClient.post('/api/esteira',{lead_id:Number(id)});window.location.href='esteira.html?lead='+encodeURIComponent(id);}
+        catch(error){mostrarToast(error.message||'Não foi possível adicionar à esteira.','error');button.disabled=false;}
+    }
+    $('leadPipeline').addEventListener('click',event=>{if(leadAtual&&!processando)void levarParaEsteira(leadAtual.id,event.currentTarget);});
+    historicoLista.addEventListener('click',event=>{const button=event.target.closest('[data-pipeline-id]');if(button){event.stopPropagation();void levarParaEsteira(button.dataset.pipelineId,button);}});
     $('resumeProspecting').addEventListener('click',()=>{if(!processando)void carregarProximoLead();});
     const historyMedia=window.matchMedia('(min-width:1025px)');
     function syncHistoryLayout(){ $('prospectHistory').open=historyMedia.matches; }
@@ -849,7 +856,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             <span>${escapeHtml(tagParaTexto(item.resultado))}</span>
                             <span class="history-requalify"><i class="fas fa-pen" aria-hidden="true"></i> Requalificar</span>
                         </button>
-                        <button type="button" class="history-pipeline" disabled title="Em breve"><i class="fas fa-layer-group" aria-hidden="true"></i> Levar para esteira <small>Em breve</small></button>
+                        <button type="button" class="history-pipeline" data-pipeline-id="${item.id}"><i class="fas fa-layer-group" aria-hidden="true"></i> Levar para esteira</button>
                     </div>
                     <div class="historico-item-info">
                         <span><i class="fas fa-phone"></i> ${escapeHtml(Acoes.formatarTelefone(item.telefone))}</span>

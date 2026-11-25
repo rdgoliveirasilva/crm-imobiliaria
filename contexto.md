@@ -649,3 +649,11 @@ Resultados da prospecção voltam a uma coluna no desktop. Histórico acompanha 
 
 ## 24/11/2026 — Correção de compressão dos cards do histórico
 Colunas desktop com larguras iguais; lead-card sem margem inferior para alinhar a base com o histórico. Histórico usa grid-auto-rows:max-content e cards sem encolhimento, evitando que os 30 registros sejam comprimidos na altura da lista rolável. Ações em áreas separadas, botão Requalificar explícito e data identificada como Qualificado em. 83 testes aprovados, incluindo conteúdo da ficha; revisão visual em navegador pendente.
+
+## 25/11/2026 — Esteira comercial integrada
+- Páginas esteira.html e admin-esteira.html usam js/esteira.js e css/esteira.css, com os temas e sidebars existentes. Links habilitados no desktop/mobile e acesso comercial do dashboard. Admin tem busca, carteira e corretor; corretor vê apenas sua titularidade atual, verificada também em cada endpoint.
+- API /api/esteira: listagem filtrada, inclusão idempotente por lead, movimentação transacional com versão otimista e eventos de auditoria. Botões Levar para esteira habilitados na ficha e no histórico de prospecção. Incluir não qualifica automaticamente o lead.
+- Seis etapas sequenciais: Documentação → Aprovação de Crédito → Validação Fluxo → Contrato assinado Construtora → Aguardando Caixa → Contrato assinado Caixa. Arraste abre confirmação; formulário funciona por teclado/mobile. Avanço de uma etapa por vez, sem retorno; versão obsoleta retorna 409.
+- Contrato construtora marca resultado vendido e registra histórico no corretor proprietário (sem duplicar se já vendido). Recebimento de 50% é opcional, confirmado manualmente; Caixa registra 100% acumulado e finaliza. Controle em percentuais, sem inventar valores monetários ou calcular comissão em reais.
+- Schema idempotente cria negociacoes e negociacao_eventos na inicialização normal do deploy. Nenhum comando de banco de produção executado nesta sessão. APIs e regras anteriores preservadas fora da integração explícita de venda.
+- Validação: sintaxe JS, diff e 92 testes aprovados, incluindo isolamento de corretor, idempotência, conflitos de versão, rollback, venda/comissão acumulada e páginas. Ainda pendentes conferência visual no navegador e integração com PostgreSQL real após implantação.
