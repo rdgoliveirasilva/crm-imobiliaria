@@ -11,7 +11,7 @@ test('páginas próprias têm destino fixo, título e painel inicial corretos',(
   const html=renderPage(admin,account,page,title);
   assert.match(html,new RegExp('<title>Prospect - '+title+'</title>'));
   const nav=html.match(/<nav class="admin-nav"[\s\S]*?<\/nav>/)[0];
-  assert.equal((nav.match(/class="nav-tab/g)||[]).length,5);
+  assert.equal((nav.match(/class="nav-tab/g)||[]).length,6);
   assert.doesNotMatch(nav,/Subir|Categorias|WhatsApp/);
   assert.match(nav,/href="admin-carteiras.html"/);assert.match(nav,/href="admin-corretores.html"/);
   if(page!=='conta'){

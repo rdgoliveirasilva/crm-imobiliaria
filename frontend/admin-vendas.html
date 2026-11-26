@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="admin-desktop-theme">
+<head>
+    <script src="js/auth-session.js"></script>
+    <script src="js/auth-guard.js"></script>
+    <meta charset="UTF-8">
+    <link rel="manifest" href="/manifest.webmanifest">
+    <link rel="apple-touch-icon" sizes="180x180" href="/assets/icons/apple-touch-icon.png?v=2">
+    <meta name="theme-color" content="#002c61">
+    <meta name="apple-mobile-web-app-title" content="Prospect">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    
+    <script src="js/corretor-theme.js"></script>
+    <title>Vendas e Comissões - Prospect</title>
+
+    <meta name="description" content="Esteira comercial: documentação, contratos e comissão - Prospect">
+
+    <link rel="icon" type="image/png" href="assets/img/logo.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/avatar.css">
+    <link rel="stylesheet" href="css/corretor.css">
+    
+    <link rel="stylesheet" href="css/corretor-theme.css">
+    <link rel="stylesheet" href="css/corretor-pages-mobile.css">
+    <link rel="stylesheet" href="css/corretor-floating-nav.css">
+<link rel="stylesheet" href="css/corretor-theme-components.css" media="(min-width: 1025px)">
+<link rel="stylesheet" href="css/corretor-desktop.css">
+<link rel="stylesheet" href="css/desktop-sidebar.css">
+<link rel="stylesheet" href="css/broker-refresh.css">
+
+<link rel="stylesheet" href="css/shared-surfaces.css">
+
+<link rel="stylesheet" href="css/admin-command.css">
+<link rel="stylesheet" href="css/esteira.css"></head>
+<body class="admin-page admin-command cc-ready esteira-page vendas-page"><script src="js/admin-boot.js"></script><header class="app-header">
+        <div class="header-inner">
+            <div class="header-brand">
+                <div class="logo-mark">
+                    <img
+                        src="assets/img/logo.png"
+                        alt="Prospect"
+                        onerror="this.style.display='none'; this.parentElement.classList.add('fallback');"
+                    >
+                    <i class="fas fa-building logo-fallback"></i>
+                </div>
+                <div class="header-brand-text">
+                    <h1>Prospect</h1>
+                    <p>SR Lançamentos</p>
+                </div>
+            </div>
+
+    <nav class="admin-nav" aria-label="Navegação administrativa">
+        <div class="admin-nav-inner">
+            <a class="nav-tab" data-tab="dashboard" href="admin.html"><i class="fas fa-chart-line"></i><span>Centro de comando</span></a>
+            <a class="nav-tab" data-tab="listas" href="admin-carteiras.html"><i class="fas fa-folder-open"></i><span>Carteiras</span></a>
+            <a class="nav-tab" data-tab="corretores" href="admin-corretores.html"><i class="fas fa-users"></i><span>Corretores</span></a>
+            <a class="nav-tab active" data-tab="vendas" href="admin-vendas.html"><i class="fas fa-chart-line"></i><span>Vendas e comissões</span></a>
+            <a class="nav-tab" data-tab="esteira" href="admin-esteira.html"><i class="fas fa-layer-group"></i><span>Esteira Comercial</span></a>
+            <a class="nav-tab" data-tab="empreendimentos" href="admin-empreendimentos.html"><i class="fas fa-building"></i><span>Empreendimentos</span></a>
+        </div>
+    </nav>
+            <div class="header-user">
+                <div class="user-info">
+                    <span class="user-greeting">Bem vindo</span>
+                    <strong id="headerUserName">Administrador</strong>
+                </div>
+                <div class="theme-control" id="themeControl">
+                    <button type="button" class="theme-toggle" id="themeToggle" aria-label="Escolher tema" aria-expanded="false" aria-controls="themeOptions"><i class="fas fa-circle-half-stroke" aria-hidden="true"></i></button>
+                    <div id="themeOptions" class="theme-options" role="group" aria-label="Tema da interface" hidden>
+                        <button type="button" data-theme-choice="auto" aria-pressed="true"><i class="fas fa-clock" aria-hidden="true"></i> Automático <small>Claro 6h–18h · escuro à noite</small></button>
+                        <button type="button" data-theme-choice="light" aria-pressed="false"><i class="fas fa-sun" aria-hidden="true"></i> Claro</button>
+                        <button type="button" data-theme-choice="dark" aria-pressed="false"><i class="fas fa-moon" aria-hidden="true"></i> Escuro</button>
+                    </div>
+                </div>
+                <button class="btn-avatar" id="btnAvatar" title="Menu">
+                    <i class="fas fa-user"></i>
+                </button>
+            </div>
+        </div>
+    </header><main class="admin-main"><div class="cc-top"><h1>Vendas e Comissões</h1><div id="pipelineAccount"></div></div><p class="pipeline-intro">Acompanhe seus clientes da documentação à conclusão da venda.</p>
+<section class="pipeline-metrics" aria-label="Resumo da esteira" id="pipelineMetrics"></section>
+<form class="pipeline-filters" id="pipelineFilters" role="search">
+<label>Buscar cliente<input type="search" id="pipelineSearch" placeholder="Nome ou telefone"></label>
+<label>Carteira<select id="pipelineWallet"><option value="">Todas as carteiras</option></select></label>
+<label id="pipelineBrokerWrap" hidden>Corretor<select id="pipelineBroker"><option value="">Todos os corretores</option></select></label>
+<label>Empreendimento<select id="pipelineProperty"><option value="">Todos os empreendimentos</option></select></label>
+<label>Status<select id="pipelineStatus"><option value="">Todos os status</option><option value="ativo">Em andamento</option><option value="condicionado">Condicionado</option><option value="reprovado">Reprovado</option><option value="desistiu">Desistiu</option><option value="finalizado">Finalizado</option></select></label>
+<label>Entrada na esteira · de<input type="date" id="pipelineFrom"></label><label>Até<input type="date" id="pipelineTo"></label><button type="submit">Atualizar</button>
+</form>
+<p id="pipelineFeedback" role="status" aria-live="polite"></p>
+<div class="pipeline-board" id="pipelineBoard" aria-label="Kanban da esteira comercial"></div>
+<dialog id="pipelineDialog" class="pipeline-dialog" aria-labelledby="pipelineTitle"></dialog></main><script src="js/api-client.js"></script><script src="js/avatar.js"></script><script src="js/esteira.js"></script><script src="js/admin-mobile-nav.js"></script><script src="js/desktop-sidebar.js"></script><script src="js/commercial-overview.js"></script></body></html>

@@ -23,3 +23,26 @@ body.esteira-page { color:var(--theme-text); }
 .esteira-page #pipelineAccount .header-user { background:transparent; border:0; margin:0; padding:0; }.esteira-page #pipelineAccount .user-info { display:none; }
 body.esteira-page :is(button,a,select,input):focus-visible { outline:2px solid var(--theme-accent); outline-offset:3px; }
 @media(max-width:900px){.pipeline-metrics{grid-template-columns:repeat(2,minmax(0,1fr));}.pipeline-filters>label{flex:1 1 140px;min-width:0;}.pipeline-filters select{width:100%;}.pipeline-board{grid-template-columns:repeat(6,minmax(260px,82vw));}.pipeline-dialog{padding-bottom:max(24px,env(safe-area-inset-bottom))!important;}}
+/* Indicadores comerciais retos, iguais nas duas áreas. */
+.pipeline-metrics { grid-template-columns:repeat(6,minmax(0,1fr)); border-radius:0!important; }
+.pipeline-metrics article { flex-direction:column; align-items:flex-start; min-width:0; padding:16px 12px; border-radius:0; }
+.pipeline-metrics strong { font-size:clamp(16px,1.5vw,24px); overflow-wrap:anywhere; }
+.pipeline-dialog :is(textarea,select,input:not([type=checkbox])) { width:100%; box-sizing:border-box; min-width:0; }
+.pipeline-dialog textarea { background:var(--theme-page); color:var(--theme-text); border:1px solid var(--theme-border); border-radius:10px; padding:12px; font:inherit; }
+.pipeline-dialog fieldset { min-width:0; border:1px solid var(--theme-border); border-radius:12px; padding:16px; display:grid; gap:12px; }
+.pipeline-dialog legend { color:var(--theme-accent); font-size:14px; }
+.pipeline-dialog>section { padding-block:18px; border-top:1px solid var(--theme-border); }
+.pipeline-dialog article { padding:12px 0; border-bottom:1px solid var(--theme-border); overflow-wrap:anywhere; }
+.pipeline-documents button { margin:6px 4px 0 0; }
+.pipeline-dialog .pipeline-audit-text { white-space:pre-wrap; color:var(--theme-muted); }
+.pipeline-sales { display:block; overflow:auto; }.pipeline-sales table { width:100%; border-collapse:collapse; background:var(--theme-surface); }.pipeline-sales :is(td,th) { padding:14px; border-bottom:1px solid var(--theme-border); text-align:left; font-size:13px; }.pipeline-sales small { display:block; margin-top:5px; color:var(--theme-muted); }.pipeline-sales button { background:transparent; color:var(--theme-accent); border:0; cursor:pointer; text-align:left; }
+.status-condicionado { color:var(--theme-warning); background:var(--theme-warning-bg); }.status-reprovado,.status-desistiu { color:var(--theme-danger); background:var(--theme-danger-bg); }
+@media(max-width:1100px){.pipeline-metrics{grid-template-columns:repeat(3,minmax(0,1fr));}}
+@media(max-width:600px){.pipeline-metrics{grid-template-columns:repeat(2,minmax(0,1fr));}.pipeline-dialog{width:100%!important;}.pipeline-dialog [draggable]{touch-action:auto;}}
+.commercial-overview { grid-column:1 / -1; margin-block:24px; color:var(--theme-text); }
+.commercial-overview>header { display:flex; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:12px; }
+.commercial-overview :is(button,a),.commercial-notifications :is(button,a) { font:inherit; font-size:12px; color:var(--theme-accent); background:var(--theme-control); border:1px solid var(--theme-border); border-radius:10px; padding:10px 12px; min-height:44px; box-sizing:border-box; cursor:pointer; text-decoration:none; }
+.commercial-notifications { width:min(520px,calc(100% - 28px)); max-height:80dvh; background:var(--theme-surface); color:var(--theme-text); border:1px solid var(--theme-border); border-radius:18px; padding:20px; }
+.commercial-notifications::backdrop { background:#0008; }.commercial-notifications header { display:flex; justify-content:space-between; align-items:center; gap:16px; }.commercial-notifications h2 { font-size:18px; }.commercial-notifications article { padding:16px 0; border-bottom:1px solid var(--theme-border); }.commercial-notifications p { white-space:pre-wrap; overflow-wrap:anywhere; line-height:1.6; }.commercial-notifications article :is(a,button) { display:inline-block; margin:4px; }
+
+.commercial-card { text-decoration:none; color:inherit; }

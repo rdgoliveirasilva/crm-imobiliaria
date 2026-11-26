@@ -60,6 +60,7 @@
             <a class="nav-tab" data-tab="dashboard" href="admin.html"><i class="fas fa-chart-line"></i><span>Centro de comando</span></a>
             <a class="nav-tab" data-tab="listas" href="admin-carteiras.html"><i class="fas fa-folder-open"></i><span>Carteiras</span></a>
             <a class="nav-tab" data-tab="corretores" href="admin-corretores.html"><i class="fas fa-users"></i><span>Corretores</span></a>
+            <a class="nav-tab" data-tab="vendas" href="admin-vendas.html"><i class="fas fa-chart-line"></i><span>Vendas e comissões</span></a>
             <a class="nav-tab active" data-tab="esteira" href="admin-esteira.html"><i class="fas fa-layer-group"></i><span>Esteira Comercial</span></a>
             <a class="nav-tab" data-tab="empreendimentos" href="admin-empreendimentos.html"><i class="fas fa-building"></i><span>Empreendimentos</span></a>
         </div>
@@ -88,8 +89,10 @@
 <label>Buscar cliente<input type="search" id="pipelineSearch" placeholder="Nome ou telefone"></label>
 <label>Carteira<select id="pipelineWallet"><option value="">Todas as carteiras</option></select></label>
 <label id="pipelineBrokerWrap" hidden>Corretor<select id="pipelineBroker"><option value="">Todos os corretores</option></select></label>
-<button type="submit">Atualizar</button>
+<label>Empreendimento<select id="pipelineProperty"><option value="">Todos os empreendimentos</option></select></label>
+<label>Status<select id="pipelineStatus"><option value="">Todos os status</option><option value="ativo">Em andamento</option><option value="condicionado">Condicionado</option><option value="reprovado">Reprovado</option><option value="desistiu">Desistiu</option><option value="finalizado">Finalizado</option></select></label>
+<label>Entrada na esteira · de<input type="date" id="pipelineFrom"></label><label>Até<input type="date" id="pipelineTo"></label><button type="submit">Atualizar</button>
 </form>
 <p id="pipelineFeedback" role="status" aria-live="polite"></p>
 <div class="pipeline-board" id="pipelineBoard" aria-label="Kanban da esteira comercial"></div>
-<dialog id="pipelineDialog" class="pipeline-dialog" aria-labelledby="pipelineTitle"></dialog></main><script src="js/api-client.js"></script><script src="js/avatar.js"></script><script src="js/esteira.js"></script><script src="js/admin-mobile-nav.js"></script><script src="js/desktop-sidebar.js"></script></body></html>
+<dialog id="pipelineDialog" class="pipeline-dialog" aria-labelledby="pipelineTitle"></dialog></main><script src="js/api-client.js"></script><script src="js/avatar.js"></script><script src="js/esteira.js"></script><script src="js/admin-mobile-nav.js"></script><script src="js/desktop-sidebar.js"></script><script src="js/commercial-overview.js"></script></body></html>

@@ -51,7 +51,7 @@
             <nav class="desktop-sidebar-nav" aria-label="Navegação principal desktop">
                 <a href="corretor.html"><i class="fas fa-house"></i> Início</a>
                 <a href="esteira.html" aria-current="page"><i class="fas fa-layer-group"></i><span>Esteira Comercial</span></a>
-                <button type="button" disabled><i class="fas fa-chart-simple"></i><span>Vendas<small>Em breve</small></span></button>
+                <a href="vendas.html"><i class="fas fa-chart-simple"></i><span>Vendas</span></a>
                 <a href="empreendimentos.html"><i class="far fa-building"></i> Empreendimentos</a>
                 <a class="sidebar-account" href="conta.html"><i class="fas fa-gear"></i> Minha conta</a>
             </nav>
@@ -79,8 +79,10 @@
 <label>Buscar cliente<input type="search" id="pipelineSearch" placeholder="Nome ou telefone"></label>
 <label>Carteira<select id="pipelineWallet"><option value="">Todas as carteiras</option></select></label>
 <label id="pipelineBrokerWrap" hidden>Corretor<select id="pipelineBroker"><option value="">Todos os corretores</option></select></label>
-<button type="submit">Atualizar</button>
+<label>Empreendimento<select id="pipelineProperty"><option value="">Todos os empreendimentos</option></select></label>
+<label>Status<select id="pipelineStatus"><option value="">Todos os status</option><option value="ativo">Em andamento</option><option value="condicionado">Condicionado</option><option value="reprovado">Reprovado</option><option value="desistiu">Desistiu</option><option value="finalizado">Finalizado</option></select></label>
+<label>Entrada na esteira · de<input type="date" id="pipelineFrom"></label><label>Até<input type="date" id="pipelineTo"></label><button type="submit">Atualizar</button>
 </form>
 <p id="pipelineFeedback" role="status" aria-live="polite"></p>
 <div class="pipeline-board" id="pipelineBoard" aria-label="Kanban da esteira comercial"></div>
-<dialog id="pipelineDialog" class="pipeline-dialog" aria-labelledby="pipelineTitle"></dialog></main><script src="js/api-client.js"></script><script src="js/avatar.js"></script><script src="js/esteira.js"></script><script src="js/desktop-sidebar.js"></script></body></html>
+<dialog id="pipelineDialog" class="pipeline-dialog" aria-labelledby="pipelineTitle"></dialog></main><script src="js/api-client.js"></script><script src="js/avatar.js"></script><script src="js/esteira.js"></script><script src="js/desktop-sidebar.js"></script><script src="js/commercial-overview.js"></script></body></html>

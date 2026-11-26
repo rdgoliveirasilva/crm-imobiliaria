@@ -1,67 +1,39 @@
-const test=require('node:test'),assert=require('node:assert/strict');
-const {transition,ETAPAS}=require('../services/esteira');
-const createRouter=require('../routes/esteira');
-const broker={id:7,tipo:'corretor'},admin={id:1,tipo:'admin'};
-function handler(pool,method,path){const router=createRouter({pool,autenticar:(req,res,next)=>next()});return router.stack.find(layer=>layer.route?.path===path&&layer.route.methods[method]).route.stack[0].handle;}
-function response(){return {code:200,status(code){this.code=code;return this;},json(data){this.data=data;}};}
-test('etapas e comissão acumulada: venda na construtora e 100% na Caixa, nunca 150%',()=>{
- assert.equal(ETAPAS.length,6);
- assert.deepEqual(transition({etapa:2,versao:1,comissao_recebida:0},{etapa:3,versao:1,meia_comissao:false}),{etapa:3,comissao:0,changed:true});
- assert.equal(transition({etapa:3,versao:2,comissao_recebida:0},{etapa:3,versao:2,meia_comissao:true}).comissao,50);
- assert.equal(transition({etapa:4,versao:3,comissao_recebida:50},{etapa:5,versao:3}).comissao,100);
- assert.equal(transition({etapa:5,versao:4,comissao_recebida:100},{etapa:5,versao:4}).changed,false);
- for(const body of [{etapa:5,versao:1},{etapa:-1,versao:1},{etapa:0,versao:1,meia_comissao:true},{etapa:1,versao:9}])assert.throws(()=>transition({etapa:0,versao:1,comissao_recebida:0},body));
+const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
+const S=require('../services/esteira'),createRouter=require('../routes/esteira');
+function handler(pool,method,url){return createRouter({pool,autenticar:(q,r,next)=>next()}).stack.find(l=>l.route?.path===url&&l.route.methods[method]).route.stack.at(-1).handle;}
+function res(){return {code:200,status(n){this.code=n;return this;},json(data){this.data=data;}};}
+test('valores financeiros usam centavos, rejeitam formatos ambíguos e datas inexistentes',()=>{
+ assert.equal(S.money('123.45'),12345);assert.equal(S.decimal(12345),'123.45');
+ for(const v of ['-1','1.234','1,20','NaN',true,'1e4'])assert.throws(()=>S.money(v));assert.throws(()=>S.date('2026-02-30'));assert.equal(S.date('2026-11-26'),'2026-11-26');
 });
-test('corretor só consulta seus leads; filtro de outro corretor é recusado',async()=>{
- const calls=[],pool={query:async(sql,args)=>{calls.push({sql,args});return {rows:[]};}};
- const get=handler(pool,'get','/');let res=response();await get({usuario:broker,query:{}},res);
- assert.match(calls[0].sql,/l.corretor_id=\$1/);assert.deepEqual(calls[0].args,[7]);assert.match(calls[0].sql,/inativa_manual=FALSE/);
- res=response();await get({usuario:broker,query:{corretor_id:8}},res);assert.equal(res.code,403);assert.equal(calls.length,1);
- res=response();await get({usuario:admin,query:{corretor_id:8,lista_id:12}},res);assert.deepEqual(calls[1].args,[8,12]);
+test('aprovação de crédito administrativa é pré-requisito para fluxo; versão evita sobrescrita',()=>{
+ const n={etapa:1,versao:2,status_comercial:'ativo',credito_status:'pendente'};
+ assert.throws(()=>S.transition(n,{etapa:2,versao:2}),e=>e.status===403);
+ assert.equal(S.transition({...n,credito_status:'aprovado'},{etapa:2,versao:2}),2);
+ assert.throws(()=>S.transition(n,{etapa:1,versao:1}),e=>e.status===409);
+ assert.throws(()=>S.transition({...n,status_comercial:'desistiu'},{etapa:2,versao:2}));
 });
-test('inserção repetida reaproveita negociação sem duplicar evento',async()=>{
- const calls=[],client={query:async(sql,args)=>{calls.push(sql);if(sql.startsWith('SELECT l.'))return {rows:[{corretor_id:7,inativa_manual:false}]};if(sql.startsWith('SELECT *'))return {rows:[{id:4,lead_id:10}]};return {rows:[]};},release(){calls.push('release');}};
- const post=handler({connect:async()=>client},'post','/'),res=response();await post({usuario:broker,body:{lead_id:10}},res);
- assert.equal(res.code,200);assert.equal(res.data.negociacao.id,4);assert.ok(calls.includes('COMMIT'));assert.ok(!calls.some(s=>s.startsWith('INSERT INTO negociacao_eventos')));
+test('indicadores distinguem venda, finalização e recebimento confirmado, sem usar percentuais legados',()=>{
+ const m=S.metrics([{etapa:3,status_comercial:'ativo',venda_id:1,valor_venda:'200000.00',comissao_prevista:'10000',recebido:'2000',pendente:'3000'},{etapa:5,status_comercial:'ativo',venda_id:2,assinatura_caixa:'2026-11-26',valor_venda:'300000',comissao_prevista:'15000',recebido:'5000'},{etapa:5,status_comercial:'ativo',comissao_recebida:100}]);
+ assert.equal(m.vgv,'500000.00');assert.equal(m.vendidos,2);assert.equal(m.finalizados,1);assert.equal(m.recebidas,'7000.00');assert.equal(m.a_receber,'18000.00');
 });
-test('cliente de outro corretor não pode ser movido nem incluído',async()=>{
- for(const [method,path,body] of [['post','/',{lead_id:10}],['patch','/:id',{etapa:3,versao:1}]]){
-  const calls=[],client={query:async sql=>{calls.push(sql);return {rows:[{corretor_id:8,inativa_manual:false}]};},release(){}};
-  const res=response();await handler({connect:async()=>client},method,path)({usuario:broker,body,params:{id:4}},res);
-  assert.equal(res.code,404);assert.ok(calls.includes('ROLLBACK'));assert.ok(!calls.some(s=>/^(INSERT|UPDATE)/.test(s)));
- }
+test('documentos aceitam somente assinaturas binárias de PDF, PNG e JPEG',()=>{
+ assert.equal(S.fileType(Buffer.from('%PDF-1.7')),'application/pdf');assert.equal(S.fileType(Buffer.from([255,216,255,0])),'image/jpeg');assert.throws(()=>S.fileType(Buffer.from('<html>documento falso</html>')));
 });
-test('movimento registra venda, comissão e auditoria na mesma transação',async()=>{
- const calls=[],current={id:4,lead_id:10,etapa:2,versao:3,comissao_recebida:0};
- const client={query:async(sql,args)=>{calls.push({sql,args});if(sql.startsWith('SELECT l.'))return {rows:[{corretor_id:7,inativa_manual:false,resultado:'em_atendimento'}]};if(sql.startsWith('SELECT *'))return {rows:[current]};return {rows:[]};},release(){}};
- const res=response();await handler({connect:async()=>client},'patch','/:id')({usuario:admin,params:{id:4},body:{etapa:3,versao:3,meia_comissao:true}},res);
- assert.equal(res.code,200);assert.ok(calls.some(c=>c.sql.startsWith('UPDATE leads')));assert.ok(calls.some(c=>c.sql.startsWith('INSERT INTO historico')&&c.args[1]===7));
- assert.deepEqual(calls.find(c=>c.sql.startsWith('UPDATE negociacoes')).args,[4,3,50]);assert.equal(calls.at(-1).sql,'COMMIT');
+test('corretor não pode confirmar recebimentos ou consultar filtro de outro corretor',async()=>{
+ const pool={query(){throw Error('Não deve consultar dados');}},user={id:7,tipo:'corretor'};
+ let response=res();await handler(pool,'patch','/:id/recebimentos/:recebimento')({usuario:user,params:{id:1,recebimento:2},body:{status:'confirmado'}},response);assert.equal(response.code,403);
+ response=res();await handler(pool,'get','/')({usuario:user,query:{corretor_id:8}},response);assert.equal(response.code,403);
 });
-test('versão obsoleta reverte sem registrar venda',async()=>{
- const calls=[],client={query:async sql=>{calls.push(sql);return {rows:sql.startsWith('SELECT l.')?[{corretor_id:7}]:[{etapa:2,versao:4,comissao_recebida:0}]};},release(){}};
- const res=response();await handler({connect:async()=>client},'patch','/:id')({usuario:broker,params:{id:4},body:{etapa:3,versao:3}},res);
- assert.equal(res.code,409);assert.ok(calls.includes('ROLLBACK'));assert.ok(!calls.some(s=>s.startsWith('UPDATE')));
+test('listagem restringe negociações à titularidade persistida e combina filtros parametrizados',async()=>{
+ const calls=[],pool={query:async(sql,args)=>{calls.push({sql,args});return {rows:[]};}},response=res();
+ await handler(pool,'get','/')({usuario:{id:7,tipo:'corretor'},query:{empreendimento_id:'4',de:'2026-11-01',ate:'2026-11-26',status:'ativo'}},response);
+ assert.equal(response.code,200);assert.match(calls[0].sql,/n.corretor_id=\$1/);assert.deepEqual(calls[0].args,[7,4,'ativo','2026-11-01','2026-11-26']);
 });
-
-test('eventos também exigem titularidade e não vazam dados de outro corretor',async()=>{
- let queries=0;const pool={query:async()=>{queries++;return {rows:[{corretor_id:8}]};}};
- const res=response();await handler(pool,'get','/:id/eventos')({usuario:broker,params:{id:4}},res);
- assert.equal(res.code,404);assert.equal(queries,1);
+test('acesso a documento exige negociação própria antes de ler o conteúdo',async()=>{
+ let queries=0;const response=res();await handler({query:async()=>{queries++;return {rows:[]};}},'get','/:id/documentos/:documento')({usuario:{id:7,tipo:'corretor'},params:{id:3,documento:4}},response);
+ assert.equal(response.code,404);assert.equal(queries,1);
 });
-test('falha de auditoria reverte a venda e não confirma transação',async()=>{
- const calls=[],client={query:async sql=>{calls.push(sql);if(sql.startsWith('SELECT l.'))return {rows:[{corretor_id:7}]};if(sql.startsWith('SELECT *'))return {rows:[{id:4,lead_id:10,etapa:2,versao:1,comissao_recebida:0}]};if(sql.startsWith('INSERT INTO negociacao_eventos'))throw Object.assign(Error('Falha simulada'),{status:503});return {rows:[]};},release(){}};
- const res=response();await handler({connect:async()=>client},'patch','/:id')({usuario:broker,params:{id:4},body:{etapa:3,versao:1}},res);
- assert.equal(res.code,503);assert.ok(calls.includes('ROLLBACK'));assert.ok(!calls.includes('COMMIT'));
-});
-test('páginas possuem IDs únicos, scripts necessários e navegação ativa para cada perfil',()=>{
- const fs=require('node:fs'),path=require('node:path');
- for(const name of ['esteira','admin-esteira']){
-  const html=fs.readFileSync(path.join(__dirname,'../../frontend/'+name+'.html'),'utf8');
-  const ids=Array.from(html.matchAll(/\bid="([^"]+)"/g),m=>m[1]);assert.equal(ids.length,new Set(ids).size);
-  for(const asset of ['api-client.js','esteira.js','corretor-theme.js','desktop-sidebar.js'])assert.ok(html.includes(asset));
-  for(const id of ['pipelineMetrics','pipelineBoard','pipelineDialog','pipelineBroker','pipelineWallet'])assert.ok(ids.includes(id));
-  if(name==='admin-esteira'){assert.match(html,/admin-desktop-theme/);assert.match(html,/nav-tab active" data-tab="esteira"/);}
-  else assert.match(html,/href="esteira.html" aria-current="page"/);
- }
+test('páginas de esteira e vendas usam filtros, tema e IDs únicos',()=>{
+ for(const name of ['esteira','admin-esteira','vendas','admin-vendas']){const html=fs.readFileSync(path.join(__dirname,'../../frontend/'+name+'.html'),'utf8'),ids=Array.from(html.matchAll(/\bid="([^"]+)"/g),m=>m[1]);assert.equal(ids.length,new Set(ids).size);for(const id of ['pipelineMetrics','pipelineDialog','pipelineProperty','pipelineStatus','pipelineFrom','pipelineTo'])assert.ok(ids.includes(id));assert.ok(html.includes('js/esteira.js'));}
 });

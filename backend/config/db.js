@@ -57,6 +57,7 @@ async function inicializarSchema() {
     try {
         const schema = fs.readFileSync(schemaPath, 'utf-8');
         await pool.query(schema);
+        await require('../scripts/migrate.cjs').migrate(pool);
         console.log('[DB] ✅ Schema aplicado com sucesso.');
     } catch (err) {
         console.error('[DB] ❌ Erro ao aplicar schema:', err.message);
