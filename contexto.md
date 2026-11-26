@@ -657,3 +657,6 @@ Colunas desktop com larguras iguais; lead-card sem margem inferior para alinhar 
 - Contrato construtora marca resultado vendido e registra histórico no corretor proprietário (sem duplicar se já vendido). Recebimento de 50% é opcional, confirmado manualmente; Caixa registra 100% acumulado e finaliza. Controle em percentuais, sem inventar valores monetários ou calcular comissão em reais.
 - Schema idempotente cria negociacoes e negociacao_eventos na inicialização normal do deploy. Nenhum comando de banco de produção executado nesta sessão. APIs e regras anteriores preservadas fora da integração explícita de venda.
 - Validação: sintaxe JS, diff e 92 testes aprovados, incluindo isolamento de corretor, idempotência, conflitos de versão, rollback, venda/comissão acumulada e páginas. Ainda pendentes conferência visual no navegador e integração com PostgreSQL real após implantação.
+
+## 26/11/2026 — Tema da prospecção e badges
+Superfícies de espera, ficha, seletor de carteiras, resultados e observação usam tokens de tema em todos os breakpoints, corrigindo fundos brancos no desktop dark. Badges editáveis sobrescrevem regras legadas !important de nowrap/fit-content, permitem quebra e mantêm ícone de edição sem legenda Requalificar (tooltip preservado). 92 testes aprovados; validação visual no navegador pendente.

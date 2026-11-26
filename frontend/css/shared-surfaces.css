@@ -82,9 +82,40 @@ body.prospeccao-page .prospect-history .historico-item > * { flex-shrink:0; }
 body.prospeccao-page .prospect-history .historico-item-top { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; align-items:stretch; }
 body.prospeccao-page .prospect-history .history-open-lead { grid-column:1 / -1; min-height:32px; white-space:normal; }
 body.prospeccao-page .prospect-history .historico-item-tag { display:flex; flex-direction:column; align-items:flex-start; justify-content:center; gap:6px; min-height:48px; padding:10px 12px; border-radius:10px; max-width:100%; overflow-wrap:anywhere; text-align:left; }
-body.prospeccao-page .prospect-history .history-requalify { display:flex; gap:6px; align-items:center; font-size:11px; font-weight:600; text-transform:none; }
 body.prospeccao-page .prospect-history .history-pipeline { min-height:48px; padding:10px 12px; white-space:normal; }
 body.prospeccao-page .prospect-history .historico-item-info { display:flex; flex-direction:column; align-items:flex-start; gap:8px; margin-top:6px; line-height:1.5; }
 body.prospeccao-page .prospect-history .historico-item-info span { white-space:normal; }
 body.prospeccao-page .prospect-history .historico-item:hover { transform:none; }
 @media(max-width:380px) { body.prospeccao-page .prospect-history .historico-item-top { grid-template-columns:minmax(0,1fr); } }
+
+/* Prospecção: mesmos tokens em desktop/mobile e nos estados vazios. */
+body.prospeccao-page :is(.lead-card,.waiting-state) { background:var(--metric-surface); border:1px solid var(--theme-border); color:var(--theme-text); box-shadow:0 8px 24px #0002; }
+body.prospeccao-page :is(.waiting-state h2,.lead-identity h2,.lead-card:hover .lead-identity h2,.result-section h3) { color:var(--theme-text); -webkit-text-fill-color:var(--theme-text); }
+body.prospeccao-page :is(.waiting-state p,.lead-phone,.lead-card:hover .lead-phone,.progress-text,.progress-stat small) { color:var(--theme-muted); }
+body.prospeccao-page .progress-stat strong { color:var(--theme-text); }
+body.prospeccao-page .progress-track { background:var(--theme-control); }
+body.prospeccao-page :is(.waiting-icon,.lead-origem,.call-notice) { background:var(--theme-control); color:var(--theme-accent); }
+body.prospeccao-page .carteira-trigger { background:var(--theme-surface); color:var(--theme-text); border:1px solid var(--theme-border); }
+body.prospeccao-page .carteira-trigger:is(:hover,.open) { background:var(--theme-control); border-color:var(--theme-accent); }
+body.prospeccao-page :is(.carteira-icon,.custom-select-arrow) { color:var(--theme-accent); }
+body.prospeccao-page :is(.carteira-badge,.carteira-opcao-count) { background:var(--theme-control); color:var(--theme-text); }
+body.prospeccao-page .carteira-menu { background:var(--theme-surface); border-color:var(--theme-border); }
+body.prospeccao-page .carteira-opcao { color:var(--theme-text); }
+body.prospeccao-page .carteira-opcao:is(:hover,.atual,.selected,.active) { background:var(--theme-control); color:var(--theme-text); }
+body.prospeccao-page .carteira-categoria-titulo { background:var(--theme-page); color:var(--theme-muted); border-color:var(--theme-border); }
+body.prospeccao-page .result-section { border-color:var(--theme-border); }
+body.prospeccao-page .result-tag.success { background:var(--theme-success-bg); color:var(--theme-success); border-color:var(--theme-success); }
+body.prospeccao-page .result-tag.warning { background:var(--theme-warning-bg); color:var(--theme-warning); border-color:var(--theme-warning); }
+body.prospeccao-page .result-tag.danger { background:var(--theme-danger-bg); color:var(--theme-danger); border-color:var(--theme-danger); }
+body.prospeccao-page .result-tag :is(.tag-label,.tag-count) { color:inherit; }
+body.prospeccao-page .result-tag .tag-count { background:transparent; }
+body.prospeccao-page .obs-field textarea { background:var(--theme-page); color:var(--theme-text); border-color:var(--theme-border); }
+body.prospeccao-page .obs-field textarea::placeholder { color:var(--theme-muted); }
+body.prospeccao-page :is(#btnVerificar,.btn-primary-action.whatsapp) { background:var(--theme-control); color:var(--theme-text); border-color:var(--theme-border); }
+/* Sobrescreve apenas os !important legados dos badges editáveis. */
+body.prospeccao-page .prospect-history .historico-item-tag.tag-editavel { display:flex!important; flex-direction:row; align-items:center!important; justify-content:space-between!important; gap:8px!important; min-width:0!important; width:100%!important; max-width:100%!important; box-sizing:border-box; white-space:normal!important; text-align:left!important; line-height:1.4!important; padding:10px!important; border-radius:12px!important; }
+body.prospeccao-page .prospect-history .tag-editavel > span { min-width:0; white-space:normal!important; overflow-wrap:anywhere; }
+body.prospeccao-page .prospect-history .tag-editavel > i { flex:0 0 auto; }
+body.prospeccao-page .prospect-history .tag-editavel.success { background:var(--theme-success-bg)!important; color:var(--theme-success)!important; border-color:var(--theme-success)!important; }
+body.prospeccao-page .prospect-history .tag-editavel.warning { background:var(--theme-warning-bg)!important; color:var(--theme-warning)!important; border-color:var(--theme-warning)!important; }
+body.prospeccao-page .prospect-history .tag-editavel.danger { background:var(--theme-danger-bg)!important; color:var(--theme-danger)!important; border-color:var(--theme-danger)!important; }

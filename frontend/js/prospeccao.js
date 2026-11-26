@@ -854,7 +854,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             type="button"
                         >
                             <span>${escapeHtml(tagParaTexto(item.resultado))}</span>
-                            <span class="history-requalify"><i class="fas fa-pen" aria-hidden="true"></i> Requalificar</span>
+                            <i class="fas fa-pen" aria-hidden="true"></i>
                         </button>
                         <button type="button" class="history-pipeline" data-pipeline-id="${item.id}"><i class="fas fa-layer-group" aria-hidden="true"></i> Levar para esteira</button>
                     </div>
@@ -883,7 +883,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         btn.dataset.resultado = novaTag;
         btn.className = `historico-item-tag ${tagCor(novaTag)} tag-editavel`;
-        btn.innerHTML = `<span>${escapeHtml(tagParaTexto(novaTag))}</span><span class="history-requalify"><i class="fas fa-pen" aria-hidden="true"></i> Requalificar</span>`;
+        btn.innerHTML = `<span>${escapeHtml(tagParaTexto(novaTag))}</span><i class="fas fa-pen" aria-hidden="true"></i>`;
 
         const ehDescartado = ['sem_interesse', 'telefone_invalido', 'sem_resposta'].includes(novaTag);
         card.classList.toggle('descartado', ehDescartado);
